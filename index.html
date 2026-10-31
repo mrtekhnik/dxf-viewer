@@ -82,7 +82,7 @@ select{background:#16181b;color:var(--fg);border:1px solid var(--line);border-ra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v1.7</small></div>
+  <div class="brand">DXF <small>+PDF · v1.8</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <input id="filter" type="search" placeholder="Фильтр по имени">
@@ -556,7 +556,7 @@ function cachePut(key,doc){
   }
 }
 /* ---------- PDF (библиотека pdf.js, встроена в файл, грузится при первом PDF) ---------- */
-let pdfjsP=null;
+let pdfjsP=null,pdfWorker=null;
 function loadPdfJs(){
   if(pdfjsP)return pdfjsP;
   pdfjsP=new Promise((res,rej)=>{
@@ -576,7 +576,8 @@ async function loadPdf(it){
   const doc={kind:'pdf',name:it.name,pdf:null,pages:0,groups:null,bbox:null,size:null,origin:[0,0],log:[],stats:{n:0}};
   try{
     const L=await loadPdfJs();const buf=await it.file.arrayBuffer();
-    doc.pdf=await L.getDocument({data:new Uint8Array(buf),isEvalSupported:false}).promise;
+    if(!pdfWorker)pdfWorker=new L.PDFWorker();
+    doc.pdf=await L.getDocument({data:new Uint8Array(buf),isEvalSupported:false,worker:pdfWorker}).promise;
     doc.pages=doc.pdf.numPages;
     const vp=(await doc.pdf.getPage(1)).getViewport({scale:1});
     doc.size=[vp.width*25.4/72,vp.height*25.4/72];doc.bbox=[0,0,vp.width,vp.height];
@@ -644,6 +645,7 @@ const io=new IntersectionObserver(es=>{for(const e of es){const it=e.target._it;
 function enqueue(it){if(it.state)return;it.state=1;tq.push(it);}
 function pumpThumbs(){
   while(running<MAXRUN&&tq.length){
+    if(V.open)break; // пока открыт просмотр — всё для него
     let i=tq.findIndex(x=>x.visible);if(i<0)i=tq.findIndex(x=>x.force);
     if(i<0){for(const x of tq)x.state=0;tq.length=0;break;}
     const it=tq.splice(i,1)[0];running++;
@@ -805,24 +807,49 @@ async function renderHi(){
   if(hv.tok!==V.tok||V.page!==page)return;
   P.hi=c;P.hv=hv;draw();
 }
+/* Растр страницы «во весь экран» + небольшой кэш уже отрисованных листов */
+const baseCache=new Map();
+function baseScale(vp){
+  const W=V.W||innerWidth,H=V.H||innerHeight,d=V.dpr||devicePixelRatio||1;
+  return Math.min(6,Math.max(0.5,Math.min(W/vp.width,H/vp.height)*d*1.3));
+}
+async function renderBase(doc,page,key){
+  const vp=page.getViewport({scale:1}),sc=baseScale(vp);
+  const hit=baseCache.get(key);if(hit&&hit.sc>=sc*0.95){baseCache.delete(key);baseCache.set(key,hit);return hit;}
+  const c=document.createElement('canvas');c.width=Math.ceil(vp.width*sc);c.height=Math.ceil(vp.height*sc);
+  const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:ctx,viewport:page.getViewport({scale:sc})}).promise;
+  const r={c,sc};baseCache.set(key,r);while(baseCache.size>6)baseCache.delete(baseCache.keys().next().value);
+  return r;
+}
+let prepTimer=0;
+function prepareNext(){ // заранее открыть и отрисовать соседние PDF
+  clearTimeout(prepTimer);
+  prepTimer=setTimeout(async()=>{
+    for(const d of [1,-1]){
+      if(!V.open||P.task)return;
+      const it=view[(V.idx+d+view.length)%view.length];if(!it||it.type!=='pdf')continue;
+      try{const doc=await getDoc(it);if(!doc.pdf||!V.open)continue;
+        const pg=await doc.pdf.getPage(1);await renderBase(doc,pg,it.key+'|1');}catch(e){}
+    }
+  },400);
+}
 async function pdfShowPage(doc,n,tok,sv){
   pdfReset();V.loading=true;V.doc=null;draw();
   let page;
   try{page=await doc.pdf.getPage(n);}catch(e){if(tok===V.tok){V.loading=false;V.doc=doc;draw();}return;}
   if(tok!==V.tok)return;
   const vp=page.getViewport({scale:1});
-  const sc=Math.min(2600/Math.max(vp.width,vp.height),6);
-  const c=document.createElement('canvas');c.width=Math.ceil(vp.width*sc);c.height=Math.ceil(vp.height*sc);
-  const ctx=c.getContext('2d');ctx.fillStyle='#fff';ctx.fillRect(0,0,c.width,c.height);
-  try{await page.render({canvasContext:ctx,viewport:page.getViewport({scale:sc})}).promise;}catch(e){}
+  let b=null;try{b=await renderBase(doc,page,(view[V.idx]?view[V.idx].key:doc.name)+'|'+n);}catch(e){}
   if(tok!==V.tok)return;
-  V.page=page;V.pageNo=n;V.pw=vp.width;V.ph=vp.height;P.base=c;P.baseSc=sc;
+  if(!b){const c=document.createElement('canvas');c.width=c.height=1;b={c,sc:0.001};}
+  V.page=page;V.pageNo=n;V.pw=vp.width;V.ph=vp.height;P.base=b.c;P.baseSc=b.sc;
   doc.bbox=[0,0,vp.width,vp.height];V.doc=doc;V.loading=false;
   if(sv&&sv.page===n&&V.W)Object.assign(V,{s:sv.s,cx:sv.cx,cy:sv.cy,fitS:fitView(doc,null,V.W,V.H,0.02).s});else if(V.W)fit();
   const mm=[vp.width*25.4/72,vp.height*25.4/72],sh=sheetName(mm[0],mm[1]);
   $('vDims').textContent=`Лист ${Math.round(mm[0])} × ${Math.round(mm[1])} мм${sh?' · '+sh:''}`;
   $('vPgNum').textContent=` ${n} / ${doc.pages} `;
-  draw();
+  draw();prepareNext();
 }
 function resizeCanvas(){
   const r=cv.getBoundingClientRect();if(!r.width||!r.height)return;
@@ -847,7 +874,7 @@ function openViewer(i){
 }
 function hideViewer(){
   saveView();
-  closePairPanel();V.open=false;$('viewer').hidden=true;V.doc=null;V.curKey=null;V.tok++;pdfReset();
+  closePairPanel();V.open=false;$('viewer').hidden=true;setTimeout(pumpThumbs,0);V.doc=null;V.curKey=null;V.tok++;pdfReset();
   document.querySelectorAll('.tile.cur').forEach(t=>t.classList.remove('cur'));
   const it=view[V.idx];if(it){it.tile.classList.add('cur');it.tile.scrollIntoView({block:'nearest'});}
 }
