@@ -154,6 +154,21 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 .h-pdf .h-n::after{content:"PDF";margin-left:6px;font-size:10px;font-weight:700;background:#b8483f;color:#fff;border-radius:3px;padding:0 4px;vertical-align:1px}
 .h-f{color:var(--mut);font-size:12px;margin-left:auto;text-align:right;word-break:break-word}
 .h-off .h-n,.h-off .h-t{opacity:.55}
+.pin{display:flex;gap:8px;align-items:center;padding:7px 10px;border-top:1px solid var(--line2);cursor:pointer}
+.pin:hover{background:var(--hover)}
+.pin .pi{flex:none;width:18px;text-align:center}
+.pin .pt{flex:1;min-width:0}
+.pin .pl{word-break:break-word}
+.pin .pp{color:var(--mut);font-size:11px;word-break:break-word}
+.pin button{padding:2px 7px;font-size:12px;visibility:hidden;flex:none}
+.pin:hover button{visibility:visible}
+@media (hover:none){.pin button{visibility:visible}}
+.pin.off{opacity:.55}
+.pin-add{display:flex;flex-direction:column;gap:6px;padding:8px 10px}
+.pin-add button{text-align:left;white-space:normal}
+.h-pin{visibility:hidden;padding:1px 7px;font-size:11px;flex:none}
+.h-row:hover .h-pin{visibility:visible}
+@media (hover:none){.h-pin{visibility:visible}}
 .h-del{visibility:hidden;padding:1px 7px;font-size:11px;flex:none}
 .h-row:hover .h-del{visibility:visible}
 @media (hover:none){.h-del{visibility:visible}}
@@ -168,9 +183,10 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v2.4</small></div>
+  <div class="brand">DXF <small>+PDF · v2.5</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
+  <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
   <button id="btnHist" title="История просмотров">История</button>
   <button id="btnTree" hidden title="Дерево папок изделия">Папки ▸</button>
   <input id="filter" type="search" placeholder="Фильтр по имени">
@@ -210,6 +226,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
     <span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span>
     <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button></span>
+    <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vLw" class="on hide-m" title="Показывать толщины линий из файла">Толщины</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
@@ -231,6 +248,13 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
       <option value="size">в любой папке, если имя и размер файлов совпадают</option>
     </select>
   </div>
+</div>
+
+<div id="pinPanel" class="pop" hidden style="right:auto;left:8px">
+  <div class="pp-h"><b>Ярлыки</b><span class="sp"></span><button id="pinClose">✕</button></div>
+  <div id="pinAdd"></div>
+  <div id="pinList"></div>
+  <div class="pp-s" id="pinFoot" style="margin:0"></div>
 </div>
 
 <div id="setPanel" class="pop" hidden>
@@ -1332,6 +1356,7 @@ function updateBar(){
   $('vPages').hidden=!pg;if(pg)$('vPgNum').textContent=` ${ap.pageNo} / ${ap.doc.pages} `;
   if(!has||VW.set.length>1)$('vPair').hidden=true;else updatePairBtn(cur);
   $('vPairMenu').hidden=!has;
+  $('vPin').hidden=!(has&&cur.rid);
   $('vSide').classList.toggle('on',SET.side);
   const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!dx;
   $('vDims').textContent=has&&ap?ap.dims():'';
@@ -1584,11 +1609,11 @@ window.addEventListener('resize',()=>renderTree());
    Повторное открытие — через сохранённый доступ к папке/файлу (ПК Chrome).
    ===================================================================== */
 let HIST=[],HLIST=[],histSaveT=0,histT=0;
-function histDel(arr){const del=new Set(arr);HIST=HIST.filter(x=>!del.has(x));IDB.put('all',HIST,'hist');if(!HIST.length)IDB.clear('roots');renderHist();}
+function histDel(arr){const del=new Set(arr);HIST=HIST.filter(x=>!del.has(x));IDB.put('all',HIST,'hist');renderHist();}
 const dayStart=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime();};
 async function histLoad(){
   const v=await IDB.get('all','hist');if(Array.isArray(v))HIST=v;
-  try{const used=new Set(HIST.map(e=>e.root).filter(Boolean));
+  try{const used=new Set([...HIST.map(e=>e.root),...PINS.map(p=>p.root)].filter(Boolean));
     for(const r of (await IDB.all('roots'))||[])if(!used.has(r.id)&&Date.now()-r.t>DAY)IDB.del(r.id,'roots');}catch(e){}
 }
 function histSave(){clearTimeout(histSaveT);histSaveT=setTimeout(()=>IDB.put('all',HIST,'hist'),500);}
@@ -1626,8 +1651,11 @@ function renderHist(){
     const ds=dayStart(e.t);
     if(ds!==last){last=ds;const h=document.createElement('div');h.className='h-day';h.textContent=dayLabel(ds);B.appendChild(h);}
     const r=document.createElement('div');r.className='h-row'+(e.root&&FSA?'':' h-off')+(e.type==='pdf'?' h-pdf':'');
-    r.innerHTML='<span class="h-t"></span><span class="h-n"></span><span class="h-f"></span><button class="h-del" title="Удалить запись из истории">✕</button>';
-    r.children[3].onclick=ev=>{ev.stopPropagation();histDel(e.src||[e]);};
+    r.innerHTML='<span class="h-t"></span><span class="h-n"></span><span class="h-f"></span><button class="h-pin" title="Добавить в ярлыки">★</button><button class="h-del" title="Удалить запись из истории">✕</button>';
+    r.children[3].hidden=!(e.root&&FSA);
+    r.children[3].onclick=ev=>{ev.stopPropagation();pinAdd(kind==='file'?{kind:'file',root:e.root,rootName:e.rootName,path:e.path,label:e.name}
+      :{kind:'folder',root:e.root,rootName:e.rootName,dir:e.dir,label:e.dir.split('/').pop()});};
+    r.children[4].onclick=ev=>{ev.stopPropagation();histDel(e.src||[e]);};
     r.children[0].textContent=new Date(e.t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
     if(kind==='file'){r.children[1].textContent=e.name;r.children[2].textContent=e.path.split('/').slice(0,-1).join(' / ');}
     else{r.children[1].textContent=e.dir.split('/').join(' / ');
@@ -1713,14 +1741,82 @@ $('xfResetAll').onclick=()=>{
   for(const p of panes)if(p.doc&&!p.isPdf&&p.doc.bbox){p.orig=false;p.keepXf=null;p.applyXf({rot:0,mirror:false});p.onUpdate();}
   updXfBadges();fillXf();
 };
-$('btnSet').onclick=()=>{closePairPanel();const p=$('setPanel');p.hidden=!p.hidden;if(!p.hidden){fillBgSel();fillCaps();fillXf();}};
+$('btnSet').onclick=()=>{closePairPanel();$('pinPanel').hidden=true;const p=$('setPanel');p.hidden=!p.hidden;if(!p.hidden){fillBgSel();fillCaps();fillXf();}};
 $('setClose').onclick=()=>{$('setPanel').hidden=true;};
+
+/* =====================================================================
+   ЯРЛЫКИ: закреплённые папки (изделие или узел внутри) и файлы
+   {id, kind:'folder'|'file', root (id сохранённого доступа), rootName, dir|path, label}
+   ===================================================================== */
+let PINS=LS.get('pins',[]);if(!Array.isArray(PINS))PINS=[];
+const savePins=()=>LS.set('pins',PINS);
+function pinAdd(p){
+  if(!p.root){flash('Для ярлыка откройте папку кнопкой «Папка» или перетаскиванием — тогда браузер запомнит доступ к ней');return;}
+  const same=PINS.find(x=>x.kind===p.kind&&x.root===p.root&&(x.dir||'')===(p.dir||'')&&(x.path||'')===(p.path||''));
+  if(same){flash('Такой ярлык уже есть: «'+same.label+'»');return;}
+  PINS.push(Object.assign({id:'p'+Date.now().toString(36)},p));savePins();
+  flash('Добавлен ярлык «'+p.label+'»');if(!$('pinPanel').hidden)renderPins();
+}
+function curFolderPin(){
+  const it=items[0];if(!it||!it.rid)return null;
+  const root=TREE_ROOT?TREE_ROOT.path:it.rootName;const dir=curDir||root;
+  return {kind:'folder',root:it.rid,rootName:it.rootName,dir,label:dir.split('/').pop()||it.rootName};
+}
+function renderPins(){
+  const A=$('pinAdd');A.textContent='';A.className='pin-add';
+  const fp=curFolderPin(),cur=VW.set.length?curItem():null;
+  if(fp){const b=document.createElement('button');b.textContent='＋ Папка: '+fp.dir.split('/').join(' / ');b.onclick=()=>pinAdd(fp);A.appendChild(b);}
+  if(cur&&cur.rid){const b=document.createElement('button');b.textContent='＋ Файл: '+cur.name;
+    b.onclick=()=>pinAdd({kind:'file',root:cur.rid,rootName:cur.rootName,path:cur.path,label:cur.name});A.appendChild(b);}
+  if(!A.children.length)A.hidden=true;else A.hidden=false;
+  const L=$('pinList');L.textContent='';
+  PINS.forEach((p,i)=>{
+    const r=document.createElement('div');r.className='pin'+(FSA?'':' off');
+    r.innerHTML='<span class="pi"></span><span class="pt"><div class="pl"></div><div class="pp"></div></span><button title="Выше">↑</button><button title="Переименовать">✎</button><button title="Удалить ярлык">✕</button>';
+    r.children[0].textContent=p.kind==='file'?(/\.pdf$/i.test(p.path)?'📄':'📐'):'📁';
+    r.querySelector('.pl').textContent=p.label;
+    r.querySelector('.pp').textContent=(p.kind==='file'?p.path.split('/').slice(0,-1):p.dir.split('/')).join(' / ');
+    const [up,ren,del]=r.querySelectorAll('button');
+    up.hidden=i===0;
+    up.onclick=e=>{e.stopPropagation();PINS.splice(i-1,0,PINS.splice(i,1)[0]);savePins();renderPins();};
+    ren.onclick=e=>{e.stopPropagation();const v=prompt('Название ярлыка',p.label);if(v&&v.trim()){p.label=v.trim();savePins();renderPins();}};
+    del.onclick=e=>{e.stopPropagation();if(confirm('Удалить ярлык «'+p.label+'»?')){PINS.splice(i,1);savePins();renderPins();}};
+    r.onclick=()=>pinOpen(p);
+    L.appendChild(r);
+  });
+  if(!PINS.length)L.innerHTML='<div class="pp-empty">Ярлыков пока нет. Откройте папку изделия и нажмите «＋ Папка» — или ★ у записи в истории.</div>';
+  $('pinFoot').textContent=FSA?'Клик — открыть. При первом открытии за сеанс браузер спросит разрешение на чтение папки.'
+    :'На этом устройстве браузер не позволяет открывать папки по ярлыку — работает только на ПК.';
+}
+async function pinOpen(p){
+  if(!FSA){flash('Ярлыки работают только на ПК в Chrome');return;}
+  const r=await IDB.get(p.root,'roots');if(!r||!r.h){flash('Доступ к «'+p.rootName+'» не сохранился — откройте папку заново и пересоздайте ярлык');return;}
+  try{let q=await r.h.queryPermission({mode:'read'});if(q!=='granted')q=await r.h.requestPermission({mode:'read'});if(q!=='granted')return;}
+  catch(err){flash('Нет доступа: '+err.message);return;}
+  $('pinPanel').hidden=true;
+  try{
+    if(r.kind==='directory'){
+      if(!items.length||items[0].rid!==p.root){if(VW.full)setFull(false);await openDirHandle(r.h);}
+      if(p.kind==='folder'){
+        if(p.dir&&p.dir!==p.rootName&&p.dir!==(TREE_ROOT&&TREE_ROOT.path)){
+          if(!items.some(x=>x.path.startsWith(p.dir+'/'))){flash('Папка «'+p.label+'» не найдена — возможно, переименована');return;}
+          $('typeSel').value='';$('filter').value='';setDir(p.dir);if(!SET.tree){SET.tree=true;saveSet();renderTree();}
+        }else{$('filter').value='';setDir('');}
+      }else{const it=items.find(x=>x.path===p.path);if(!it){flash('Файл «'+p.label+'» не найден — возможно, удалён или переименован');return;}
+        jumpTo(it);if(!docked())setFull(true);}
+    }else{const f=await r.h.getFile();setFiles([{file:f,path:f.name,rid:p.root}],{rootName:''});showItem(0);if(!docked())setFull(true);}
+  }catch(err){flash('Сервер или папка недоступны: '+(err.message||err));}
+}
+$('btnPins').onclick=()=>{$('setPanel').hidden=true;closePairPanel();const P=$('pinPanel');P.hidden=!P.hidden;if(!P.hidden)renderPins();};
+$('pinClose').onclick=()=>{$('pinPanel').hidden=true;};
+$('vPin').onclick=()=>{const it=curItem();if(it)pinAdd({kind:'file',root:it.rid,rootName:it.rootName,path:it.path,label:it.name});};
 
 /* ---------- Клавиатура ---------- */
 document.addEventListener('keydown',e=>{
   const k=e.key;
   for(const id of ['logPanel','histPanel'])if(!$(id).hidden){if(k==='Escape')$(id).hidden=true;return;}
   if(k==='Escape'&&!$('setPanel').hidden){$('setPanel').hidden=true;return;}
+  if(k==='Escape'&&!$('pinPanel').hidden){$('pinPanel').hidden=true;return;}
   if(k==='Escape'&&!$('pairPanel').hidden){closePairPanel();e.preventDefault();return;}
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
   if(!viewerShown()||!view.length)return;
