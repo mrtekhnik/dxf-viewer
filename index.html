@@ -926,7 +926,7 @@ function pairScore(pdf,dxf){
   else if(P.b===D.b)sc=1000;
   else{
     const pk=P.b.split(' ')[0],db=D.b;
-    if(pk.length>=3){
+    if(pk.length>=3&&/\d/.test(pk)){ // обозначение всегда содержит цифры
       if(db===pk)sc=900;
       else if(db.startsWith(pk+'-')){const rem=db.slice(pk.length+1);
         sc=(/^[^-]+-\d+(?:[.,]\d+)?-[kк]\d+$/.test(rem)?800:/-[kк]\d+$/.test(rem)?600:300)+pk.length;}
