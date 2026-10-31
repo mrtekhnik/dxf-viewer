@@ -9,7 +9,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-:root{--bg:#1b1d21;--panel:#24272c;--line:#363a41;--line2:#2c2f35;--fg:#e6e6e6;--mut:#9aa0a8;--acc:#4ea1ff;--warn:#e5b54a;--err:#ff6b6b;
+:root{--treew:270px;--lthumb:76px;--bg:#1b1d21;--panel:#24272c;--line:#363a41;--line2:#2c2f35;--fg:#e6e6e6;--mut:#9aa0a8;--acc:#4ea1ff;--warn:#e5b54a;--err:#ff6b6b;
   --cv:#0f1012;--btn:#30343a;--btnh:#5a6069;--inp:#16181b;--on:#25425f;--hover:#2c3138;--pair:#3a2b2a;--pairb:#7a4a44;--ph:#5c626b;
   --tile:180px;--listw:380px}
 :root[data-theme=light]{--bg:#eef0f3;--panel:#ffffff;--line:#d3d7dd;--line2:#e7e9ed;--fg:#1d2024;--mut:#67707b;--acc:#1f6fd1;--warn:#c98a00;--err:#d93636;
@@ -34,7 +34,7 @@ input[type=range]{width:110px}
 
 /* рабочая область: сетка или список + просмотр */
 #work{flex:1;display:flex;min-height:0}
-#tree{flex:none;width:270px;overflow:auto;border-right:1px solid var(--line);background:var(--panel);padding:4px 0 10px;font-size:13px}
+#tree{flex:none;width:var(--treew);overflow:auto;border-right:1px solid var(--line);background:var(--panel);padding:4px 0 10px;font-size:13px}
 .tr{display:flex;align-items:center;gap:2px;padding:4px 8px 4px 0;cursor:pointer;white-space:nowrap;user-select:none}
 .tr:hover{background:var(--hover)}
 .tr.sel{background:var(--on);box-shadow:inset 3px 0 0 var(--acc)}
@@ -47,9 +47,8 @@ input[type=range]{width:110px}
 .tree-h button{padding:2px 7px;font-size:12px}
 main#gridWrap{flex:1;overflow:auto;padding:8px;min-height:0;min-width:0}
 body.explorer main#gridWrap{flex:none;width:var(--listw);padding:4px}
-body.explorer #tileSize{display:none}
-#split{flex:none;width:6px;cursor:col-resize;background:var(--line);touch-action:none}
-#split:hover,#split.drag{background:var(--acc)}
+.splitter{flex:none;width:6px;cursor:col-resize;background:var(--line);touch-action:none}
+.splitter:hover,.splitter.drag{background:var(--acc)}
 #dock{flex:1;min-width:0;display:flex}
 #grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--tile),1fr));gap:8px}
 #empty{max-width:560px;margin:10vh auto;text-align:center;color:var(--mut);line-height:1.6;border:2px dashed var(--line);border-radius:12px;padding:30px 20px}
@@ -65,18 +64,24 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 .tag{position:absolute;left:4px;bottom:4px;background:#b8483f;color:#fff;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700}
 .tx{padding:5px 7px;min-width:0}
 .nm{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meta{display:none;font-size:11px;color:var(--mut);margin-top:2px}
+.meta{font-size:11px;color:var(--mut);margin-top:2px}
+.meta:empty{display:none}
+#grid.wrapnm .nm{white-space:normal;word-break:break-word}
+#grid.nonm .nm{display:none}
+#grid.nocap .tx{display:none}
+.xfb{position:absolute;right:4px;bottom:4px;background:var(--acc);color:#fff;border-radius:4px;padding:0 5px;font-size:10px;font-weight:700}
+.szbox{display:flex;align-items:center;gap:3px}
+.szbox button{padding:5px 9px}
 /* режим «Проводник»: строки */
 #grid.list{display:flex;flex-direction:column;gap:2px}
 #grid.list .tile{display:flex;align-items:center;gap:8px;padding:3px 6px 3px 3px;border-radius:6px;border-color:transparent;background:transparent}
 #grid.list .tile:hover{background:var(--hover)}
 #grid.list .tile.cur{background:var(--on);border-color:var(--acc);box-shadow:none}
-#grid.list .th{width:76px;flex:none;border-radius:4px;overflow:hidden}
+#grid.list .th{width:var(--lthumb);flex:none;border-radius:4px;overflow:hidden}
 #grid.list .tag{display:none}
 #grid.list .badge{top:2px;right:2px;font-size:10px;padding:0 5px}
 #grid.list .tx{flex:1;padding:0}
 #grid.list .nm{white-space:normal;word-break:break-word;font-size:13px}
-#grid.list .meta{display:block}
 
 /* окно просмотра */
 #viewer{display:flex;flex-direction:column;background:var(--cv);min-width:0}
@@ -90,7 +95,6 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 .pairbox{display:flex}
 .xfbox{display:flex;gap:2px}
 .xfbox button{padding:7px 9px}
-#vXfReset{color:var(--warn)}
 #vPair{background:var(--pair);border-color:var(--pairb);border-radius:6px 0 0 6px}
 #vPair.none{background:var(--btn);border-color:var(--line);color:var(--mut)}
 #vPairMenu{border-radius:0 6px 6px 0;border-left:none;padding:7px 8px}
@@ -104,6 +108,10 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 #stage.multi .pcap{display:block}
 #stage.multi .pane.active{outline:2px solid var(--acc);outline-offset:-2px;z-index:1}
 #stage.multi .pane.active .pcap{background:var(--acc);color:#fff}
+.pxf{position:absolute;right:6px;top:6px;z-index:3;display:flex;gap:6px;align-items:center;background:var(--warn);color:#000;font-size:12px;font-weight:600;
+  padding:3px 4px 3px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.pxf.orig{background:var(--mut);color:#fff}
+.pxf button{padding:2px 8px;font-size:12px;background:rgba(255,255,255,.85);color:#000;border-color:rgba(0,0,0,.25)}
 .vinfo{display:flex;gap:16px;align-items:center;padding:4px 10px;font-size:12px;color:var(--mut);background:var(--panel);border-top:1px solid var(--line);flex-wrap:wrap;min-height:28px}
 .vinfo .sp{flex:1}
 #vWarn{background:none;border:none;color:var(--warn);padding:2px 4px;font-size:12px}
@@ -122,6 +130,12 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 .pp-empty{padding:6px 10px;color:var(--mut);font-size:13px}
 .set-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 12px}
 .set-row select{min-width:170px}
+.set-row input[type=color]{width:38px;height:32px;padding:0;border:1px solid var(--line);border-radius:6px;background:none;cursor:pointer}
+.set-sec{padding:12px 12px 4px;font-weight:600;border-top:1px solid var(--line);margin-top:6px}
+.cap-t{width:calc(100% - 24px);margin:2px 12px 8px;border-collapse:collapse;font-size:13px}
+.cap-t td,.cap-t th{padding:4px 6px;text-align:center}
+.cap-t td:first-child,.cap-t th:first-child{text-align:left}
+.cap-t th{color:var(--mut);font-weight:500;font-size:12px}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:20;display:flex;justify-content:center;padding:4vh 3vw}
 .lp{background:var(--panel);border:1px solid var(--line);border-radius:10px;width:min(920px,100%);display:flex;flex-direction:column;min-height:0}
 .lph{display:flex;gap:8px;align-items:center;padding:10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
@@ -139,7 +153,10 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 .h-n{word-break:break-word}
 .h-pdf .h-n::after{content:"PDF";margin-left:6px;font-size:10px;font-weight:700;background:#b8483f;color:#fff;border-radius:3px;padding:0 4px;vertical-align:1px}
 .h-f{color:var(--mut);font-size:12px;margin-left:auto;text-align:right;word-break:break-word}
-.h-off{opacity:.55}
+.h-off .h-n,.h-off .h-t{opacity:.55}
+.h-del{visibility:hidden;padding:1px 7px;font-size:11px;flex:none}
+.h-row:hover .h-del{visibility:visible}
+@media (hover:none){.h-del{visibility:visible}}
 @media (max-width:759px){#btnLayout{display:none}#tree{position:fixed;left:0;top:0;bottom:0;width:84vw;z-index:12;box-shadow:0 0 40px rgba(0,0,0,.5)}}
 @media (max-width:600px){
   header{gap:5px;padding:6px}
@@ -151,7 +168,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v2.3</small></div>
+  <div class="brand">DXF <small>+PDF · v2.4</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnHist" title="История просмотров">История</button>
@@ -159,16 +176,18 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
   <input id="filter" type="search" placeholder="Фильтр по имени">
   <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
   <button id="btnLayout" title="Сетка миниатюр или «Проводник»: список слева, просмотр справа"></button>
-  <input id="tileSize" type="range" min="100" max="340" value="180" title="Размер миниатюр">
+  <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><button id="szMinus">−</button><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szPlus">+</button></span>
   <button id="btnLog">Журнал<span id="logBadge" hidden></span></button>
-  <button id="btnSet" title="Тема и фон">⚙</button>
+  <button id="btnClose" hidden title="Закрыть все файлы">Закрыть</button>
+  <button id="btnSet" title="Настройки: тема, фон, подписи">⚙</button>
   <input id="inFolder" type="file" webkitdirectory multiple hidden>
   <input id="inFiles" type="file" multiple hidden accept=".dxf,.pdf,application/pdf,*/*">
 </header>
 <div id="updBar" hidden>Доступна новая версия<button id="updBtn">Обновить</button></div>
 <div id="status"></div>
 <div id="work">
-  <nav id="tree" hidden><div class="tree-h">Папки<span class="sp"></span><button id="treeFold" title="Свернуть все">свернуть</button><button id="treeHide" title="Скрыть дерево">✕</button></div><div id="treeBody"></div></nav>
+  <nav id="tree" hidden><div class="tree-h">Папки<span class="sp"></span><button id="treeExpand">развернуть</button><button id="treeFold">свернуть</button><button id="treeHide" title="Скрыть дерево">✕</button></div><div id="treeBody"></div></nav>
+  <div id="split2" class="splitter" hidden title="Потяните, чтобы изменить ширину дерева"></div>
   <main id="gridWrap">
     <div id="empty">
       Откройте папку с DXF и PDF кнопкой <b>«Папка»</b> или перетащите папку/файлы в это окно.<br>
@@ -178,7 +197,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
     </div>
     <div id="grid"></div>
   </main>
-  <div id="split" hidden title="Потяните, чтобы изменить ширину списка"></div>
+  <div id="split" class="splitter" hidden title="Потяните, чтобы изменить ширину списка"></div>
   <div id="dock" hidden></div>
 </div>
 
@@ -190,7 +209,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
     <span id="vName"></span>
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
     <span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span>
-    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vXfReset" hidden title="Вернуть как в файле (0)">как в файле</button></span>
+    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button></span>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vLw" class="on hide-m" title="Показывать толщины линий из файла">Толщины</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
@@ -217,8 +236,15 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 <div id="setPanel" class="pop" hidden>
   <div class="pp-h"><b>Настройки</b><span class="sp"></span><button id="setClose">✕</button></div>
   <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option></select></div>
-  <div class="set-row"><span>Фон чертежа</span><select id="sBg"><option value="auto">По теме</option><option value="dark">Чёрный</option><option value="gray">Серый</option><option value="light">Белый</option></select></div>
-  <div class="pp-s" style="margin:0">На белом фоне белые линии DXF рисуются чёрными, как в CAD. Миниатюры перерисуются под новый фон.</div>
+  <div class="set-sec">Фон</div>
+  <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
+  <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
+  <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
+  <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>
+  <div class="set-sec">Подписи под миниатюрами</div>
+  <table class="cap-t" id="capT"></table>
+  <div class="set-sec">Повёрнутые DXF</div>
+  <div class="set-row"><span id="xfCount"></span><button id="xfResetAll">Вернуть все как в файле</button></div>
 </div>
 
 <div id="histPanel" class="modal" hidden>
@@ -228,7 +254,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
       <select id="hKind"><option value="file">Файлы</option><option value="folder">Папки</option></select>
       <select id="hPeriod"><option value="1">Сегодня</option><option value="7" selected>7 дней</option><option value="30">30 дней</option><option value="0">Всё время</option></select>
       <input id="hSearch" type="search" placeholder="Поиск">
-      <button id="hClear" title="Удалить всю историю">Очистить</button>
+      <button id="hClear" title="Удалить показанные записи">Очистить…</button>
       <button id="hClose">✕</button>
     </div>
     <div id="hBody" class="lbody"></div>
@@ -564,31 +590,38 @@ function DXFCORE(){
    ОСНОВНОЙ ПОТОК
    ===================================================================== */
 const Core=DXFCORE();
-const TAU=Math.PI*2, THUMB_VER=2, TW=320, TH=240, DAY=86400000;
+const TAU=Math.PI*2, THUMB_VER=3, TW=400, TH=300, DAY=86400000;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{const v=localStorage.getItem('dxfv.'+k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
           set(k,v){try{localStorage.setItem('dxfv.'+k,JSON.stringify(v));}catch(e){}}};
 
 /* ---------- Настройки, тема, фон ---------- */
-const SET=Object.assign({theme:'dark',bg:'auto',layout:'grid',listW:380,side:false,lw:true,tree:true},LS.get('set',{}));
+const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,layout:'grid',listW:380,treeW:270,side:false,lw:true,tree:true,
+  capGrid:{name:1,wrap:0,type:0,size:0,date:0,dir:0},capList:{name:1,type:1,size:1,date:1,dir:1}},LS.get('set',{}));
+if(SET.bg){const o={dark:'#0f1012',gray:'#3a3d42',light:'#ffffff'}[SET.bg];if(o){if(SET.bgDxf==='auto')SET.bgDxf=o;if(SET.bgPdf==='auto')SET.bgPdf=o;}delete SET.bg;}
 const saveSet=()=>LS.set('set',SET);
 const mqLight=matchMedia('(prefers-color-scheme: light)');
 const effTheme=()=>SET.theme==='auto'?(mqLight.matches?'light':'dark'):SET.theme;
-const effBg=()=>SET.bg==='auto'?(effTheme()==='light'?'light':'dark'):SET.bg;
-const BGC={dark:'#0f1012',gray:'#3a3d42',light:'#ffffff'};
-const bgColor=()=>BGC[effBg()];
-/* На белом фоне: белые линии — чёрными (как в CAD), очень светлые (жёлтый, голубой) — темнее, чтобы читались */
+const lum=h=>{const n=parseInt(h.slice(1),16);return 0.299*(n>>16&255)+0.587*(n>>8&255)+0.114*(n&255);};
+const dxfBg=()=>SET.bgDxf==='auto'?(effTheme()==='light'?'#ffffff':'#0f1012'):SET.bgDxf;
+const pdfBg=()=>SET.bgPdf==='auto'?(effTheme()==='light'?'#dfe2e6':'#0f1012'):SET.bgPdf;
+const bgKey=()=>dxfBg()+'|'+pdfBg()+'|'+(SET.pdfDark?1:0);
+const PDF_INV='invert(1) hue-rotate(180deg)';
+/* Цвета линий DXF под фон, как в CAD: на светлом белые → чёрные, очень светлые (жёлтый, голубой) темнее;
+   на тёмном чёрные → белые, очень тёмные светлее */
 const colCache=new Map();
 function mapCol(c){
-  if(effBg()!=='light')return c;
-  let r=colCache.get(c);if(r)return r;
-  const n=parseInt(c.slice(1),16),R=n>>16&255,G=n>>8&255,B=n&255,l=0.299*R+0.587*G+0.114*B;
-  r=c==='#ffffff'||(R===G&&G===B&&l>200)?'#000000':l>150?'#'+[R,G,B].map(v=>Math.round(v*0.55).toString(16).padStart(2,'0')).join(''):c;
-  colCache.set(c,r);return r;
+  const bg=dxfBg(),k=bg+c;let r=colCache.get(k);if(r)return r;
+  const n=parseInt(c.slice(1),16),R=n>>16&255,G=n>>8&255,B=n&255,l=0.299*R+0.587*G+0.114*B,grey=R===G&&G===B;
+  const hx=f=>'#'+[R,G,B].map(v=>Math.round(f(v)).toString(16).padStart(2,'0')).join('');
+  if(lum(bg)>150)r=grey&&l>200?'#000000':l>150?hx(v=>v*0.55):c;
+  else r=grey&&l<60?'#ffffff':l<45?hx(v=>v+(255-v)*0.5):c;
+  colCache.set(k,r);return r;
 }
 function applyTheme(){document.documentElement.dataset.theme=effTheme();}
 applyTheme();
 document.documentElement.style.setProperty('--listw',SET.listW+'px');
+document.documentElement.style.setProperty('--treew',SET.treeW+'px');
 
 /* ---------- Пул фоновых потоков для разбора ---------- */
 const Pool=(()=>{
@@ -635,7 +668,12 @@ function mInv(m){const d=m[0]*m[3]-m[1]*m[2];return [m[3]/d,-m[1]/d,-m[2]/d,m[0]
 const XFS=new Map(Object.entries(LS.get('xf',{})));
 const xfKey=it=>it.name.toLowerCase()+'|'+it.file.size;
 function saveXf(it,xf){const k=xfKey(it);if(isId(xf))XFS.delete(k);else XFS.set(k,{rot:xf.rot,mirror:xf.mirror});
-  while(XFS.size>1000)XFS.delete(XFS.keys().next().value);LS.set('xf',Object.fromEntries(XFS));}
+  while(XFS.size>1000)XFS.delete(XFS.keys().next().value);LS.set('xf',Object.fromEntries(XFS));updXfBadges(k);}
+const rotText=r=>r===90?'повёрнут на 90° против часовой':r===270?'повёрнут на 90° по часовой':r===180?'повёрнут на 180°':'';
+const xfDesc=x=>!x||isId(x)?'':[rotText(x.rot),x.mirror?'зеркально':''].filter(Boolean).join(', ');
+const xfShort=x=>[x.rot===90?'⟲90°':x.rot===270?'⟳90°':x.rot===180?'180°':'',x.mirror?'⇋':''].filter(Boolean).join(' ');
+function updXfBadges(k){for(const it of items){if(it.type!=='dxf'||(k&&xfKey(it)!==k))continue;
+  const x=XFS.get(xfKey(it));it.xfb.hidden=!x;if(x){it.xfb.textContent=xfShort(x);it.xfb.title='При просмотре: '+xfDesc(x)+' (файл не изменён)';}}}
 function lwPx(lw){if(!(lw>=0))return 1;const mm=lw/100;return mm<=0.25?1:Math.min(8,mm*3.5);}
 function tracePrims(ctx,prims){
   for(const p of prims){
@@ -761,21 +799,21 @@ function setFiles(arr,src={}){
   items=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name))
     .sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}))
     .map(x=>makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:'')));
-  $('empty').hidden=items.length>0;
+  $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;
+  if(!arr.length)$('empty').innerHTML=EMPTY_HTML;
   if(!items.length&&arr.length)$('empty').innerHTML='DXF и PDF не найдены среди выбранных ('+arr.length+' файл.).<br>Выберите другую папку.';
   if(src.folder)histAddFolder(src.rid||null,src.rootName||'',items.length);
   curDir='';treeOpen.clear();treeInit=true;
-  applyFilter();placeViewer();renderTree();
+  applyCaps();updXfBadges();applyFilter();placeViewer();renderTree();
 }
 function makeItem(file,path,rid,rootName){
   const it={file,path,name:file.name,type:/\.pdf$/i.test(file.name)?'pdf':'dxf',key:path+'|'+file.size+'|'+file.lastModified,
     rid,rootName,state:0,visible:false,force:false,log:null,issues:0,err:false,gen};
   const t=document.createElement('div');t.className='tile';t.title=path;
   t.innerHTML='<div class="th"><img alt="" hidden><div class="ph">…</div><span class="badge" hidden></span>'+(it.type==='pdf'?'<span class="tag">PDF</span>':'')+
-    '</div><div class="tx"><div class="nm"></div><div class="meta"></div></div>';
+    '<span class="xfb" hidden></span></div><div class="tx"><div class="nm"></div><div class="meta"></div></div>';
   t.querySelector('.nm').textContent=file.name;
-  const dir=path.split('/').slice(1,-1).join(' / ');
-  t.querySelector('.meta').textContent=`${it.type.toUpperCase()} · ${fmtSize(file.size)} · ${fmtDate(file.lastModified)}${dir?' · '+dir:''}`;
+  it.meta=t.querySelector('.meta');it.xfb=t.querySelector('.xfb');
   it.tile=t;it.tag=t.querySelector('.tag');it.img=t.querySelector('img');it.ph=t.querySelector('.ph');it.badge=t.querySelector('.badge');t._it=it;
   t.addEventListener('click',()=>{const i=view.indexOf(it);if(i<0)return;showItem(i);if(!docked())setFull(true);});
   t.addEventListener('dblclick',()=>{if(docked())setFull(true);});
@@ -791,6 +829,18 @@ function applyFilter(){
   for(const it of view)io.observe(it.tile);
   scheduleStatus();updateBar();
 }
+const EMPTY_HTML=$('empty').innerHTML;
+function closeAll(){if(VW.full)setFull(false);closePairPanel();$('filter').value='';$('typeSel').value='';clearTimeout(histT);setFiles([],{});}
+$('btnClose').onclick=closeAll;
+/* подписи под миниатюрами: свои настройки для сетки и для списка */
+function capText(it,c){const p=[];if(c.type)p.push(it.type.toUpperCase());if(c.size)p.push(fmtSize(it.file.size));if(c.date)p.push(fmtDate(it.file.lastModified));
+  if(c.dir){const d=it.path.split('/').slice(1,-1).join(' / ');if(d)p.push(d);}return p.join(' · ');}
+function applyCaps(){
+  const list=docked(),c=list?SET.capList:SET.capGrid,g=$('grid');
+  g.classList.toggle('nonm',!c.name);g.classList.toggle('wrapnm',!list&&!!c.wrap);
+  g.classList.toggle('nocap',!c.name&&!c.type&&!c.size&&!c.date&&!c.dir);
+  for(const it of items)it.meta.textContent=capText(it,c);
+}
 function markCurrent(it){
   for(const t of $('grid').querySelectorAll('.tile.cur'))t.classList.remove('cur');
   if(it&&it.tile){it.tile.classList.add('cur');it.tile.scrollIntoView({block:'nearest'});}
@@ -798,7 +848,7 @@ function markCurrent(it){
 
 /* ---------- Ленивые миниатюры ---------- */
 const tq=[];let running=0;const MAXRUN=3;
-const thumbKey=it=>it.key+'|t'+THUMB_VER+'|'+effBg();
+const thumbKey=it=>it.key+'|t'+THUMB_VER+'|'+(it.type==='pdf'?pdfBg()+(SET.pdfDark?'i':''):dxfBg());
 const io=new IntersectionObserver(es=>{for(const e of es){const it=e.target._it;it.visible=e.isIntersecting;if(it.visible&&it.state===0)enqueue(it);}pumpThumbs();},{root:$('gridWrap'),rootMargin:'300px'});
 function enqueue(it){if(it.state)return;it.state=1;tq.push(it);}
 function pumpThumbs(){
@@ -823,7 +873,7 @@ async function makeThumb(it){
 function thumbBlob(doc){
   if(!doc.bbox)return Promise.resolve(null);
   const cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const ctx=cv.getContext('2d');
-  ctx.fillStyle=bgColor();ctx.fillRect(0,0,TW,TH);
+  ctx.fillStyle=dxfBg();ctx.fillRect(0,0,TW,TH);
   renderDoc(ctx,doc,Object.assign({W:TW,H:TH,dpr:1,lw:false,px:1.1},fitView(doc,null,TW,TH,0.06)));
   return new Promise(res=>cv.toBlob(b=>res(b),'image/png'));
 }
@@ -832,12 +882,12 @@ async function pdfThumb(doc){
   const page=await doc.pdf.getPage(1),v1=page.getViewport({scale:1});
   const sc=Math.min(TW/v1.width,TH/v1.height)*0.94,ox=(TW-v1.width*sc)/2,oy=(TH-v1.height*sc)/2;
   const cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const ctx=cv.getContext('2d');
-  ctx.fillStyle=bgColor();ctx.fillRect(0,0,TW,TH);
+  ctx.fillStyle=pdfBg();ctx.fillRect(0,0,TW,TH);
   // страница рисуется в отдельный холст: pdf.js заливает белым весь холст, а не только лист
   const pc=document.createElement('canvas');pc.width=Math.max(1,Math.round(v1.width*sc));pc.height=Math.max(1,Math.round(v1.height*sc));
   await page.render({canvasContext:pc.getContext('2d'),viewport:page.getViewport({scale:sc})}).promise;
-  ctx.drawImage(pc,ox,oy);
-  if(effBg()==='light'){ctx.strokeStyle='#c3c8cf';ctx.strokeRect(ox-0.5,oy-0.5,pc.width+1,pc.height+1);}
+  if(SET.pdfDark)ctx.filter=PDF_INV;ctx.drawImage(pc,ox,oy);ctx.filter='none';
+  if(lum(pdfBg())>150){ctx.strokeStyle='#c3c8cf';ctx.strokeRect(ox-0.5,oy-0.5,pc.width+1,pc.height+1);}
   return new Promise(res=>cv.toBlob(b=>res(b),'image/png'));
 }
 function applyThumb(it,rec){
@@ -936,8 +986,12 @@ $('filter').addEventListener('input',applyFilter);
 $('typeSel').addEventListener('change',applyFilter);
 const ts=$('tileSize');
 try{const v=localStorage.getItem('dxfv.tile');if(v)ts.value=v;else if(innerWidth<600)ts.value=140;}catch(e){if(innerWidth<600)ts.value=140;}
-const setTile=()=>{document.documentElement.style.setProperty('--tile',ts.value+'px');try{localStorage.setItem('dxfv.tile',ts.value);}catch(e){}};
+const setTile=()=>{const v=+ts.value,st=document.documentElement.style;st.setProperty('--tile',v+'px');
+  st.setProperty('--lthumb',Math.round(Math.min(260,Math.max(40,v*0.42)))+'px');try{localStorage.setItem('dxfv.tile',v);}catch(e){}};
+const bumpTile=f=>{ts.value=Math.round(Math.min(600,Math.max(80,+ts.value*f)));setTile();};
 ts.oninput=setTile;setTile();
+$('szMinus').onclick=()=>bumpTile(1/1.15);$('szPlus').onclick=()=>bumpTile(1.15);
+$('gridWrap').addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();bumpTile(e.deltaY<0?1.1:1/1.1);},{passive:false});
 
 document.addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag');});
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.body.classList.remove('drag');});
@@ -999,7 +1053,13 @@ class Pane{
     this.s=1;this.cx=0;this.cy=0;this.fitS=1;this.W=0;this.H=0;this.dpr=1;this.pending=null;
     this.xf={tx:0,ty:0,rot:0,mirror:false};this.hidden=new Set();
     this.pageNo=1;this.page=null;this.pw=0;this.ph=0;
-    this.P={base:null,baseSc:1,hi:null,hv:null,task:null,timer:0};this.raf=0;
+    this.P={base:null,baseSc:1,hi:null,hv:null,task:null,timer:0};this.raf=0;this.orig=false;this.keepXf=null;
+    const ch=document.createElement('div');ch.className='pxf';ch.hidden=true;
+    ch.innerHTML='<span></span><button data-a="o" title="Показать как в файле, не сбрасывая поворот (O)"></button><button data-a="r" title="Сбросить поворот для этого файла (0)">сбросить</button>';
+    el.appendChild(ch);this.chip=ch;
+    ch.addEventListener('pointerdown',e=>e.stopPropagation());
+    ch.children[1].onclick=()=>{setActive(this);this.toggleOrig();};
+    ch.children[2].onclick=()=>{setActive(this);this.setXf({rot:0,mirror:false});};
     new ResizeObserver(()=>this.resize()).observe(this.cv);
     this.bindPointer();
   }
@@ -1028,10 +1088,11 @@ class Pane{
   draw(){if(!this.raf)this.raf=requestAnimationFrame(()=>{this.raf=0;this.paint();});}
   paint(){
     const c=this.ctx,d=this.dpr;
-    c.setTransform(1,0,0,1,0,0);c.fillStyle=bgColor();c.fillRect(0,0,this.cv.width,this.cv.height);
+    const bg=this.it&&this.it.type==='pdf'?pdfBg():dxfBg();
+    c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.P.base){this.paintPdf();return;}
     if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw});return;}
-    c.setTransform(d,0,0,d,0,0);c.fillStyle=effBg()==='light'?'#8a9099':'#6b717a';c.font='14px system-ui,sans-serif';c.textAlign='center';
+    c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
     c.fillText(t,this.W/2,this.H/2);
   }
@@ -1039,10 +1100,12 @@ class Pane{
     const c=this.ctx,d=this.dpr,s=this.s,P=this.P;
     const L=this.W/2-this.cx*s,T=this.H/2-(this.ph-this.cy)*s;
     c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+    if(SET.pdfDark)c.filter=PDF_INV;
     c.drawImage(P.base,L*d,T*d,this.pw*s*d,this.ph*s*d);
     const h=P.hv;
     if(P.hi&&h)c.drawImage(P.hi,(this.W/2+(h.x0-this.cx)*s)*d,(this.H/2-((this.ph-h.y0)-this.cy)*s)*d,(h.x1-h.x0)*s*d,(h.y1-h.y0)*s*d);
-    c.strokeStyle=effBg()==='light'?'#b9bec6':'#3a3f47';c.lineWidth=1;c.strokeRect(L*d-0.5,T*d-0.5,this.pw*s*d+1,this.ph*s*d+1);
+    c.filter='none';
+    c.strokeStyle=lum(pdfBg())>150?'#a9aeb6':'#3a3f47';c.lineWidth=1;c.strokeRect(L*d-0.5,T*d-0.5,this.pw*s*d+1,this.ph*s*d+1);
     const need=s*d>P.baseSc*1.05;
     const same=h&&h.s===s&&h.cx===this.cx&&h.cy===this.cy&&h.W===this.W&&h.H===this.H;
     if(!need){P.hi=null;P.hv=null;}
@@ -1084,6 +1147,7 @@ class Pane{
     if(this.it===it&&this.doc){this.onUpdate();return;}
     this.save();
     const tok=++this.tok;this.it=it;this.doc=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
+    this.orig=false;this.keepXf=null;
     const sx=it.type==='dxf'&&XFS.get(xfKey(it));this.xf={tx:0,ty:0,rot:sx?sx.rot:0,mirror:sx?!!sx.mirror:false};
     this.cap.textContent=it.name;this.el.title=it.path;this.draw();
     const doc=await getDoc(it);
@@ -1093,16 +1157,32 @@ class Pane{
     else{this.loading=false;this.applyView(sv||'fit');this.onUpdate();}
     if(it.state<2&&it.gen===gen){const k=tq.indexOf(it);if(k>=0)tq.splice(k,1);it.state=1;makeThumb(it).catch(()=>{});}
   }
-  setXf(nx){ // сохранить место, на которое смотрим
-    if(this.isPdf||!this.doc||!this.doc.bbox)return;
+  applyXf(nx){ // сменить положение, сохранив место, на которое смотрим
     const [mx,my]=mApply(mInv(xfMat(this.xf)),this.cx,this.cy);
     this.xf=Object.assign({tx:0,ty:0},nx);[this.cx,this.cy]=mApply(xfMat(this.xf),mx,my);
     const ofit=this.fitS;this.fitS=this.fitView().s;if(ofit&&this.fitS)this.s*=this.fitS/ofit;
-    saveXf(this.it,this.xf);this.draw();this.onUpdate();
+    this.draw();
+  }
+  setXf(nx){
+    if(this.isPdf||!this.doc||!this.doc.bbox)return;
+    this.orig=false;this.keepXf=null;this.applyXf(nx);saveXf(this.it,this.xf);this.onUpdate();
+  }
+  toggleOrig(){ // посмотреть «как в файле» и вернуться к своему положению
+    if(this.isPdf||!this.doc||!this.doc.bbox)return;
+    if(this.orig){this.orig=false;this.applyXf(this.keepXf);this.keepXf=null;}
+    else{if(isId(this.xf))return;this.keepXf={rot:this.xf.rot,mirror:this.xf.mirror};this.orig=true;this.applyXf({rot:0,mirror:false});}
+    this.onUpdate();
+  }
+  updChip(){
+    const x=this.orig?this.keepXf:this.xf,show=!!(this.doc&&!this.isPdf&&this.doc.bbox&&x&&!isId(x));
+    this.chip.hidden=!show;if(!show)return;
+    this.chip.classList.toggle('orig',this.orig);
+    this.chip.children[0].textContent=this.orig?'Показано как в файле':'⟳ '+xfDesc(x);
+    this.chip.children[1].textContent=this.orig?'вернуть':'исходное';
   }
   rotate(d){this.setXf({rot:((this.xf.rot+d)%360+360)%360,mirror:this.xf.mirror});}
   mirror(){this.setXf({rot:(360-this.xf.rot)%360,mirror:!this.xf.mirror});}   // зеркало по горизонтали экрана
-  xfText(){const x=this.xf;if(this.isPdf||isId(x))return '';return [x.rot?'повёрнут '+x.rot+'°':'',x.mirror?'зеркально':''].filter(Boolean).join(', ');}
+  xfText(){if(this.isPdf)return '';return this.orig?'показано как в файле':xfDesc(this.xf);}
   clear(){this.save();this.tok++;this.it=null;this.doc=null;this.loading=false;this.pdfReset();this.pending=null;this.draw();}
   pageGo(d){
     if(!this.isPdf||!this.doc.pdf)return false;
@@ -1113,6 +1193,7 @@ class Pane{
     if(!d.size)return '';const sw=this.xf.rot%180!==0,t=this.xfText();
     return `Габарит: ${fmt(d.size[sw?1:0])} × ${fmt(d.size[sw?0:1])}`+(t?'  ·  '+t:'');}
   onUpdate(){
+    this.updChip();
     const dm=this.dims();
     this.cap.textContent=(this.it?this.it.name:'')+(dm?'  ·  '+dm.replace('Габарит: ',''):'')+(this.isPdf&&this.doc.pages>1?`  ·  стр. ${this.pageNo}/${this.doc.pages}`:'');
     if(panes[VW.active]===this)updateBar();
@@ -1252,7 +1333,7 @@ function updateBar(){
   if(!has||VW.set.length>1)$('vPair').hidden=true;else updatePairBtn(cur);
   $('vPairMenu').hidden=!has;
   $('vSide').classList.toggle('on',SET.side);
-  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!dx;$('vXfReset').hidden=!(dx&&!isId(ap.xf));
+  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!dx;
   $('vDims').textContent=has&&ap?ap.dims():'';
   $('vWarn').hidden=!(has&&cur.issues);if(has)$('vWarn').textContent=`⚠ замечаний: ${cur.issues}`;
 }
@@ -1263,7 +1344,7 @@ function placeViewer(){
   const d=docked(),v=$('viewer');
   document.body.classList.toggle('explorer',d);
   $('grid').classList.toggle('list',d);
-  $('dock').hidden=!d;$('split').hidden=!d;
+  $('dock').hidden=!d;$('split').hidden=!d;applyCaps();
   if(d){if(v.parentNode!==$('dock'))$('dock').appendChild(v);v.hidden=false;}
   else{if(v.parentNode!==document.body)document.body.insertBefore(v,$('pairPanel'));v.hidden=!VW.full;}
   v.classList.toggle('full',VW.full||!d);
@@ -1310,7 +1391,6 @@ const apDo=f=>{const p=panes[VW.active];if(p&&VW.set.length)f(p);};
 $('vRotL').onclick=()=>apDo(p=>p.rotate(90));
 $('vRotR').onclick=()=>apDo(p=>p.rotate(-90));
 $('vMir').onclick=()=>apDo(p=>p.mirror());
-$('vXfReset').onclick=()=>apDo(p=>p.setXf({rot:0,mirror:false}));
 $('vLw').onclick=()=>{SET.lw=!SET.lw;saveSet();$('vLw').classList.toggle('on',SET.lw);panes.forEach(p=>p.draw());};
 $('vLw').classList.toggle('on',SET.lw);
 $('vWarn').onclick=()=>{const it=curItem();if(it)openLog(it.path);};
@@ -1436,7 +1516,8 @@ $('vPairMenu').onclick=()=>{$('pairPanel').hidden?openPairPanel():closePairPanel
 /* =====================================================================
    ДЕРЕВО ПАПОК изделия: выбор узла показывает его файлы вместе с вложенными папками
    ===================================================================== */
-let curDir='',treeInit=true;const treeOpen=new Set();
+let curDir='',treeInit=true,TREE_ROOT=null,NODES=new Map();const treeOpen=new Set();
+const descend=(n,out=[])=>{for(const k of n.kids.values()){out.push(k.path);descend(k,out);}return out;};
 function buildTree(){
   const root={name:'',path:'',kids:new Map(),n:0};
   for(const it of items){
@@ -1450,10 +1531,14 @@ function renderTree(){
   const hasSub=items.some(it=>it.path.split('/').length>2);
   $('btnTree').hidden=!hasSub;$('btnTree').classList.toggle('on',hasSub&&SET.tree);
   const show=hasSub&&SET.tree&&(innerWidth>=760||treeMobile);
-  $('tree').hidden=!show;
+  $('tree').hidden=!show;$('split2').hidden=!(show&&innerWidth>=760);
   if(!hasSub)return;
   let root=buildTree();
   if(root.kids.size===1)root=[...root.kids.values()][0];          // одна папка изделия — она и есть корень
+  TREE_ROOT=root;NODES=new Map();(function idx(n){NODES.set(n.path,n);for(const k of n.kids.values())idx(k);})(root);
+  const selNode=curDir&&curDir!==root.path&&NODES.get(curDir);
+  $('treeExpand').title=selNode?'Развернуть все вложенные папки «'+selNode.name+'»':'Развернуть все папки';
+  $('treeFold').title=selNode?'Свернуть «'+selNode.name+'» со всеми вложенными':'Свернуть все папки';
   if(treeInit){treeInit=false;treeOpen.add(root.path);for(const k of root.kids.values())treeOpen.add(k.path);}
   const T=$('treeBody');T.textContent='';
   const row=(node,depth,isAll)=>{
@@ -1482,7 +1567,15 @@ function setDir(d){
 let treeMobile=false;
 $('btnTree').onclick=()=>{if(innerWidth<760){treeMobile=!treeMobile;SET.tree=true;}else SET.tree=!SET.tree;saveSet();renderTree();};
 $('treeHide').onclick=()=>{if(innerWidth<760)treeMobile=false;else{SET.tree=false;saveSet();}renderTree();};
-$('treeFold').onclick=()=>{treeOpen.clear();renderTree();};
+$('treeExpand').onclick=()=>{if(!TREE_ROOT)return;const n=(curDir&&NODES.get(curDir))||TREE_ROOT;treeOpen.add(n.path);for(const p of descend(n))treeOpen.add(p);renderTree();};
+$('treeFold').onclick=()=>{if(!TREE_ROOT)return;const n=curDir&&curDir!==TREE_ROOT.path&&NODES.get(curDir);
+  if(n){treeOpen.delete(n.path);for(const p of descend(n))treeOpen.delete(p);}else treeOpen.clear();renderTree();};
+(()=>{const sp=$('split2');let x0=0,w0=0;
+  sp.addEventListener('pointerdown',e=>{sp.setPointerCapture(e.pointerId);x0=e.clientX;w0=$('tree').getBoundingClientRect().width;sp.classList.add('drag');});
+  sp.addEventListener('pointermove',e=>{if(!sp.hasPointerCapture(e.pointerId))return;
+    SET.treeW=Math.round(Math.min(Math.max(w0+e.clientX-x0,150),Math.min(700,innerWidth-300)));document.documentElement.style.setProperty('--treew',SET.treeW+'px');});
+  sp.addEventListener('pointerup',()=>{sp.classList.remove('drag');saveSet();});
+})();
 window.addEventListener('resize',()=>renderTree());
 
 /* =====================================================================
@@ -1490,7 +1583,8 @@ window.addEventListener('resize',()=>renderTree());
    Запись: {t, kind:'file'|'folder', name, path, type, root (id сохранённого доступа), rootName}.
    Повторное открытие — через сохранённый доступ к папке/файлу (ПК Chrome).
    ===================================================================== */
-let HIST=[],histSaveT=0,histT=0;
+let HIST=[],HLIST=[],histSaveT=0,histT=0;
+function histDel(arr){const del=new Set(arr);HIST=HIST.filter(x=>!del.has(x));IDB.put('all',HIST,'hist');if(!HIST.length)IDB.clear('roots');renderHist();}
 const dayStart=t=>{const d=new Date(t);d.setHours(0,0,0,0);return d.getTime();};
 async function histLoad(){
   const v=await IDB.get('all','hist');if(Array.isArray(v))HIST=v;
@@ -1519,18 +1613,21 @@ function renderHist(){
     for(const e of HIST){if(e.t<from)continue;
       const dir=e.kind==='file'?e.path.split('/').slice(0,-1).join('/'):e.rootName;if(!dir)continue;
       const k=dayStart(e.t)+'|'+(e.root||'')+'|'+dir;let f=m.get(k);
-      if(!f){f={t:e.t,kind:'folder',dir,root:e.root,rootName:e.rootName,name:dir.split('/').pop(),path:dir,seen:0,count:0,isRoot:false};m.set(k,f);}
+      if(!f){f={t:e.t,kind:'folder',dir,root:e.root,rootName:e.rootName,name:dir.split('/').pop(),path:dir,seen:0,count:0,isRoot:false,src:[]};m.set(k,f);}
+      f.src.push(e);
       if(e.kind==='file'){f.seen++;}else{f.isRoot=true;f.count=e.count||0;}
       if(e.t>f.t)f.t=e.t;}
     list=[...m.values()].sort((a,b)=>b.t-a.t);
   }else list=HIST.filter(e=>e.kind==='file'&&e.t>=from);
   if(q)list=list.filter(e=>(e.name+' '+e.path+' '+e.rootName).toLowerCase().includes(q));
+  HLIST=list;
   const B=$('hBody');B.textContent='';let last=null;
   for(const e of list.slice(0,800)){
     const ds=dayStart(e.t);
     if(ds!==last){last=ds;const h=document.createElement('div');h.className='h-day';h.textContent=dayLabel(ds);B.appendChild(h);}
     const r=document.createElement('div');r.className='h-row'+(e.root&&FSA?'':' h-off')+(e.type==='pdf'?' h-pdf':'');
-    r.innerHTML='<span class="h-t"></span><span class="h-n"></span><span class="h-f"></span>';
+    r.innerHTML='<span class="h-t"></span><span class="h-n"></span><span class="h-f"></span><button class="h-del" title="Удалить запись из истории">✕</button>';
+    r.children[3].onclick=ev=>{ev.stopPropagation();histDel(e.src||[e]);};
     r.children[0].textContent=new Date(e.t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
     if(kind==='file'){r.children[1].textContent=e.name;r.children[2].textContent=e.path.split('/').slice(0,-1).join(' / ');}
     else{r.children[1].textContent=e.dir.split('/').join(' / ');
@@ -1569,17 +1666,54 @@ $('hClose').onclick=()=>{$('histPanel').hidden=true;};
 $('histPanel').addEventListener('click',e=>{if(e.target.id==='histPanel')$('histPanel').hidden=true;});
 for(const id of ['hPeriod','hKind'])$(id).addEventListener('change',renderHist);
 $('hSearch').addEventListener('input',renderHist);
-$('hClear').onclick=async()=>{if(!confirm('Удалить всю историю просмотров?'))return;HIST=[];await IDB.put('all',HIST,'hist');await IDB.clear('roots');renderHist();};
+$('hClear').onclick=()=>{
+  const arr=HLIST.flatMap(e=>e.src||[e]);if(!arr.length)return;
+  const per=$('hPeriod').selectedOptions[0].textContent.toLowerCase(),q=$('hSearch').value.trim();
+  const msg=$('hKind').value==='folder'?`Удалить из истории ${HLIST.length} папок (${per}${q?', по запросу «'+q+'»':''}) вместе с просмотренными в них файлами?`
+    :`Удалить из истории ${arr.length} файлов (${per}${q?', по запросу «'+q+'»':''})?`;
+  if(confirm(msg))histDel(arr);
+};
 histLoad();
 
-/* ---------- Настройки: тема и фон ---------- */
-function bgChanged(){panes.forEach(p=>p.draw());resetThumbs();}
-function changeSet(k,v){const ob=effBg();SET[k]=v;saveSet();applyTheme();if(effBg()!==ob)bgChanged();}
-$('sTheme').value=SET.theme;$('sBg').value=SET.bg;
-$('sTheme').onchange=e=>changeSet('theme',e.target.value);
-$('sBg').onchange=e=>changeSet('bg',e.target.value);
-mqLight.addEventListener('change',()=>{if(SET.theme==='auto'){const ob=effBg();applyTheme();if(effBg()!==ob)bgChanged();}});
-$('btnSet').onclick=()=>{closePairPanel();$('setPanel').hidden=!$('setPanel').hidden;};
+/* ---------- Настройки: тема, фон, подписи, повороты ---------- */
+function bgChanged(){colCache.clear();panes.forEach(p=>p.draw());resetThumbs();}
+function changeSet(k,v){const ob=bgKey();SET[k]=v;saveSet();applyTheme();if(bgKey()!==ob)bgChanged();}
+$('sTheme').value=SET.theme;
+$('sTheme').onchange=e=>{changeSet('theme',e.target.value);fillBgSel();};
+mqLight.addEventListener('change',()=>{if(SET.theme==='auto'){const ob=bgKey();applyTheme();if(bgKey()!==ob)bgChanged();}});
+const BG_PRESETS=[['auto','по теме'],['#000000','чёрный'],['#0f1012','графит'],['#212830','тёмно-синий (AutoCAD)'],['#3a3d42','серый'],['#d4d7dc','светло-серый'],['#ffffff','белый'],['custom','свой цвет…']];
+function fillBgSel(){
+  for(const [key,sid,cid,cur] of [['bgDxf','sBgDxf','cBgDxf',dxfBg],['bgPdf','sBgPdf','cBgPdf',pdfBg]]){
+    const sel=$(sid),col=$(cid),v=SET[key],known=BG_PRESETS.some(p=>p[0]===v);
+    if(!sel.options.length)sel.innerHTML=BG_PRESETS.map(([v,t])=>`<option value="${v}">${t}</option>`).join('');
+    sel.value=known?v:'custom';col.hidden=known;col.value=cur();
+    sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
+    col.oninput=()=>changeSet(key,col.value);
+  }
+  $('sPdfDark').value=SET.pdfDark?'1':'0';
+}
+$('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
+const CAPS=[['name','Имя файла'],['wrap','Имя полностью, в несколько строк'],['type','Тип (DXF / PDF)'],['size','Размер файла'],['date','Дата изменения'],['dir','Подпапка']];
+function fillCaps(){
+  const T=$('capT');T.innerHTML='<tr><th></th><th>Сетка</th><th>Список</th></tr>';
+  for(const [k,t] of CAPS){
+    const tr=document.createElement('tr');tr.innerHTML='<td></td><td></td><td></td>';tr.children[0].textContent=t;
+    for(const [i,key] of [[1,'capGrid'],[2,'capList']]){
+      if(k==='wrap'&&key==='capList'){tr.children[i].textContent='всегда';tr.children[i].style.color='var(--mut)';tr.children[i].style.fontSize='11px';continue;}
+      const cb=document.createElement('input');cb.type='checkbox';cb.checked=!!SET[key][k];
+      cb.onchange=()=>{SET[key][k]=cb.checked?1:0;saveSet();applyCaps();};tr.children[i].appendChild(cb);
+    }
+    T.appendChild(tr);
+  }
+}
+function fillXf(){$('xfCount').textContent=XFS.size?`Повёрнуто при просмотре: ${XFS.size} файл.`:'Повёрнутых файлов нет';$('xfResetAll').disabled=!XFS.size;}
+$('xfResetAll').onclick=()=>{
+  if(!confirm(`Вернуть все ${XFS.size} повёрнутых DXF в положение как в файле?`))return;
+  XFS.clear();LS.set('xf',{});
+  for(const p of panes)if(p.doc&&!p.isPdf&&p.doc.bbox){p.orig=false;p.keepXf=null;p.applyXf({rot:0,mirror:false});p.onUpdate();}
+  updXfBadges();fillXf();
+};
+$('btnSet').onclick=()=>{closePairPanel();const p=$('setPanel');p.hidden=!p.hidden;if(!p.hidden){fillBgSel();fillCaps();fillXf();}};
 $('setClose').onclick=()=>{$('setPanel').hidden=true;};
 
 /* ---------- Клавиатура ---------- */
@@ -1602,7 +1736,8 @@ document.addEventListener('keydown',e=>{
   else if(/^[qQйЙ]$/.test(k))$('vRotL').click();
   else if(/^[eEуУ]$/.test(k))$('vRotR').click();
   else if(/^[mMьЬ]$/.test(k))$('vMir').click();
-  else if(k==='0')$('vXfReset').click();
+  else if(k==='0')apDo(p=>p.setXf({rot:0,mirror:false}));
+  else if(/^[oOщЩ]$/.test(k))apDo(p=>p.toggleOrig());
   else if(k==='Home'||/^[fFаА]$/.test(k))$('vFit').click();
   else if((k==='+'||k==='=')&&ap)ap.zoomAt(ap.W/2,ap.H/2,1.25);
   else if((k==='-'||k==='_')&&ap)ap.zoomAt(ap.W/2,ap.H/2,0.8);
