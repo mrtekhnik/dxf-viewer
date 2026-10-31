@@ -88,6 +88,9 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 #vName{flex:1 1 auto;min-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
 #vPages{display:flex;gap:4px;align-items:center;color:var(--mut);font-size:13px}
 .pairbox{display:flex}
+.xfbox{display:flex;gap:2px}
+.xfbox button{padding:7px 9px}
+#vXfReset{color:var(--warn)}
 #vPair{background:var(--pair);border-color:var(--pairb);border-radius:6px 0 0 6px}
 #vPair.none{background:var(--btn);border-color:var(--line);color:var(--mut)}
 #vPairMenu{border-radius:0 6px 6px 0;border-left:none;padding:7px 8px}
@@ -148,7 +151,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v2.2</small></div>
+  <div class="brand">DXF <small>+PDF · v2.3</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnHist" title="История просмотров">История</button>
@@ -171,7 +174,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
       Откройте папку с DXF и PDF кнопкой <b>«Папка»</b> или перетащите папку/файлы в это окно.<br>
       На телефоне — кнопка <b>«Файлы»</b>.<br><br>
       <span class="hide-m">В просмотре: колесо — масштаб, перетаскивание — сдвиг, двойной клик или <b>F</b> — показать всё,<br>
-      <b>← →</b> — листать, <b>Tab</b> — по кругу чертёж ⇄ развёртки, <b>R</b> — «Рядом»,<br><b>PgUp/PgDn</b> — страницы PDF, <b>Esc</b> — назад.</span>
+      <b>← →</b> — листать, <b>Tab</b> — по кругу чертёж ⇄ развёртки, <b>R</b> — «Рядом», <b>Q/E</b> — поворот, <b>M</b> — зеркало,<br><b>PgUp/PgDn</b> — страницы PDF, <b>Esc</b> — назад.</span>
     </div>
     <div id="grid"></div>
   </main>
@@ -187,6 +190,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
     <span id="vName"></span>
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
     <span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span>
+    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vXfReset" hidden title="Вернуть как в файле (0)">как в файле</button></span>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vLw" class="on hide-m" title="Показывать толщины линий из файла">Толщины</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
@@ -625,6 +629,13 @@ if(LS.get('thumbVer',0)!==THUMB_VER){IDB.clear('thumbs');LS.set('thumbVer',THUMB
    xf — независимая трансформация файла (основа для будущего сравнения). */
 function xfMat(xf){const r=(xf.rot||0)*Math.PI/180,c=Math.cos(r),s=Math.sin(r),m=xf.mirror?-1:1;return [c*m,s*m,-s,c,xf.tx||0,xf.ty||0];}
 const isId=xf=>!xf||(!xf.rot&&!xf.mirror&&!xf.tx&&!xf.ty);
+const mApply=(m,x,y)=>[m[0]*x+m[2]*y+m[4],m[1]*x+m[3]*y+m[5]];
+function mInv(m){const d=m[0]*m[3]-m[1]*m[2];return [m[3]/d,-m[1]/d,-m[2]/d,m[0]/d,(m[2]*m[5]-m[3]*m[4])/d,(m[1]*m[4]-m[0]*m[5])/d];}
+/* Поворот/зеркало DXF запоминаются для файла (имя + размер) */
+const XFS=new Map(Object.entries(LS.get('xf',{})));
+const xfKey=it=>it.name.toLowerCase()+'|'+it.file.size;
+function saveXf(it,xf){const k=xfKey(it);if(isId(xf))XFS.delete(k);else XFS.set(k,{rot:xf.rot,mirror:xf.mirror});
+  while(XFS.size>1000)XFS.delete(XFS.keys().next().value);LS.set('xf',Object.fromEntries(XFS));}
 function lwPx(lw){if(!(lw>=0))return 1;const mm=lw/100;return mm<=0.25?1:Math.min(8,mm*3.5);}
 function tracePrims(ctx,prims){
   for(const p of prims){
@@ -1073,6 +1084,7 @@ class Pane{
     if(this.it===it&&this.doc){this.onUpdate();return;}
     this.save();
     const tok=++this.tok;this.it=it;this.doc=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
+    const sx=it.type==='dxf'&&XFS.get(xfKey(it));this.xf={tx:0,ty:0,rot:sx?sx.rot:0,mirror:sx?!!sx.mirror:false};
     this.cap.textContent=it.name;this.el.title=it.path;this.draw();
     const doc=await getDoc(it);
     if(tok!==this.tok)return;
@@ -1081,13 +1093,25 @@ class Pane{
     else{this.loading=false;this.applyView(sv||'fit');this.onUpdate();}
     if(it.state<2&&it.gen===gen){const k=tq.indexOf(it);if(k>=0)tq.splice(k,1);it.state=1;makeThumb(it).catch(()=>{});}
   }
+  setXf(nx){ // сохранить место, на которое смотрим
+    if(this.isPdf||!this.doc||!this.doc.bbox)return;
+    const [mx,my]=mApply(mInv(xfMat(this.xf)),this.cx,this.cy);
+    this.xf=Object.assign({tx:0,ty:0},nx);[this.cx,this.cy]=mApply(xfMat(this.xf),mx,my);
+    const ofit=this.fitS;this.fitS=this.fitView().s;if(ofit&&this.fitS)this.s*=this.fitS/ofit;
+    saveXf(this.it,this.xf);this.draw();this.onUpdate();
+  }
+  rotate(d){this.setXf({rot:((this.xf.rot+d)%360+360)%360,mirror:this.xf.mirror});}
+  mirror(){this.setXf({rot:(360-this.xf.rot)%360,mirror:!this.xf.mirror});}   // зеркало по горизонтали экрана
+  xfText(){const x=this.xf;if(this.isPdf||isId(x))return '';return [x.rot?'повёрнут '+x.rot+'°':'',x.mirror?'зеркально':''].filter(Boolean).join(', ');}
   clear(){this.save();this.tok++;this.it=null;this.doc=null;this.loading=false;this.pdfReset();this.pending=null;this.draw();}
   pageGo(d){
     if(!this.isPdf||!this.doc.pdf)return false;
     const n=Math.min(Math.max(this.pageNo+d,1),this.doc.pages);if(n!==this.pageNo){this.save();this.pdfShowPage(n,SAVED.get(this.it.key));}
     return true;
   }
-  dims(){const d=this.doc;if(!d)return '';return d.kind==='pdf'?(this.pw?sheetText(this.pw,this.ph):''):(d.size?`Габарит: ${fmt(d.size[0])} × ${fmt(d.size[1])}`:'');}
+  dims(){const d=this.doc;if(!d)return '';if(d.kind==='pdf')return this.pw?sheetText(this.pw,this.ph):'';
+    if(!d.size)return '';const sw=this.xf.rot%180!==0,t=this.xfText();
+    return `Габарит: ${fmt(d.size[sw?1:0])} × ${fmt(d.size[sw?0:1])}`+(t?'  ·  '+t:'');}
   onUpdate(){
     const dm=this.dims();
     this.cap.textContent=(this.it?this.it.name:'')+(dm?'  ·  '+dm.replace('Габарит: ',''):'')+(this.isPdf&&this.doc.pages>1?`  ·  стр. ${this.pageNo}/${this.doc.pages}`:'');
@@ -1104,7 +1128,7 @@ class Pane{
     });
     cv.addEventListener('pointermove',e=>{
       const [x,y]=pos(e);
-      if(this.doc&&!this.isPdf&&this.doc.bbox&&e.pointerType==='mouse'){const [wx,wy]=this.s2w(x,y);$('vCoord').textContent=`X ${fmt(wx+this.doc.origin[0])}   Y ${fmt(wy+this.doc.origin[1])}`;}
+      if(this.doc&&!this.isPdf&&this.doc.bbox&&e.pointerType==='mouse'){const [wx,wy]=mApply(mInv(xfMat(this.xf)),...this.s2w(x,y));$('vCoord').textContent=`X ${fmt(wx+this.doc.origin[0])}   Y ${fmt(wy+this.doc.origin[1])}`;}
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
       if(ptrs.size===1){this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();}
@@ -1228,6 +1252,7 @@ function updateBar(){
   if(!has||VW.set.length>1)$('vPair').hidden=true;else updatePairBtn(cur);
   $('vPairMenu').hidden=!has;
   $('vSide').classList.toggle('on',SET.side);
+  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!dx;$('vXfReset').hidden=!(dx&&!isId(ap.xf));
   $('vDims').textContent=has&&ap?ap.dims():'';
   $('vWarn').hidden=!(has&&cur.issues);if(has)$('vWarn').textContent=`⚠ замечаний: ${cur.issues}`;
 }
@@ -1281,6 +1306,11 @@ $('vSide').onclick=()=>{SET.side=!SET.side;saveSet();if(VW.idx>=0)showItem(VW.id
 $('vPair').onclick=()=>cyclePair(1);
 $('vPgPrev').onclick=()=>{const p=panes[VW.active];p&&p.pageGo(-1);};
 $('vPgNext').onclick=()=>{const p=panes[VW.active];p&&p.pageGo(1);};
+const apDo=f=>{const p=panes[VW.active];if(p&&VW.set.length)f(p);};
+$('vRotL').onclick=()=>apDo(p=>p.rotate(90));
+$('vRotR').onclick=()=>apDo(p=>p.rotate(-90));
+$('vMir').onclick=()=>apDo(p=>p.mirror());
+$('vXfReset').onclick=()=>apDo(p=>p.setXf({rot:0,mirror:false}));
 $('vLw').onclick=()=>{SET.lw=!SET.lw;saveSet();$('vLw').classList.toggle('on',SET.lw);panes.forEach(p=>p.draw());};
 $('vLw').classList.toggle('on',SET.lw);
 $('vWarn').onclick=()=>{const it=curItem();if(it)openLog(it.path);};
@@ -1569,6 +1599,10 @@ document.addEventListener('keydown',e=>{
   else if(k==='Enter'){if(docked()&&!VW.full&&VW.idx>=0)setFull(true);else h=false;}
   else if(k==='Escape'){if(VW.full)setFull(false);else h=false;}
   else if(/^[rRкК]$/.test(k))$('vSide').click();
+  else if(/^[qQйЙ]$/.test(k))$('vRotL').click();
+  else if(/^[eEуУ]$/.test(k))$('vRotR').click();
+  else if(/^[mMьЬ]$/.test(k))$('vMir').click();
+  else if(k==='0')$('vXfReset').click();
   else if(k==='Home'||/^[fFаА]$/.test(k))$('vFit').click();
   else if((k==='+'||k==='=')&&ap)ap.zoomAt(ap.W/2,ap.H/2,1.25);
   else if((k==='-'||k==='_')&&ap)ap.zoomAt(ap.W/2,ap.H/2,0.8);
