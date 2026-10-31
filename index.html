@@ -137,7 +137,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v2.0</small></div>
+  <div class="brand">DXF <small>+PDF · v2.1</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnHist" title="История просмотров">История</button>
@@ -1416,7 +1416,19 @@ const dayLabel=ds=>{const t=dayStart(Date.now());if(ds===t)return 'Сегодн�
 function renderHist(){
   const per=+$('hPeriod').value,kind=$('hKind').value,q=$('hSearch').value.trim().toLowerCase();
   const from=per?dayStart(Date.now())-(per-1)*DAY:0;
-  const list=HIST.filter(e=>e.kind===kind&&e.t>=from&&(!q||(e.name+' '+e.path+' '+e.rootName).toLowerCase().includes(q)));
+  let list;
+  if(kind==='folder'){
+    /* папки: открытые целиком + вложенные папки, в которых смотрели файлы (по одной строке на папку за день) */
+    const m=new Map();
+    for(const e of HIST){if(e.t<from)continue;
+      const dir=e.kind==='file'?e.path.split('/').slice(0,-1).join('/'):e.rootName;if(!dir)continue;
+      const k=dayStart(e.t)+'|'+(e.root||'')+'|'+dir;let f=m.get(k);
+      if(!f){f={t:e.t,kind:'folder',dir,root:e.root,rootName:e.rootName,name:dir.split('/').pop(),path:dir,seen:0,count:0,isRoot:false};m.set(k,f);}
+      if(e.kind==='file'){f.seen++;}else{f.isRoot=true;f.count=e.count||0;}
+      if(e.t>f.t)f.t=e.t;}
+    list=[...m.values()].sort((a,b)=>b.t-a.t);
+  }else list=HIST.filter(e=>e.kind==='file'&&e.t>=from);
+  if(q)list=list.filter(e=>(e.name+' '+e.path+' '+e.rootName).toLowerCase().includes(q));
   const B=$('hBody');B.textContent='';let last=null;
   for(const e of list.slice(0,800)){
     const ds=dayStart(e.t);
@@ -1425,7 +1437,8 @@ function renderHist(){
     r.innerHTML='<span class="h-t"></span><span class="h-n"></span><span class="h-f"></span>';
     r.children[0].textContent=new Date(e.t).toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'});
     if(kind==='file'){r.children[1].textContent=e.name;r.children[2].textContent=e.path.split('/').slice(0,-1).join(' / ');}
-    else{r.children[1].textContent=e.rootName;r.children[2].textContent=(e.count||0)+' файл.';}
+    else{r.children[1].textContent=e.dir.split('/').join(' / ');
+      r.children[2].textContent=[e.isRoot?'открыта целиком, '+e.count+' файл.':'',e.seen?'просмотрено: '+e.seen:''].filter(Boolean).join(' · ');}
     r.title=e.root&&FSA?'Открыть':'Открывалось без сохранения доступа — откройте заново кнопкой «Папка» или перетаскиванием';
     r.onclick=()=>histOpen(e);
     B.appendChild(r);
@@ -1443,6 +1456,11 @@ async function histOpen(e){
   try{
     if(r.kind==='directory'){
       if(!items.length||items[0].rid!==e.root)await openDirHandle(r.h);
+      if(e.kind==='folder'&&e.dir&&e.dir!==e.rootName){ // вложенная папка — показать только её содержимое
+        $('typeSel').value='';$('filter').value=e.dir+'/';applyFilter();
+        if(!view.length){$('filter').value='';applyFilter();flash('Папка «'+e.name+'» не найдена — возможно, переименована');}
+        else flash('Показана папка «'+e.dir.split('/').join(' / ')+'» — очистите фильтр, чтобы увидеть всё изделие');
+        return;}
       if(e.kind==='file'){const it=items.find(x=>x.path===e.path);
         if(!it){flash('Файл «'+e.name+'» не найден в папке — возможно, удалён или переименован');return;}
         jumpTo(it);if(!docked())setFull(true);}
