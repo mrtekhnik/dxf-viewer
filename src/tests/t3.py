@@ -1,0 +1,28 @@
+import asyncio, glob, time
+from playwright.async_api import async_playwright
+async def main():
+  async with async_playwright() as p:
+    b=await p.chromium.launch(executable_path='/usr/bin/google-chrome')
+    pg=await b.new_page(viewport={'width':1280,'height':800})
+    errs=[]; pg.on('pageerror',lambda e: errs.append('PAGEERR '+str(e))); pg.on('console',lambda m: errs.append(m.type+': '+m.text[:200]) if m.type=='error' else None)
+    t=time.time(); await pg.goto('file:///home/claude/dxf-viewer.html'); print('load %.2fs'%(time.time()-t))
+    await pg.set_input_files('#inFiles',sorted(glob.glob('dxf/*')))
+    await pg.wait_for_timeout(4000)
+    await pg.screenshot(path='g2.png')
+    await pg.click('#btnLog'); await pg.click('#logAll'); await pg.wait_for_timeout(5000)
+    print(await pg.inner_text('#logBody')); await pg.click('#logClose')
+    await pg.fill('#filter','деталь_01.'); await pg.wait_for_timeout(300)
+    await pg.click('.tile:nth-child(2)'); await pg.wait_for_timeout(2000)
+    print(await pg.inner_text('#vName'), '|', await pg.inner_text('.vinfo'), '| pair:', await pg.inner_text('#vPair'), await pg.is_visible('#vPages'))
+    await pg.screenshot(path='p1.png')
+    await pg.mouse.move(700,450)
+    for i in range(6): await pg.mouse.wheel(0,-400); await pg.wait_for_timeout(50)
+    await pg.wait_for_timeout(1200); await pg.screenshot(path='p_zoom.png')
+    await pg.keyboard.press('Tab'); await pg.wait_for_timeout(1000)
+    print('after tab', await pg.inner_text('#vName')); await pg.screenshot(path='p_tab_dxf.png')
+    await pg.keyboard.press('Tab'); await pg.wait_for_timeout(1500)
+    print('back', await pg.inner_text('#vName')); await pg.screenshot(path='p_back.png')
+    await pg.keyboard.press('PageDown'); await pg.wait_for_timeout(1500)
+    print('page', await pg.inner_text('#vPgNum'), await pg.inner_text('#vDims')); await pg.screenshot(path='p_page2.png')
+    print(errs); await b.close()
+asyncio.run(main())

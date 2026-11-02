@@ -1,0 +1,44 @@
+import asyncio
+from playwright.async_api import async_playwright
+async def main():
+  async with async_playwright() as p:
+    b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); ctx=await b.new_context(viewport={'width':1400,'height':850}); pg=await ctx.new_page()
+    errs=[]; pg.on('pageerror',lambda e: errs.append('M:'+str(e)))
+    pg.on('dialog', lambda d: asyncio.ensure_future(d.accept()))
+    await pg.goto('file:///home/claude/dxf-viewer.html'); await pg.set_input_files('#inFolder','cmpA/Заказ 2026'); await pg.wait_for_timeout(1500)
+    await pg.set_input_files('#inCmp','cmpB/Заказ 2024'); await pg.wait_for_timeout(800)
+    print('bar:', await pg.inner_text('#cmpInfo'), '|', await pg.inner_text('#cmpOnlyBtn'))
+    for t in await pg.locator('.tile').all(): print('  ', (await t.locator('.nm').inner_text()), '→', await t.locator('.cmpb').inner_text(), '|', await t.locator('.cmpb').get_attribute('title'))
+    await pg.screenshot(path='cmp_grid.png')
+    await pg.select_option('#cmpFilter','diff'); await pg.wait_for_timeout(200); print('filter diff tiles:', await pg.locator('#grid .tile').count()); await pg.select_option('#cmpFilter','')
+    # open diff side by side
+    await pg.locator('.tile', has_text='002-01-08пс').locator('.cmpb').click(); await pg.wait_for_timeout(1500)
+    print('cmp view:', await pg.inner_text('#vName'), '| panes', await pg.locator('#stage .pane').count(), '| sync btn', await pg.is_visible('#vSync'))
+    box=await pg.locator('#stage canvas').first.bounding_box(); await pg.mouse.move(box['x']+200,box['y']+200)
+    for i in range(3): await pg.mouse.wheel(0,-300); await pg.wait_for_timeout(50)
+    print('synced s:', await pg.evaluate('[panes[0].s.toFixed(3),panes[1].s.toFixed(3),panes[0].cx.toFixed(1),panes[1].cx.toFixed(1)]'))
+    await pg.screenshot(path='cmp_view.png')
+    await pg.keyboard.press('ArrowRight'); await pg.wait_for_timeout(1000); print('next cmp:', await pg.inner_text('#vName'))
+    await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)
+    # only there
+    await pg.click('#cmpOnlyBtn'); await pg.wait_for_timeout(200); print('only:', (await pg.inner_text('#onlyList')).replace('\n',' | ')); await pg.click('#onlyClose')
+    # ctrl+click manual
+    await pg.click('#cmpEnd'); await pg.wait_for_timeout(200)
+    await pg.locator('.tile').nth(0).click(modifiers=['Control']); await pg.locator('.tile').nth(1).click(modifiers=['Control']); await pg.wait_for_timeout(200)
+    print('sel:', await pg.inner_text('#selInfo')); await pg.click('#selGo'); await pg.wait_for_timeout(1200)
+    print('manual cmp:', await pg.inner_text('#vName'), await pg.locator('#stage .pane').count()); await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)
+    # second monitor
+    await pg.locator('.tile', has_text='002-08пс').click(); await pg.wait_for_timeout(1000)
+    await pg.evaluate("Object.defineProperty(screen,'isExtended',{get:()=>true});updateBar()")
+    print('mon btn:', await pg.is_visible('#vMon'))
+    async with ctx.expect_page() as pi: await pg.click('#vMon')
+    p2=await pi.value; p2.on('pageerror',lambda e: errs.append('F:'+str(e))); await p2.wait_for_timeout(2500)
+    print('second shows:', await p2.inner_text('#vName'), '| panes', await p2.locator('#stage .pane').count())
+    await p2.screenshot(path='mon2.png')
+    await p2.keyboard.press('Tab'); await p2.wait_for_timeout(1800)
+    print('after swap: main', await pg.inner_text('#vName'), '| second', await p2.inner_text('#vName'), await p2.locator('#stage .pcap').all_inner_texts())
+    await p2.keyboard.press('ArrowRight'); await p2.wait_for_timeout(1500)
+    print('after → in second: main', await pg.inner_text('#vName'), '| second', await p2.inner_text('#vName'))
+    await p2.click('#vClose'); await pg.wait_for_timeout(1500); print('mon btn on after close:', await pg.evaluate("$('vMon').classList.contains('on')"))
+    print('errors', errs); await b.close()
+asyncio.run(main())

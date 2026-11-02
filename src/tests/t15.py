@@ -1,0 +1,24 @@
+import asyncio
+from playwright.async_api import async_playwright
+async def main():
+  async with async_playwright() as p:
+    b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page(viewport={'width':1400,'height':820})
+    errs=[]; pg.on('pageerror',lambda e: errs.append(str(e)))
+    await pg.goto('file:///home/claude/dxf-viewer.html'); await pg.set_input_files('#inFolder','tree/Изделие 320'); await pg.wait_for_timeout(1500)
+    print('TREE:', (await pg.inner_text('#treeBody')).replace('\n',' '))
+    await pg.locator('.tr', has_text='02 Рама').locator('.cr').click(); await pg.wait_for_timeout(200)
+    print('collapsed:', (await pg.inner_text('#treeBody')).replace('\n',' '))
+    await pg.locator('.tr', has_text='02 Рама').locator('.cr').click(); await pg.wait_for_timeout(200)
+    await pg.locator('.tr', has_text='02.01 Боковина').click(); await pg.wait_for_timeout(1500)
+    print('status:', await pg.inner_text('#status')); print('tiles:', await pg.locator('#grid .tile .nm').all_inner_texts())
+    await pg.screenshot(path='s_tree.png')
+    await pg.click('#btnLayout'); await pg.wait_for_timeout(1200); await pg.screenshot(path='s_tree_expl.png')
+    await pg.locator('.tr.all').click(); await pg.wait_for_timeout(500); print('all:', await pg.locator('#grid .tile').count())
+    pg2=await b.new_page(viewport={'width':390,'height':800},is_mobile=True,has_touch=True)
+    await pg2.goto('file:///home/claude/dxf-viewer.html'); await pg2.set_input_files('#inFolder','tree/Изделие 320'); await pg2.wait_for_timeout(1000)
+    print('mobile tree visible before:', await pg2.is_visible('#tree')); await pg2.tap('#btnTree'); await pg2.wait_for_timeout(300)
+    print('after tap:', await pg2.is_visible('#tree')); await pg2.screenshot(path='s_tree_m.png')
+    await pg2.locator('.tr', has_text='03 Крышка').tap(); await pg2.wait_for_timeout(500)
+    print('after choose:', await pg2.is_visible('#tree'), await pg2.locator('#grid .tile').count())
+    print('errors:', errs); await b.close()
+asyncio.run(main())
