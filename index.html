@@ -9,7 +9,7 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-192.png">
 <style>
-:root{--treew:270px;--lthumb:76px;--bg:#1b1d21;--panel:#24272c;--line:#363a41;--line2:#2c2f35;--fg:#e6e6e6;--mut:#9aa0a8;--acc:#4ea1ff;--warn:#e5b54a;--err:#ff6b6b;
+:root{--prevw:480px;--treew:270px;--lthumb:76px;--bg:#1b1d21;--panel:#24272c;--line:#363a41;--line2:#2c2f35;--fg:#e6e6e6;--mut:#9aa0a8;--acc:#4ea1ff;--warn:#e5b54a;--err:#ff6b6b;
   --cv:#0f1012;--btn:#30343a;--btnh:#5a6069;--inp:#16181b;--on:#25425f;--hover:#2c3138;--pair:#3a2b2a;--pairb:#7a4a44;--ph:#5c626b;
   --tile:180px;--listw:380px}
 :root[data-theme=light]{--bg:#eef0f3;--panel:#ffffff;--line:#d3d7dd;--line2:#e7e9ed;--fg:#1d2024;--mut:#67707b;--acc:#1f6fd1;--warn:#c98a00;--err:#d93636;
@@ -47,6 +47,8 @@ input[type=range]{width:110px}
 .tree-h button{padding:2px 7px;font-size:12px}
 main#gridWrap{flex:1;overflow:auto;padding:8px;min-height:0;min-width:0}
 body.explorer main#gridWrap{flex:none;width:var(--listw);padding:4px}
+body.gridprev main#gridWrap{flex:1;width:auto;padding:8px}
+body.gridprev #dock{flex:none;width:var(--prevw)}
 .splitter{flex:none;width:6px;cursor:col-resize;background:var(--line);touch-action:none}
 .splitter:hover,.splitter.drag{background:var(--acc)}
 #dock{flex:1;min-width:0;display:flex}
@@ -172,7 +174,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 .h-del{visibility:hidden;padding:1px 7px;font-size:11px;flex:none}
 .h-row:hover .h-del{visibility:visible}
 @media (hover:none){.h-del{visibility:visible}}
-@media (max-width:759px){#btnLayout{display:none}#tree{position:fixed;left:0;top:0;bottom:0;width:84vw;z-index:12;box-shadow:0 0 40px rgba(0,0,0,.5)}}
+@media (max-width:759px){#btnPreview{display:none}#tree{position:fixed;left:0;top:0;bottom:0;width:84vw;z-index:12;box-shadow:0 0 40px rgba(0,0,0,.5)}}
 @media (max-width:600px){
   header{gap:5px;padding:6px}
   button{padding:7px 9px}
@@ -183,7 +185,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v2.5</small></div>
+  <div class="brand">DXF <small>+PDF · v2.6</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -191,7 +193,8 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
   <button id="btnTree" hidden title="Дерево папок изделия">Папки ▸</button>
   <input id="filter" type="search" placeholder="Фильтр по имени">
   <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
-  <button id="btnLayout" title="Сетка миниатюр или «Проводник»: список слева, просмотр справа"></button>
+  <button id="btnLayout" title="Сетка миниатюр или список"></button>
+  <button id="btnPreview" title="Окно просмотра справа, как в Проводнике">◫ Просмотр</button>
   <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><button id="szMinus">−</button><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szPlus">+</button></span>
   <button id="btnLog">Журнал<span id="logBadge" hidden></span></button>
   <button id="btnClose" hidden title="Закрыть все файлы">Закрыть</button>
@@ -263,6 +266,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
+  <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
   <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>
   <div class="set-sec">Подписи под миниатюрами</div>
@@ -520,6 +524,73 @@ function DXFCORE(){
       for(let i=0;i<=n;i++){const t=t0+(t1-t0)*i/n,c=Math.cos(t),s=Math.sin(t);out.push(cx+mx*c+ax*s,cy+my*c+ay*s,0);}
       grp(st,sp).prims.push(['P',0,out]);return true;
     }
+    /* ---- надписи: TEXT, MTEXT, MULTILEADER, LEADER ---- */
+    const spec=t=>t.replace(/%%[cC]/g,'Ø').replace(/%%[dD]/g,'°').replace(/%%[pP]/g,'±').replace(/%%[uUoOkK]/g,'').replace(/%%%/g,'%');
+    function mtextPlain(t){
+      return spec(unesc(t)).replace(/\\P/g,'\n').replace(/\\~/g,' ')
+        .replace(/\\S([^;]*?)[\^#\/]([^;]*);/g,'$1/$2')
+        .replace(/\\[AaCcFfHhQqTtWw][^;]*;/g,'').replace(/\\[LlOoKkNX]/g,'')
+        .replace(/\\\\/g,'\u0001').replace(/[{}]/g,'').replace(/\u0001/g,'\\');
+    }
+    function addTextRec(sp,g,x,y,h,r,str,ha,va){
+      if(!(h>0)||!str||!str.trim())return false;
+      const G=grp(style(g),sp);(G.texts||(G.texts=[])).push({x,y,h,r,l:str.split('\n'),ha,va});return true;
+    }
+    function addText(sp,g){
+      const h72=gn(g,72,0),v73=gn(g,73,0),al=h72||v73;
+      let x=gn(g,al?11:10,0),y=gn(g,al?21:20,0),r=gn(g,50,0)*D2R;
+      if(gn(g,230,1)<0){x=-x;r=Math.PI-r;}
+      const ha=h72===1||h72===4?'center':h72===2?'right':'left';
+      const va=h72===4?'middle':v73===1?'bottom':v73===2?'middle':v73===3?'top':'alphabetic';
+      return addTextRec(sp,g,x,y,gn(g,40,0),r,spec(unesc(gs(g,1,''))),ha,va);
+    }
+    function addMText(sp,g){
+      let t='';for(let i=0;i<g.length;i+=2)if(g[i]===3)t+=g[i+1];t+=gs(g,1,'');
+      const a=gn(g,71,1),dx=gn(g,11,NaN),dy=gn(g,21,NaN);
+      let r=isFinite(dx)&&isFinite(dy)&&(dx||dy)?Math.atan2(dy,dx):gn(g,50,0)*D2R,x=gn(g,10,0);
+      if(gn(g,230,1)<0){x=-x;r=Math.PI-r;}
+      const ha=['left','center','right'][(a-1)%3]||'left',va=['top','middle','bottom'][Math.floor((a-1)/3)]||'top';
+      return addTextRec(sp,g,x,gn(g,20,0),gn(g,40,2.5),r,mtextPlain(t),ha,va);
+    }
+    function arrowPts(tx,ty,fx,fy,sz){ // наконечник: острие (tx,ty), направление от (fx,fy)
+      const L=Math.hypot(tx-fx,ty-fy);if(!(L>0)||!(sz>0))return null;
+      const ux=(tx-fx)/L,uy=(ty-fy)/L,bx=tx-ux*sz,by=ty-uy*sz,w=sz/3;
+      return [tx,ty,0,bx-uy*w,by+ux*w,0,bx+uy*w,by-ux*w,0];
+    }
+    function addMLeader(sp,g){
+      const G=grp(style(g),sp);let txt='',tx=NaN,ty=NaN,th=0,ar=0,tdx=1,tdy=0,ctx=0,lead=null,line=null,drawn=0;
+      const leaders=[];
+      for(let i=0;i<g.length;i+=2){
+        const c=g[i],v=g[i+1],vt=String(v).trim();
+        if(c===300&&vt==='CONTEXT_DATA{'){ctx=1;continue;}
+        if(c===301){ctx=0;continue;}
+        if(c===302&&vt==='LEADER{'){lead={lx:NaN,ly:NaN,dx:0,dy:0,dl:0,lines:[]};leaders.push(lead);continue;}
+        if(c===303){lead=null;continue;}
+        if(c===304&&vt==='LEADER_LINE{'){line=[];if(lead)lead.lines.push(line);continue;}
+        if(c===305){line=null;continue;}
+        const n=Number(v);
+        if(line){if(c===10)line.push(n,0,0);else if(c===20&&line.length)line[line.length-2]=n;continue;}
+        if(lead){if(c===10)lead.lx=n;else if(c===20)lead.ly=n;else if(c===11)lead.dx=n;else if(c===21)lead.dy=n;else if(c===40)lead.dl=n;continue;}
+        if(ctx){if(c===304)txt=vt;else if(c===12)tx=n;else if(c===22)ty=n;else if(c===41)th=n;else if(c===140)ar=n;else if(c===13)tdx=n;else if(c===23)tdy=n;}
+      }
+      for(const L of leaders){
+        const hasL=isFinite(L.lx)&&isFinite(L.ly);
+        for(const ln of L.lines){
+          const pts=ln.slice();if(hasL)pts.push(L.lx,L.ly,0);
+          if(pts.length>=6){G.prims.push(['P',0,pts]);drawn++;
+            const a=arrowPts(pts[0],pts[1],pts[3],pts[4],ar||th||2.5);if(a){G.prims.push(['P',1,a]);}}
+        }
+        if(hasL&&L.dl>0&&(L.dx||L.dy)){G.prims.push(['L',L.lx,L.ly,L.lx+L.dx*L.dl,L.ly+L.dy*L.dl]);drawn++;}
+      }
+      if(txt&&isFinite(tx)&&isFinite(ty)&&addTextRec(sp,g,tx,ty,th||2.5,Math.atan2(tdy,tdx),mtextPlain(txt),'left','top'))drawn++;
+      return drawn>0;
+    }
+    function addLeader(sp,g){
+      const pts=[];for(let i=0;i<g.length;i+=2){if(g[i]===10)pts.push(Number(g[i+1])||0,0,0);else if(g[i]===20&&pts.length)pts[pts.length-2]=Number(g[i+1])||0;}
+      if(pts.length<6)return false;const G=grp(style(g),sp);G.prims.push(['P',0,pts]);
+      if(gn(g,71,1)){const a=arrowPts(pts[0],pts[1],pts[3],pts[4],gn(g,41,0)||2.5);if(a)G.prims.push(['P',1,a]);}
+      return true;
+    }
     function addSpline(sp,g){
       const st=style(g),deg=gn(g,71,3),U=[],Wt=[],C=[],F=[];
       for(let i=0;i<g.length;i+=2){const c=g[i],v=Number(g[i+1])||0;
@@ -570,6 +641,10 @@ function DXFCORE(){
           case 'LWPOLYLINE':ok=addLw(sp,r.g);break;
           case 'ELLIPSE':ok=addEllipse(sp,r.g);break;
           case 'SPLINE':ok=addSpline(sp,r.g);break;
+          case 'TEXT':ok=addText(sp,r.g);break;
+          case 'MTEXT':ok=addMText(sp,r.g);break;
+          case 'MULTILEADER':case 'MLEADER':ok=addMLeader(sp,r.g);break;
+          case 'LEADER':ok=addLeader(sp,r.g);break;
           case 'POLYLINE':{const vs=[];while(k+1<recs.length&&recs[k+1].t==='VERTEX')vs.push(recs[++k]);
             if(k+1<recs.length&&recs[k+1].t==='SEQEND')k++;ok=addPolyline(sp,r.g,vs);break;}
           case 'VERTEX':case 'SEQEND':break;
@@ -585,7 +660,14 @@ function DXFCORE(){
     else if(paperN>0)W('info','Модель пуста — показано пространство листа');
 
     // 4. Габарит по реальной геометрии
-    for(const G of list){const B=[Infinity,Infinity,-Infinity,-Infinity];for(const p of G.prims)primBox(p,B);G.bbox=B[0]<=B[2]?B:null;doc.stats.n+=G.prims.length;}
+    for(const G of list){const B=[Infinity,Infinity,-Infinity,-Infinity];for(const p of G.prims)primBox(p,B);
+      if(G.texts)for(const T of G.texts){ // примерный прямоугольник надписи
+        const w=Math.max(...T.l.map(s=>s.length))*0.6*T.h,hh=T.l.length*1.6*T.h;
+        const x0=T.ha==='center'?-w/2:T.ha==='right'?-w:0,y1=T.va==='top'?0:T.va==='middle'?hh/2:hh,y0=y1-hh;
+        const c=Math.cos(T.r),s2=Math.sin(T.r);
+        for(const [u,v] of [[x0,y0],[x0+w,y0],[x0,y1],[x0+w,y1]])ext(B,T.x+u*c-v*s2,T.y+u*s2+v*c);
+        doc.stats.n++;}
+      G.bbox=B[0]<=B[2]?B:null;doc.stats.n+=G.prims.length;}
     let vis=list.filter(G=>!G.off&&G.bbox);
     const offL=[...new Set(list.filter(G=>G.off).map(G=>G.layer))];
     if(!vis.length&&offL.length){list.forEach(G=>G.off=false);vis=list.filter(G=>G.bbox);W('warn','Вся геометрия на выключенных слоях — показана принудительно');}
@@ -593,14 +675,14 @@ function DXFCORE(){
     if(vis.length){
       const B=[Infinity,Infinity,-Infinity,-Infinity];for(const G of vis){ext(B,G.bbox[0],G.bbox[1]);ext(B,G.bbox[2],G.bbox[3]);}
       const ox=(B[0]+B[2])/2,oy=(B[1]+B[3])/2;doc.origin=[ox,oy];
-      for(const G of list){for(const p of G.prims)shiftPrim(p,ox,oy);if(G.bbox)G.bbox=[G.bbox[0]-ox,G.bbox[1]-oy,G.bbox[2]-ox,G.bbox[3]-oy];}
+      for(const G of list){for(const p of G.prims)shiftPrim(p,ox,oy);if(G.texts)for(const T of G.texts){T.x-=ox;T.y-=oy;}if(G.bbox)G.bbox=[G.bbox[0]-ox,G.bbox[1]-oy,G.bbox[2]-ox,G.bbox[3]-oy];}
       doc.bbox=[B[0]-ox,B[1]-oy,B[2]-ox,B[3]-oy];doc.size=[B[2]-B[0],B[3]-B[1]];
     }
     doc.groups=list;
 
     // 5. Журнал
     W('info',`Версия ${VER[doc.ver]||doc.ver||'не указана'} · кодировка ${doc.enc}${dec===null&&doc.enc!=='ASCII'?'':''} · отрисовано элементов: ${doc.stats.n}`);
-    const hint={INSERT:' (блоки — следующий этап)',TEXT:' (тексты не входят в этап 1)',MTEXT:' (тексты не входят в этап 1)',DIMENSION:' (размеры не входят в этап 1)'};
+    const hint={INSERT:' (блоки — следующий этап)',DIMENSION:' (размеры — следующий этап)',HATCH:' (штриховка не рисуется)'};
     for(const [t,n] of Object.entries(skipped))W('warn',`${t} ×${n} — не отрисован${hint[t]||''}`);
     if(blocks&&!skipped.INSERT)W('info',`Определений блоков: ${blocks} (не вставлены — не используются)`);
     if(errN)W('error',`Ошибки в элементах: ${errN} пропущено`);
@@ -614,15 +696,16 @@ function DXFCORE(){
    ОСНОВНОЙ ПОТОК
    ===================================================================== */
 const Core=DXFCORE();
-const TAU=Math.PI*2, THUMB_VER=3, TW=400, TH=300, DAY=86400000;
+const TAU=Math.PI*2, THUMB_VER=4, TW=400, TH=300, DAY=86400000;
 const $=id=>document.getElementById(id);
 const LS={get(k,d){try{const v=localStorage.getItem('dxfv.'+k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
           set(k,v){try{localStorage.setItem('dxfv.'+k,JSON.stringify(v));}catch(e){}}};
 
 /* ---------- Настройки, тема, фон ---------- */
-const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,layout:'grid',listW:380,treeW:270,side:false,lw:true,tree:true,
+const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,texts:true,layout:'grid',preview:false,listW:380,prevW:480,treeW:270,side:false,lw:true,tree:true,
   capGrid:{name:1,wrap:0,type:0,size:0,date:0,dir:0},capList:{name:1,type:1,size:1,date:1,dir:1}},LS.get('set',{}));
 if(SET.bg){const o={dark:'#0f1012',gray:'#3a3d42',light:'#ffffff'}[SET.bg];if(o){if(SET.bgDxf==='auto')SET.bgDxf=o;if(SET.bgPdf==='auto')SET.bgPdf=o;}delete SET.bg;}
+if(SET.layout==='explorer'){SET.layout='list';SET.preview=true;}
 const saveSet=()=>LS.set('set',SET);
 const mqLight=matchMedia('(prefers-color-scheme: light)');
 const effTheme=()=>SET.theme==='auto'?(mqLight.matches?'light':'dark'):SET.theme;
@@ -646,6 +729,7 @@ function applyTheme(){document.documentElement.dataset.theme=effTheme();}
 applyTheme();
 document.documentElement.style.setProperty('--listw',SET.listW+'px');
 document.documentElement.style.setProperty('--treew',SET.treeW+'px');
+document.documentElement.style.setProperty('--prevw',SET.prevW+'px');
 
 /* ---------- Пул фоновых потоков для разбора ---------- */
 const Pool=(()=>{
@@ -726,6 +810,26 @@ function renderDoc(ctx,doc,o){
     ctx.lineWidth=Math.max(px/o.s,G.w||0);
     ctx.strokeStyle=o.color||mapCol(G.color);
     ctx.beginPath();tracePrims(ctx,G.prims);ctx.stroke();
+  }
+  ctx.restore();
+  if(o.texts!==false)renderTexts(ctx,doc,o);
+}
+/* надписи рисуются в экранных координатах: всегда читаемо, мелкие (< 3 px) пропускаются */
+function renderTexts(ctx,doc,o){
+  const d=o.dpr||1,V=[o.s*d,(o.W/2-o.cx*o.s)*d,-o.s*d,(o.H/2+o.cy*o.s)*d],X=isId(o.xf)?null:xfMat(o.xf);
+  ctx.save();
+  for(const G of doc.groups){
+    if(!G.texts||G.off||(o.hidden&&o.hidden.has(G.layer)))continue;
+    ctx.fillStyle=o.color||mapCol(G.color);
+    for(const T of G.texts){
+      const hp=T.h*o.s*d;if(hp<3)continue;
+      let px=T.x,py=T.y,dx=Math.cos(T.r),dy=Math.sin(T.r);
+      if(X){[px,py]=mApply(X,px,py);const ex=X[0]*dx+X[2]*dy,ey=X[1]*dx+X[3]*dy;dx=ex;dy=ey;}
+      ctx.setTransform(1,0,0,1,V[0]*px+V[1],V[2]*py+V[3]);ctx.rotate(Math.atan2(-dy,dx));
+      ctx.font=(hp*1.4)+'px Arial,"Segoe UI",sans-serif';ctx.textAlign=T.ha;ctx.textBaseline=T.va;
+      const n=T.l.length,lh=hp*1.6;
+      for(let i=0;i<n;i++)ctx.fillText(T.l[i],0,T.va==='top'?i*lh:T.va==='middle'?(i-(n-1)/2)*lh:-(n-1-i)*lh);
+    }
   }
   ctx.restore();
 }
@@ -860,7 +964,7 @@ $('btnClose').onclick=closeAll;
 function capText(it,c){const p=[];if(c.type)p.push(it.type.toUpperCase());if(c.size)p.push(fmtSize(it.file.size));if(c.date)p.push(fmtDate(it.file.lastModified));
   if(c.dir){const d=it.path.split('/').slice(1,-1).join(' / ');if(d)p.push(d);}return p.join(' · ');}
 function applyCaps(){
-  const list=docked(),c=list?SET.capList:SET.capGrid,g=$('grid');
+  const list=SET.layout==='list',c=list?SET.capList:SET.capGrid,g=$('grid');
   g.classList.toggle('nonm',!c.name);g.classList.toggle('wrapnm',!list&&!!c.wrap);
   g.classList.toggle('nocap',!c.name&&!c.type&&!c.size&&!c.date&&!c.dir);
   for(const it of items)it.meta.textContent=capText(it,c);
@@ -871,16 +975,21 @@ function markCurrent(it){
 }
 
 /* ---------- Ленивые миниатюры ---------- */
-const tq=[];let running=0;const MAXRUN=3;
-const thumbKey=it=>it.key+'|t'+THUMB_VER+'|'+(it.type==='pdf'?pdfBg()+(SET.pdfDark?'i':''):dxfBg());
-const io=new IntersectionObserver(es=>{for(const e of es){const it=e.target._it;it.visible=e.isIntersecting;if(it.visible&&it.state===0)enqueue(it);}pumpThumbs();},{root:$('gridWrap'),rootMargin:'300px'});
+const tq=[];let running=0;const MAXRUN=4,BGRUN=2;
+const thumbKey=it=>it.key+'|t'+THUMB_VER+'|'+(it.type==='pdf'?pdfBg()+(SET.pdfDark?'i':''):dxfBg()+(SET.texts?'':'|nt'));
+const io=new IntersectionObserver(es=>{for(const e of es){const it=e.target._it;it.visible=e.isIntersecting;if(it.visible&&it.state===0)enqueue(it);}pumpThumbs();},{root:$('gridWrap'),rootMargin:'1200px'});
 function enqueue(it){if(it.state)return;it.state=1;tq.push(it);}
 function pumpThumbs(){
-  while(running<MAXRUN&&tq.length){
-    if(VW.full||panes.some(p=>p.loading&&p.el.isConnected))break; // пока грузится просмотр — всё для него
+  if(VW.full||panes.some(p=>p.loading&&p.el.isConnected))return; // пока грузится просмотр — всё для него
+  while(running<MAXRUN){
     let i=tq.findIndex(x=>x.visible);if(i<0)i=tq.findIndex(x=>x.force);
-    if(i<0){for(const x of tq)x.state=0;tq.length=0;break;}
-    const it=tq.splice(i,1)[0];running++;
+    let it;
+    if(i>=0)it=tq.splice(i,1)[0];
+    else{ // видимые готовы — заранее готовим остальные по порядку, чтобы при прокрутке они уже были
+      for(const x of tq)x.state=0;tq.length=0;
+      if(running>=BGRUN)break;it=view.find(x=>x.state===0);if(!it)break;it.state=1;
+    }
+    running++;
     makeThumb(it).catch(e=>{it.ph.textContent='ошибка';}).finally(()=>{running--;pumpThumbs();scheduleStatus();});
   }
 }
@@ -898,7 +1007,7 @@ function thumbBlob(doc){
   if(!doc.bbox)return Promise.resolve(null);
   const cv=document.createElement('canvas');cv.width=TW;cv.height=TH;const ctx=cv.getContext('2d');
   ctx.fillStyle=dxfBg();ctx.fillRect(0,0,TW,TH);
-  renderDoc(ctx,doc,Object.assign({W:TW,H:TH,dpr:1,lw:false,px:1.1},fitView(doc,null,TW,TH,0.06)));
+  renderDoc(ctx,doc,Object.assign({W:TW,H:TH,dpr:1,lw:false,px:1.1,texts:SET.texts},fitView(doc,null,TW,TH,0.06)));
   return new Promise(res=>cv.toBlob(b=>res(b),'image/png'));
 }
 async function pdfThumb(doc){
@@ -967,11 +1076,18 @@ $('logClear').onclick=async()=>{await IDB.clear('thumbs');resetThumbs(false);};
 
 /* ---------- Открытие файлов и папок ---------- */
 const FSA='showDirectoryPicker' in window;           // ПК Chrome: доступ к папке можно запомнить для истории
+/* обход папки: файлы и подпапки читаются параллельно — по сети это в разы быстрее, чем по одному */
+async function pmap(arr,n,fn){let i=0;const run=async()=>{while(i<arr.length){const k=i++;await fn(arr[k]);}};await Promise.all(Array.from({length:Math.min(n,arr.length)},run));}
+let walkShown=0;
 async function walkDir(dir,prefix,out){
+  const files=[],dirs=[];
   for await(const [name,e] of dir.entries()){
-    if(e.kind==='file'){if(/\.(dxf|pdf)$/i.test(name)){try{out.push({file:await e.getFile(),path:prefix+'/'+name});}catch(err){}}}
-    else if(e.kind==='directory')await walkDir(e,prefix+'/'+name,out);
+    if(e.kind==='file'){if(/\.(dxf|pdf)$/i.test(name))files.push([name,e]);}
+    else if(e.kind==='directory')dirs.push([name,e]);
   }
+  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name});}catch(err){}});
+  if(out.length-walkShown>=40){walkShown=out.length;$('status').textContent='Чтение папки… найдено файлов: '+out.length;}
+  await pmap(dirs,6,([name,e])=>walkDir(e,prefix+'/'+name,out));
 }
 async function rememberRoot(h){
   try{
@@ -983,7 +1099,7 @@ async function rememberRoot(h){
 }
 async function openDirHandle(h){
   $('status').textContent='Чтение папки «'+h.name+'»…';
-  const out=[];try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
+  const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
   const rid=await rememberRoot(h);
   setFiles(out,{rid,rootName:h.name,folder:true});
 }
@@ -1050,7 +1166,7 @@ document.addEventListener('drop',async e=>{
    ===================================================================== */
 const VW={idx:-1,full:false,active:0,set:[]};
 const SAVED=new Map(),panes=[];
-const docked=()=>SET.layout==='explorer'&&innerWidth>=760;
+const docked=()=>SET.preview&&innerWidth>=760;
 const viewerShown=()=>VW.full||docked();
 
 /* растр листа PDF «во весь экран» + небольшой кэш отрисованных листов */
@@ -1115,7 +1231,7 @@ class Pane{
     const bg=this.it&&this.it.type==='pdf'?pdfBg():dxfBg();
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.P.base){this.paintPdf();return;}
-    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw});return;}
+    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts});return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
     c.fillText(t,this.W/2,this.H/2);
@@ -1367,15 +1483,15 @@ function updateBar(){
 let ignorePop=false;
 function placeViewer(){
   const d=docked(),v=$('viewer');
-  document.body.classList.toggle('explorer',d);
-  $('grid').classList.toggle('list',d);
+  document.body.classList.toggle('explorer',d);document.body.classList.toggle('gridprev',d&&SET.layout!=='list');
+  $('grid').classList.toggle('list',SET.layout==='list');
   $('dock').hidden=!d;$('split').hidden=!d;applyCaps();
   if(d){if(v.parentNode!==$('dock'))$('dock').appendChild(v);v.hidden=false;}
   else{if(v.parentNode!==document.body)document.body.insertBefore(v,$('pairPanel'));v.hidden=!VW.full;}
   v.classList.toggle('full',VW.full||!d);
   $('vClose').hidden=d;
   $('vFull').hidden=!d;$('vFull').textContent=VW.full?'🗗':'⛶';$('vFull').title=VW.full?'Вернуть в окно (Esc)':'На весь экран (Enter, двойной клик по файлу)';
-  $('btnLayout').textContent=SET.layout==='explorer'?'▦ Сетка':'☰ Список';
+  $('btnLayout').textContent=SET.layout==='list'?'▦ Сетка':'☰ Список';$('btnPreview').classList.toggle('on',SET.preview);
   layoutStage();
 }
 function setFull(on,fromPop){
@@ -1389,17 +1505,20 @@ function setFull(on,fromPop){
 }
 window.addEventListener('popstate',()=>{if(ignorePop){ignorePop=false;return;}if(VW.full)setFull(false,true);});
 window.addEventListener('resize',()=>{if(document.body.classList.contains('explorer')!==docked()){placeViewer();if(docked()&&VW.idx>=0&&!VW.set.length)showItem(VW.idx);}});
-$('btnLayout').onclick=()=>{
+$('btnLayout').onclick=()=>{SET.layout=SET.layout==='list'?'grid':'list';saveSet();placeViewer();markCurrent(view[VW.idx]);};
+$('btnPreview').onclick=()=>{
   if(VW.full)setFull(false);
-  SET.layout=SET.layout==='explorer'?'grid':'explorer';saveSet();
+  SET.preview=!SET.preview;saveSet();
   if(!docked()){for(const p of panes)p.clear();VW.set=[];}
   placeViewer();
   if(docked()&&VW.idx>=0)showItem(VW.idx);
 };
 (()=>{const sp=$('split');let x0=0,w0=0;
-  sp.addEventListener('pointerdown',e=>{sp.setPointerCapture(e.pointerId);x0=e.clientX;w0=$('gridWrap').getBoundingClientRect().width;sp.classList.add('drag');});
+  const gp=()=>document.body.classList.contains('gridprev');
+  sp.addEventListener('pointerdown',e=>{sp.setPointerCapture(e.pointerId);x0=e.clientX;w0=(gp()?$('dock'):$('gridWrap')).getBoundingClientRect().width;sp.classList.add('drag');});
   sp.addEventListener('pointermove',e=>{if(!sp.hasPointerCapture(e.pointerId))return;
-    SET.listW=Math.round(Math.min(Math.max(w0+e.clientX-x0,220),innerWidth-320));document.documentElement.style.setProperty('--listw',SET.listW+'px');});
+    if(gp()){SET.prevW=Math.round(Math.min(Math.max(w0-(e.clientX-x0),260),innerWidth-320));document.documentElement.style.setProperty('--prevw',SET.prevW+'px');}
+    else{SET.listW=Math.round(Math.min(Math.max(w0+e.clientX-x0,220),innerWidth-320));document.documentElement.style.setProperty('--listw',SET.listW+'px');}});
   sp.addEventListener('pointerup',()=>{sp.classList.remove('drag');saveSet();});
 })();
 
@@ -1718,9 +1837,10 @@ function fillBgSel(){
     sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
     col.oninput=()=>changeSet(key,col.value);
   }
-  $('sPdfDark').value=SET.pdfDark?'1':'0';
+  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sTexts').value=SET.texts?'1':'0';
 }
 $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
+$('sTexts').onchange=e=>{SET.texts=e.target.value==='1';saveSet();bgChanged();};
 const CAPS=[['name','Имя файла'],['wrap','Имя полностью, в несколько строк'],['type','Тип (DXF / PDF)'],['size','Размер файла'],['date','Дата изменения'],['dir','Подпапка']];
 function fillCaps(){
   const T=$('capT');T.innerHTML='<tr><th></th><th>Сетка</th><th>Список</th></tr>';
@@ -1812,17 +1932,34 @@ $('pinClose').onclick=()=>{$('pinPanel').hidden=true;};
 $('vPin').onclick=()=>{const it=curItem();if(it)pinAdd({kind:'file',root:it.rid,rootName:it.rootName,path:it.path,label:it.name});};
 
 /* ---------- Клавиатура ---------- */
+function gridCols(){const t=$('grid').children;if(t.length<2)return 1;const y=t[0].offsetTop;let n=0;while(n<t.length&&t[n].offsetTop===y)n++;return n||1;}
+function pageRows(){const t=$('grid').children[0];return t?Math.max(1,Math.floor($('gridWrap').clientHeight/(t.offsetHeight+8))):1;}
 document.addEventListener('keydown',e=>{
   const k=e.key;
   for(const id of ['logPanel','histPanel'])if(!$(id).hidden){if(k==='Escape')$(id).hidden=true;return;}
   if(k==='Escape'&&!$('setPanel').hidden){$('setPanel').hidden=true;return;}
   if(k==='Escape'&&!$('pinPanel').hidden){$('pinPanel').hidden=true;return;}
   if(k==='Escape'&&!$('pairPanel').hidden){closePairPanel();e.preventDefault();return;}
+  if(e.target.id==='filter'&&(k==='ArrowDown'||k==='Enter')){e.target.blur();e.preventDefault();if(view.length&&VW.idx<0){if(docked())showItem(0);else{VW.idx=0;markCurrent(view[0]);}}return;}
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
-  if(!viewerShown()||!view.length)return;
+  if(!view.length)return;
+  if(!viewerShown()){ // сетка/список без окна просмотра: выбор стрелками, Enter или пробел — открыть
+    const cols=SET.layout==='list'?1:gridCols();let i=VW.idx,h=true;
+    if(k==='ArrowRight')i=i<0?0:i+1;else if(k==='ArrowLeft')i=i<0?0:i-1;
+    else if(k==='ArrowDown')i=i<0?0:i+cols;else if(k==='ArrowUp')i=i<0?0:i-cols;
+    else if(k==='Home')i=0;else if(k==='End')i=view.length-1;
+    else if(k==='PageDown')i=(i<0?0:i)+cols*pageRows();else if(k==='PageUp')i=(i<0?0:i)-cols*pageRows();
+    else if((k==='Enter'||k===' ')&&i>=0){e.preventDefault();showItem(i);setFull(true);return;}
+    else h=false;
+    if(h){e.preventDefault();VW.idx=Math.min(Math.max(i,0),view.length-1);markCurrent(view[VW.idx]);}
+    return;
+  }
   const ap=panes[VW.active];let h=true;
-  if(k==='ArrowRight'||k==='ArrowDown'||k===' ')step(1);
-  else if(k==='ArrowLeft'||k==='ArrowUp')step(-1);
+  const gridDock=docked()&&!VW.full&&SET.layout!=='list'&&VW.set.length<2;
+  if(k==='ArrowRight'||k===' ')step(1);
+  else if(k==='ArrowLeft')step(-1);
+  else if(k==='ArrowDown'||k==='ArrowUp'){const d=k==='ArrowDown'?1:-1;
+    if(gridDock)showItem(Math.min(Math.max((VW.idx<0?0:VW.idx)+d*gridCols(),0),view.length-1));else step(d);}
   else if(k==='PageDown'){if(!(ap&&ap.pageGo(1)))step(1);}
   else if(k==='PageUp'){if(!(ap&&ap.pageGo(-1)))step(-1);}
   else if(k==='Tab'){if(VW.set.length>1){const n=VW.set.length;setActive(panes[(VW.active+(e.shiftKey?-1:1)+n)%n]);}else cyclePair(e.shiftKey?-1:1);}
