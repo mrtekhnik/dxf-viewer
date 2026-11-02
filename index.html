@@ -56,8 +56,10 @@ body.gridprev #dock{flex:none;width:var(--prevw)}
 #empty{max-width:560px;margin:10vh auto;text-align:center;color:var(--mut);line-height:1.6;border:2px dashed var(--line);border-radius:12px;padding:30px 20px}
 body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;user-select:none}
-.tile:hover{border-color:var(--acc)}
-.tile.cur{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.tile:hover{border-color:var(--btnh)}
+.tile.cur{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+body.kbd .tile:hover:not(.cur){border-color:var(--line)}
+body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:transparent}
 .th{position:relative;aspect-ratio:4/3;background:var(--cv)}
 .th img{width:100%;height:100%;object-fit:contain;display:block}
 .ph{position:absolute;inset:0;display:grid;place-items:center;color:var(--ph);font-size:12px}
@@ -185,7 +187,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v2.6.1</small></div>
+  <div class="brand">DXF <small>+PDF · v2.6.2</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -1960,6 +1962,9 @@ $('pinClose').onclick=()=>{$('pinPanel').hidden=true;};
 $('vPin').onclick=()=>{const it=curItem();if(it)pinAdd({kind:'file',root:it.rid,rootName:it.rootName,path:it.path,label:it.name});};
 
 /* ---------- Клавиатура ---------- */
+/* при листании клавиатурой не подсвечивать плитку под мышью — чтобы не было «второй рамки» */
+document.addEventListener('keydown',e=>{if(/^(Arrow|Page|Home|End)/.test(e.key))document.body.classList.add('kbd');},true);
+document.addEventListener('mousemove',()=>{if(document.body.classList.contains('kbd'))document.body.classList.remove('kbd');});
 function gridCols(){const t=$('grid').children;if(t.length<2)return 1;const y=t[0].offsetTop;let n=0;while(n<t.length&&t[n].offsetTop===y)n++;return n||1;}
 function pageRows(){const t=$('grid').children[0];return t?Math.max(1,Math.floor($('gridWrap').clientHeight/(t.offsetHeight+8))):1;}
 document.addEventListener('keydown',e=>{
