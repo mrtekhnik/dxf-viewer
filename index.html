@@ -209,7 +209,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.1</small></div>
+  <div class="brand">DXF <small>+PDF · v3.2</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -313,6 +313,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
   <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>
+  <div class="set-sec">Пары чертёж ⇄ DXF</div>
+  <div class="set-row"><span>Искать пары</span><select id="sScope"><option value="dir">в выбранной папке дерева</option><option value="all">во всём открытом изделии</option></select></div>
+  <div class="pp-s" style="margin:0;border:0">«Во всём изделии» нужно для старых проектов, где PDF и DXF лежат в соседних папках.</div>
   <div class="set-sec">Подпись в окне просмотра</div>
   <div id="capV" style="padding:2px 12px 6px;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;font-size:13px"></div>
   <div class="set-sec">Подписи под миниатюрами</div>
@@ -777,10 +780,11 @@ const LS={get(k,d){try{const v=localStorage.getItem('dxfv.'+k);return v===null?d
           set(k,v){try{localStorage.setItem('dxfv.'+k,JSON.stringify(v));}catch(e){}}};
 
 /* ---------- Настройки, тема, фон ---------- */
-const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,texts:true,lineK:1,hView:'list',sync:true,capV:{name:1,dims:1,spec:1,dir:0,date:0,size:0,single:0},layout:'grid',preview:false,listW:380,prevW:480,treeW:270,side:false,lw:true,tree:true,
+const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,texts:true,lineK:1,hView:'list',sync:true,capV:{name:1,dims:1,spec:1,dir:0,date:0,size:0,single:1},pairScope:'dir',monMain:'pdf',layout:'grid',preview:false,listW:380,prevW:480,treeW:270,side:false,lw:true,tree:true,
   capGrid:{name:1,wrap:0,type:0,size:0,date:0,dir:0},capList:{name:1,type:1,size:1,date:1,dir:1}},LS.get('set',{}));
 if(SET.bg){const o={dark:'#0f1012',gray:'#3a3d42',light:'#ffffff'}[SET.bg];if(o){if(SET.bgDxf==='auto')SET.bgDxf=o;if(SET.bgPdf==='auto')SET.bgPdf=o;}delete SET.bg;}
 if(SET.layout==='explorer'){SET.layout='list';SET.preview=true;}
+if(!SET.capVv){SET.capV.single=1;SET.capVv=1;}   // подпись и при одном файле — по умолчанию
 const saveSet=()=>LS.set('set',SET);
 const mqLight=matchMedia('(prefers-color-scheme: light)');
 const effTheme=()=>SET.theme==='auto'?(mqLight.matches?'light':'dark'):SET.theme;
@@ -1552,7 +1556,13 @@ function showItem(i){
   i=((i%view.length)+view.length)%view.length;VW.idx=i;
   const it=view[i];
   markCurrent(it);closePairPanel();
-  let set=dedupe(SET.side?setFor(it):[it],it);
+  let set;VW.kit=null;VW.monList=null;
+  if(monOn()){ // два монитора: основной — всегда один тип (PDF или DXF), второй — другой; шаг — по комплектам
+    const kit=setFor(it),mt=SET.monMain,mine=kit.filter(x=>x.type===mt);
+    set=mine.length?[mine.includes(it)?it:mine[0]]:[it];
+    VW.kit=kit;VW.monList=kit.filter(x=>x.type!==set[0].type);
+  }else{set=SET.side?setFor(it):[it];   // setFor уже убирает копии
+    if(set.length===1){const c=items.filter(x=>x.type===it.type&&x.file.size===it.file.size&&fname(x.path)===fname(it.path)&&inScope(x));it.dups=c.length>1?c:null;}}
   if(set.length>10){set=set.slice(0,10);if(!set.includes(it))set[9]=it;}
   VW.set=set;layoutStage();
   VW.active=Math.max(0,set.indexOf(it));
@@ -1572,8 +1582,8 @@ function step(d){
   if(VW.cmp&&!VW.cmp.manual&&CMP){ // сравнение папок: к следующему файлу, у которого есть версия
     let i=VW.idx;for(let k=0;k<view.length;k++){i=(i+d+view.length)%view.length;const c=CMP.map.get(view[i]);if(c&&c.b){cmpOpen(view[i],c.b);return;}}return;}
   if(VW.idx<0){showItem(d>0?0:view.length-1);return;}
-  if(VW.set.length<2){showItem(VW.idx+d);return;}
-  const cur=new Set(VW.set);let i=VW.idx;
+  if(VW.set.length<2&&!(VW.kit&&VW.kit.length>1)){showItem(VW.idx+d);return;}
+  const cur=new Set(VW.kit||VW.set);let i=VW.idx;
   for(let k=0;k<view.length;k++){i=(i+d+view.length)%view.length;if(!cur.has(view[i]))break;}
   showItem(i);
 }
@@ -1607,6 +1617,8 @@ function updateBar(){
   $('vDims').textContent=has&&ap?ap.dims():'';
   $('vWarn').hidden=!(has&&cur.issues);if(has)$('vWarn').textContent=`⚠ замечаний: ${cur.issues}`;
   if(FOLLOW)followerBar();
+  else if(monOn()&&has){const b=$('vPair');b.hidden=false;b.classList.remove('none');b.textContent='⇄ поменять';
+    b.title='Основной: '+(SET.monMain==='pdf'?'PDF':'DXF')+', второй: '+(SET.monMain==='pdf'?'DXF':'PDF')+' — поменять местами';}
 }
 
 /* ---------- Сетка / Проводник / весь экран ---------- */
@@ -1658,7 +1670,7 @@ $('vPrev').onclick=()=>step(-1);
 $('vNext').onclick=()=>step(1);
 $('vFit').onclick=()=>{for(let k=0;k<VW.set.length;k++)panes[k].fit();};
 $('vSide').onclick=()=>{if(FOLLOW)return;SET.side=!SET.side;saveSet();if(VW.idx>=0)showItem(VW.idx);else updateBar();};
-$('vPair').onclick=()=>{if(FOLLOW)followerSend({t:'swap'});else cyclePair(1);};
+$('vPair').onclick=()=>{if(FOLLOW)followerSend({t:'swap'});else if(monOn())monSwap();else cyclePair(1);};
 $('vSync').onclick=()=>{SET.sync=!SET.sync;saveSet();updateBar();if(SET.sync){const p=panes[VW.active];p&&p.changed();}};
 $('vMon').onclick=()=>openSecond();
 $('vPgPrev').onclick=()=>{const p=panes[VW.active];p&&p.pageGo(-1);};
@@ -1738,12 +1750,15 @@ function buildPairs(){
     if(!man){let bs=0;for(const p of pdfs){const sc=pairScore(p,d);if(sc>bs){bs=sc;best=p;}}}
     if(best){toPdf.set(d,{pdf:best,man});toDxf.get(best).push(d);}
   }
+  const nat=(a,b)=>pkeys(a).desig.localeCompare(pkeys(b).desig,'ru',{numeric:true})||a.path.localeCompare(b.path,'ru',{numeric:true});
+  for(const arr of toDxf.values())arr.sort(nat);   // сначала основная деталь, потом -01, -02 …
   pairMap={toPdf,toDxf};
 }
+const inScope=x=>SET.pairScope==='all'||!curDir||x.path.startsWith(curDir+'/');
 function targets(it){
   if(!it)return [];if(!pairMap)buildPairs();
-  if(it.type==='dxf'){const r=pairMap.toPdf.get(it);return r?[r.pdf]:[];}
-  return pairMap.toDxf.get(it)||[];
+  if(it.type==='dxf'){const r=pairMap.toPdf.get(it);return r&&inScope(r.pdf)?[r.pdf]:[];}
+  return (pairMap.toDxf.get(it)||[]).filter(inScope);
 }
 const isManual=dxf=>{if(!pairMap)buildPairs();const r=pairMap.toPdf.get(dxf);return !!(r&&r.man);};
 function updatePairBtn(it){
@@ -2029,12 +2044,13 @@ function fillBgSel(){
     sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
     col.oninput=()=>changeSet(key,col.value);
   }
-  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);
+  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
 }
 $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;saveSet();panes.forEach(p=>p.draw());};
 function cycleLineK(){const v=[1,1.6,2.4];SET.lineK=v[(v.indexOf(SET.lineK)+1)%3]||1;saveSet();panes.forEach(p=>p.draw());$('sLineK').value=String(SET.lineK);
   flash('Линии DXF: '+({1:'тонкие',1.6:'средние',2.4:'жирные'})[SET.lineK]);}
+$('sScope').onchange=e=>{SET.pairScope=e.target.value;saveSet();if(VW.idx>=0&&viewerShown())showItem(VW.idx);};
 $('sTexts').onchange=e=>{SET.texts=e.target.value==='1';saveSet();bgChanged();};
 const CAPS=[['name','Имя файла'],['wrap','Имя полностью, в несколько строк'],['type','Тип (DXF / PDF)'],['size','Размер файла'],['date','Дата изменения'],['dir','Подпапка']];
 function fillCaps(){
@@ -2137,14 +2153,20 @@ $('vPin').onclick=()=>{const it=curItem();if(it)pinAdd({kind:'file',root:it.rid,
    ===================================================================== */
 const FOLLOW=location.hash==='#second';
 const MON={win:null,timer:0};
+const monOn=()=>!FOLLOW&&!!MON.win&&!MON.win.closed;
+function monSwap(){SET.monMain=SET.monMain==='pdf'?'dxf':'pdf';saveSet();if(VW.idx>=0)showItem(VW.idx);
+  flash('Основной монитор: '+(SET.monMain==='pdf'?'чертежи PDF':'развёртки DXF')+', второй: '+(SET.monMain==='pdf'?'развёртки DXF':'чертежи PDF'));}
+function monTab(d){ // Tab при двух мониторах: на основном несколько исполнений — по ним, иначе поменять мониторы
+  const mine=(VW.kit||[]).filter(x=>x.type===SET.monMain);
+  if(SET.monMain==='dxf'&&mine.length>1){const k=mine.indexOf(VW.set[0]);jumpTo(mine[(k+d+mine.length)%mine.length]);}else monSwap();
+}
 function monSync(){
-  if(FOLLOW||!MON.win||MON.win.closed)return;
-  const it=view[VW.idx];let list=[];
-  if(it)list=dedupe(it.type==='pdf'?targets(it):targets(it).slice(0,1));
+  if(!monOn())return;
+  const it=view[VW.idx];const list=it?(VW.monList||[]):[];
   try{MON.win.postMessage({t:'show',from:it?it.name:'',list:list.map(x=>({file:x.file,path:x.path,key:x.key,name:x.name,rid:x.rid||null,rootName:x.rootName,dups:x.dups?x.dups.map(y=>y.path):null}))},'*');}catch(e){}
 }
 async function openSecond(){
-  if(MON.win&&!MON.win.closed){MON.win.close();MON.win=null;updateBar();return;}
+  if(MON.win&&!MON.win.closed){MON.win.close();MON.win=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);else updateBar();return;}
   let feat='popup,width=1100,height=800',o=null,asked=false;
   if('getScreenDetails' in window){ // сначала — какой экран второй (Chrome один раз спросит «управление окнами»)
     try{const st=await navigator.permissions.query({name:'window-management'}).catch(()=>null);asked=!st||st.state==='prompt';
@@ -2156,15 +2178,15 @@ async function openSecond(){
   if(!w){flash(asked?'Разрешение получено — нажмите «2-й монитор» ещё раз':'Браузер заблокировал второе окно — разрешите всплывающие окна для этого сайта (значок в адресной строке)');return;}
   if(o){try{w.moveTo(o.availLeft,o.availTop);w.resizeTo(o.availWidth,o.availHeight);}catch(e){}}
   MON.win=w;updateBar();
-  clearInterval(MON.timer);MON.timer=setInterval(()=>{if(!MON.win||MON.win.closed){clearInterval(MON.timer);MON.win=null;updateBar();}},1000);
+  clearInterval(MON.timer);MON.timer=setInterval(()=>{if(!MON.win||MON.win.closed){clearInterval(MON.timer);MON.win=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);else updateBar();}},1000);
 }
 window.addEventListener('message',e=>{
   const d=e.data;if(!d||typeof d!=='object')return;
   if(!FOLLOW&&MON.win&&e.source===MON.win){
-    if(d.t==='ready')monSync();
-    else if(d.t==='swap'){if(view[VW.idx])cyclePair(1);}
+    if(d.t==='ready'){if(VW.idx>=0&&viewerShown())showItem(VW.idx);else monSync();}
+    else if(d.t==='swap')monSwap();
     else if(d.t==='key'){const k=d.key;
-      if(k==='Tab')cyclePair(d.shift?-1:1);
+      if(k==='Tab')monTab(d.shift?-1:1);
       else if(/^(ArrowRight|ArrowDown|PageDown| )$/.test(k)){if(viewerShown())step(1);else{VW.idx=Math.min(view.length-1,VW.idx+1);markCurrent(view[VW.idx]);monSync();}}
       else if(/^(ArrowLeft|ArrowUp|PageUp)$/.test(k)){if(viewerShown())step(-1);else{VW.idx=Math.max(0,VW.idx-1);markCurrent(view[VW.idx]);monSync();}}}
   }
@@ -2356,6 +2378,7 @@ document.addEventListener('keydown',e=>{
     if(gridDock)showItem(Math.min(Math.max((VW.idx<0?0:VW.idx)+d*gridCols(),0),view.length-1));else step(d);}
   else if(k==='PageDown'){if(!(ap&&ap.pageGo(1)))step(1);}
   else if(k==='PageUp'){if(!(ap&&ap.pageGo(-1)))step(-1);}
+  else if(k==='Tab'&&monOn())monTab(e.shiftKey?-1:1);
   else if(k==='Tab'){if(VW.set.length>1){const n=VW.set.length;setActive(panes[(VW.active+(e.shiftKey?-1:1)+n)%n]);}else cyclePair(e.shiftKey?-1:1);}
   else if(k==='Enter'){if(docked()&&!VW.full&&VW.idx>=0)setFull(true);else h=false;}
   else if(k==='Escape'){if(VW.cmp&&docked()&&!VW.full)showItem(VW.idx);else if(VW.full)setFull(false);else h=false;}
