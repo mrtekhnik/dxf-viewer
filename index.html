@@ -209,7 +209,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.2</small></div>
+  <div class="brand">DXF <small>+PDF · v3.2.1</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -1300,25 +1300,27 @@ class Pane{
     this.dpr=devicePixelRatio||1;this.W=r.width;this.H=r.height;
     this.cv.width=Math.round(this.W*this.dpr);this.cv.height=Math.round(this.H*this.dpr);
     if(this.pending&&this.doc)this.applyView(this.pending);
-    else if(this.doc&&this.doc.bbox)this.fitS=this.fitView().s;
+    else if(this.doc&&this.doc.bbox){ // окно поменяло размер: вписанный чертёж — вписать заново, приближенный — сохранить относительный масштаб
+      if(this.fitted){this.fit();return;}
+      const of=this.fitS;this.fitS=this.fitView().s;if(of&&this.fitS)this.s*=this.fitS/of;}
     this.draw();
   }
   fitView(){return fitView(this.doc,this.xf,this.W,this.H,this.isPdf?0.02:0.05);}
-  fit(){if(!this.doc||!this.doc.bbox)return;if(!this.W){this.pending='fit';return;}Object.assign(this,this.fitView());this.fitS=this.s;this.draw();}
+  fit(){if(!this.doc||!this.doc.bbox)return;if(!this.W){this.pending='fit';return;}Object.assign(this,this.fitView());this.fitS=this.s;this.fitted=true;this.draw();}
   applyView(sv){ // 'fit' или {z,cx,cy} — z = масштаб относительно «показать всё»
     if(!this.W){this.pending=sv;return;}
     this.pending=null;if(!this.doc||!this.doc.bbox){this.draw();return;}
     const f=this.fitView();this.fitS=f.s;
-    if(sv&&sv!=='fit'){this.s=f.s*sv.z;this.cx=sv.cx;this.cy=sv.cy;}else Object.assign(this,f);
+    if(sv&&sv!=='fit'&&Math.abs(sv.z-1)>0.02){this.s=f.s*sv.z;this.cx=sv.cx;this.cy=sv.cy;this.fitted=false;}else{Object.assign(this,f);this.fitted=true;}
     this.draw();
   }
   save(){if(this.it&&this.doc&&!this.loading&&this.W&&this.fitS&&!this.pending)SAVED.set(this.it.key,{z:this.s/this.fitS,cx:this.cx,cy:this.cy,page:this.pageNo});}
   s2w(x,y){return [this.cx+(x-this.W/2)/this.s,this.cy-(y-this.H/2)/this.s];}
   clampS(s){return Math.min(Math.max(s,this.fitS/2000),this.fitS*(this.isPdf?200:1e6));}
-  zoomAt(x,y,f){const ns=this.clampS(this.s*f),[wx,wy]=this.s2w(x,y);this.s=ns;this.cx=wx-(x-this.W/2)/ns;this.cy=wy+(y-this.H/2)/ns;this.draw();this.changed();}
+  zoomAt(x,y,f){this.fitted=false;const ns=this.clampS(this.s*f),[wx,wy]=this.s2w(x,y);this.s=ns;this.cx=wx-(x-this.W/2)/ns;this.cy=wy+(y-this.H/2)/ns;this.draw();this.changed();}
   changed(){ // при сравнении второе окно повторяет масштаб и сдвиг (в мм — для одинаковых деталей совпадают)
     if(!VW.cmp||!SET.sync||VW.set.length!==2)return;const o=panes[1-panes.indexOf(this)];
-    if(!o||!o.doc||!this.doc||o.isPdf!==this.isPdf)return;o.s=this.s;o.cx=this.cx;o.cy=this.cy;o.draw();
+    if(!o||!o.doc||!this.doc||o.isPdf!==this.isPdf)return;o.fitted=this.fitted;o.s=this.s;o.cx=this.cx;o.cy=this.cy;o.draw();
   }
   draw(){if(!this.raf)this.raf=requestAnimationFrame(()=>{this.raf=0;this.paint();});}
   paint(){
@@ -1395,7 +1397,8 @@ class Pane{
   applyXf(nx){ // сменить положение, сохранив место, на которое смотрим
     const [mx,my]=mApply(mInv(xfMat(this.xf)),this.cx,this.cy);
     this.xf=Object.assign({tx:0,ty:0},nx);[this.cx,this.cy]=mApply(xfMat(this.xf),mx,my);
-    const ofit=this.fitS;this.fitS=this.fitView().s;if(ofit&&this.fitS)this.s*=this.fitS/ofit;
+    if(this.fitted){Object.assign(this,this.fitView());this.fitS=this.s;}
+    else{const ofit=this.fitS;this.fitS=this.fitView().s;if(ofit&&this.fitS)this.s*=this.fitS/ofit;}
     this.draw();
   }
   setXf(nx){
@@ -1462,13 +1465,13 @@ class Pane{
       if(this.doc&&!this.isPdf&&this.doc.bbox&&e.pointerType==='mouse'){const [wx,wy]=mApply(mInv(xfMat(this.xf)),...this.s2w(x,y));$('vCoord').textContent=`X ${fmt(wx+this.doc.origin[0])}   Y ${fmt(wy+this.doc.origin[1])}`;}
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
-      if(ptrs.size===1){this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
+      if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
       else if(ptrs.size===2){
         const [a,b]=[...ptrs.values()];
         const m0=[(a.x+b.x)/2,(a.y+b.y)/2],d0=Math.hypot(a.x-b.x,a.y-b.y);
         p.x=x;p.y=y;
         const m1=[(a.x+b.x)/2,(a.y+b.y)/2],d1=Math.hypot(a.x-b.x,a.y-b.y);
-        if(d0>0){const [wx,wy]=this.s2w(m0[0],m0[1]);this.s=this.clampS(this.s*d1/d0);
+        if(d0>0){this.fitted=false;const [wx,wy]=this.s2w(m0[0],m0[1]);this.s=this.clampS(this.s*d1/d0);
           this.cx=wx-(m1[0]-this.W/2)/this.s;this.cy=wy+(m1[1]-this.H/2)/this.s;this.draw();this.changed();}
       }
     });
