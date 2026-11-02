@@ -185,7 +185,7 @@ body.drag main#gridWrap{outline:2px dashed var(--acc);outline-offset:-6px}
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v2.6</small></div>
+  <div class="brand">DXF <small>+PDF · v2.6.1</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -416,7 +416,7 @@ function DXFCORE(){
     let dec;
     try{dec=decode(buf);}catch(e){W('error','Не удалось прочитать файл: '+e.message);return doc;}
     if(dec.binary){W('error','Двоичный (binary) DXF пока не поддерживается');return doc;}
-    doc.ver=dec.ver;doc.enc=dec.enc;
+    doc.ver=dec.ver;doc.enc=dec.enc;doc.cp=dec.cp;
     const Ls=dec.text.split(/\r\n|\n|\r/);
     dec=null;
 
@@ -534,6 +534,7 @@ function DXFCORE(){
     }
     function addTextRec(sp,g,x,y,h,r,str,ha,va){
       if(!(h>0)||!str||!str.trim())return false;
+      if(str.includes('\uFFFD')){txtBroken++;str=str.replace(/\uFFFD/g,'?');}
       const G=grp(style(g),sp);(G.texts||(G.texts=[])).push({x,y,h,r,l:str.split('\n'),ha,va});return true;
     }
     function addText(sp,g){
@@ -552,13 +553,35 @@ function DXFCORE(){
       const ha=['left','center','right'][(a-1)%3]||'left',va=['top','middle','bottom'][Math.floor((a-1)/3)]||'top';
       return addTextRec(sp,g,x,gn(g,20,0),gn(g,40,2.5),r,mtextPlain(t),ha,va);
     }
+    /* Кодировка надписи испорчена при экспорте (вместо букв «�»). Ищем исходный текст в резервной
+       графике выноски (код 310): там он хранится в кодовой странице файла. */
+    let txtFixed=0,txtBroken=0;
+    function recoverText(txt,hex){
+      const n=txt.length;
+      if(hex&&hex.length>=n*2){
+        const b=new Uint8Array(hex.length>>1);for(let i=0;i<b.length;i++)b[i]=parseInt(hex.substr(i*2,2),16);
+        const ok=x=>x>=0xC0||(x>=0x20&&x<0x7F)||[0xA8,0xB8,0xAA,0xBA,0xAF,0xBF,0xB2,0xB3,0xA5,0xB4].includes(x);
+        for(let i=0;i<b.length;){
+          if(!ok(b[i])){i++;continue;}
+          let j=i;while(j<b.length&&ok(b[j]))j++;
+          const run=b.subarray(i,j);let hi=0;for(const x of run)if(x>=0xA8)hi++;
+          if(run.length===n&&hi>0){
+            const s=new TextDecoder(encFromCp(doc.cp)).decode(run);
+            let match=true;for(let k=0;k<n;k++)if(txt[k]!=='�'&&txt[k]!==s[k]){match=false;break;}
+            if(match){txtFixed++;return s;}
+          }
+          i=j;
+        }
+      }
+      txtBroken++;return txt.replace(/�/g,'?');
+    }
     function arrowPts(tx,ty,fx,fy,sz){ // наконечник: острие (tx,ty), направление от (fx,fy)
       const L=Math.hypot(tx-fx,ty-fy);if(!(L>0)||!(sz>0))return null;
       const ux=(tx-fx)/L,uy=(ty-fy)/L,bx=tx-ux*sz,by=ty-uy*sz,w=sz/3;
       return [tx,ty,0,bx-uy*w,by+ux*w,0,bx+uy*w,by-ux*w,0];
     }
     function addMLeader(sp,g){
-      const G=grp(style(g),sp);let txt='',tx=NaN,ty=NaN,th=0,ar=0,tdx=1,tdy=0,ctx=0,lead=null,line=null,drawn=0;
+      const G=grp(style(g),sp);let txt='',tx=NaN,ty=NaN,th=0,ar=0,tdx=1,tdy=0,ctx=0,lead=null,line=null,drawn=0,att=1,hex='';
       const leaders=[];
       for(let i=0;i<g.length;i+=2){
         const c=g[i],v=g[i+1],vt=String(v).trim();
@@ -571,7 +594,8 @@ function DXFCORE(){
         const n=Number(v);
         if(line){if(c===10)line.push(n,0,0);else if(c===20&&line.length)line[line.length-2]=n;continue;}
         if(lead){if(c===10)lead.lx=n;else if(c===20)lead.ly=n;else if(c===11)lead.dx=n;else if(c===21)lead.dy=n;else if(c===40)lead.dl=n;continue;}
-        if(ctx){if(c===304)txt=vt;else if(c===12)tx=n;else if(c===22)ty=n;else if(c===41)th=n;else if(c===140)ar=n;else if(c===13)tdx=n;else if(c===23)tdy=n;}
+        if(!ctx&&c===310){hex+=vt;continue;}
+        if(ctx){if(c===304)txt=vt;else if(c===171)att=n||1;else if(c===12)tx=n;else if(c===22)ty=n;else if(c===41)th=n;else if(c===140)ar=n;else if(c===13)tdx=n;else if(c===23)tdy=n;}
       }
       for(const L of leaders){
         const hasL=isFinite(L.lx)&&isFinite(L.ly);
@@ -582,7 +606,9 @@ function DXFCORE(){
         }
         if(hasL&&L.dl>0&&(L.dx||L.dy)){G.prims.push(['L',L.lx,L.ly,L.lx+L.dx*L.dl,L.ly+L.dy*L.dl]);drawn++;}
       }
-      if(txt&&isFinite(tx)&&isFinite(ty)&&addTextRec(sp,g,tx,ty,th||2.5,Math.atan2(tdy,tdx),mtextPlain(txt),'left','top'))drawn++;
+      if(txt.includes('\uFFFD'))txt=recoverText(txt,hex);
+      const ha=['left','center','right'][(att-1)%3]||'left',va=['top','middle','bottom'][Math.floor((att-1)/3)]||'top';
+      if(txt&&isFinite(tx)&&isFinite(ty)&&addTextRec(sp,g,tx,ty,th||2.5,Math.atan2(tdy,tdx),mtextPlain(txt),ha,va))drawn++;
       return drawn>0;
     }
     function addLeader(sp,g){
@@ -685,6 +711,8 @@ function DXFCORE(){
     const hint={INSERT:' (блоки — следующий этап)',DIMENSION:' (размеры — следующий этап)',HATCH:' (штриховка не рисуется)'};
     for(const [t,n] of Object.entries(skipped))W('warn',`${t} ×${n} — не отрисован${hint[t]||''}`);
     if(blocks&&!skipped.INSERT)W('info',`Определений блоков: ${blocks} (не вставлены — не используются)`);
+    if(txtFixed)W('info',`Надписи выносок: кодировка в файле испорчена, текст восстановлен из графики выноски (${txtFixed})`);
+    if(txtBroken)W('warn',`Надписи с испорченной кодировкой: ${txtBroken} — буквы потеряны при экспорте, показаны «?»`);
     if(errN)W('error',`Ошибки в элементах: ${errN} пропущено`);
     if(!doc.stats.n&&!log.some(l=>l[0]==='error'))W('warn','Нет отрисовываемой геометрии');
     return doc;
