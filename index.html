@@ -116,11 +116,11 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 .pane{position:relative;min-width:0;min-height:0;overflow:hidden}
 .pane canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .pcap{display:none;position:absolute;left:6px;top:6px;z-index:2;background:rgba(20,22,26,.78);color:#e6e6e6;font-size:12px;padding:3px 4px 3px 8px;border-radius:6px;
-  max-width:calc(100% - 12px);gap:6px;align-items:center;pointer-events:auto;flex-wrap:wrap}
+  max-width:calc(100% - 12px);gap:6px;align-items:center;pointer-events:none;flex-wrap:wrap}
 .pcap .cn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%}
 .pcap .ch{background:rgba(255,255,255,.14);border-radius:4px;padding:0 6px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pcap .ch.dim{background:rgba(78,161,255,.28)}
-.pcap .ch.dup{background:#d9822b;color:#fff;cursor:help}
+.pcap .ch.dup{background:#d9822b;color:#fff;cursor:help;pointer-events:auto}
 #stage.multi .pcap,#stage.capone .pcap{display:flex}
 #stage.multi .pane.active{outline:2px solid var(--acc);outline-offset:-2px;z-index:1}
 #stage.multi .pane.active .pcap{background:var(--acc);color:#fff}
@@ -209,7 +209,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.2.1</small></div>
+  <div class="brand">DXF <small>+PDF · v3.3</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -309,8 +309,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
-  <div class="set-row"><span>Линии DXF на экране (B)</span><select id="sLineK"><option value="1">тонкие</option><option value="1.6">средние</option><option value="2.4">жирные</option></select></div>
+  <div class="set-row"><span>Линии DXF на экране (W)</span><select id="sLineK"><option value="1">тонкие</option><option value="1.6">средние</option><option value="2.4">жирные</option></select></div>
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
+  <div class="set-row"><span>Тонкие линии PDF</span><select id="sPdfBold"><option value="0">как в файле</option><option value="1">темнее (чётче на большом листе)</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
   <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>
   <div class="set-sec">Пары чертёж ⇄ DXF</div>
@@ -780,7 +781,7 @@ const LS={get(k,d){try{const v=localStorage.getItem('dxfv.'+k);return v===null?d
           set(k,v){try{localStorage.setItem('dxfv.'+k,JSON.stringify(v));}catch(e){}}};
 
 /* ---------- Настройки, тема, фон ---------- */
-const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,texts:true,lineK:1,hView:'list',sync:true,capV:{name:1,dims:1,spec:1,dir:0,date:0,size:0,single:1},pairScope:'dir',monMain:'pdf',layout:'grid',preview:false,listW:380,prevW:480,treeW:270,side:false,lw:true,tree:true,
+const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,pdfBold:false,texts:true,lineK:1,hView:'list',sync:true,capV:{name:1,dims:1,spec:1,dir:0,date:0,size:0,single:1},pairScope:'dir',monMain:'pdf',layout:'grid',preview:false,listW:380,prevW:480,treeW:270,side:false,lw:true,tree:true,
   capGrid:{name:1,wrap:0,type:0,size:0,date:0,dir:0},capList:{name:1,type:1,size:1,date:1,dir:1}},LS.get('set',{}));
 if(SET.bg){const o={dark:'#0f1012',gray:'#3a3d42',light:'#ffffff'}[SET.bg];if(o){if(SET.bgDxf==='auto')SET.bgDxf=o;if(SET.bgPdf==='auto')SET.bgPdf=o;}delete SET.bg;}
 if(SET.layout==='explorer'){SET.layout='list';SET.preview=true;}
@@ -793,6 +794,8 @@ const dxfBg=()=>SET.bgDxf==='auto'?(effTheme()==='light'?'#ffffff':'#0f1012'):SE
 const pdfBg=()=>SET.bgPdf==='auto'?(effTheme()==='light'?'#dfe2e6':'#0f1012'):SET.bgPdf;
 const bgKey=()=>dxfBg()+'|'+pdfBg()+'|'+(SET.pdfDark?1:0);
 const PDF_INV='invert(1) hue-rotate(180deg)';
+/* «тонкие линии темнее»: полутона сглаживания дотягиваются до чёрного (на белом листе), цвета почти не меняются */
+const pdfFilter=()=>[SET.pdfBold?'contrast(1.9) saturate(0.8)':'',SET.pdfDark?PDF_INV:''].filter(Boolean).join(' ');
 /* Цвета линий DXF под фон, как в CAD: на светлом белые → чёрные, очень светлые (жёлтый, голубой) темнее;
    на тёмном чёрные → белые, очень тёмные светлее */
 const colCache=new Map();
@@ -1262,13 +1265,14 @@ const viewerShown=()=>VW.full||docked();
 
 /* растр листа PDF «во весь экран» + небольшой кэш отрисованных листов */
 const baseCache=new Map();
+/* масштаб растра = ровно «показать всё» в этом окне × плотность пикселей: в исходном виде лист пиксель в пиксель, без размытия */
 function baseScale(vp,pane){
   const W=pane&&pane.W||innerWidth,H=pane&&pane.H||innerHeight,d=devicePixelRatio||1;
-  return Math.min(6,Math.max(0.5,Math.min(W/vp.width,H/vp.height)*d*1.3));
+  return Math.min(6,Math.max(0.2,Math.min(W*0.96/vp.width,H*0.96/vp.height)*d));
 }
 async function renderBase(page,key,pane){
   const vp=page.getViewport({scale:1}),sc=baseScale(vp,pane);
-  const hit=baseCache.get(key);if(hit&&hit.sc>=sc*0.95){baseCache.delete(key);baseCache.set(key,hit);return hit;}
+  const hit=baseCache.get(key);if(hit&&Math.abs(hit.sc/sc-1)<0.02){baseCache.delete(key);baseCache.set(key,hit);return hit;}
   const c=document.createElement('canvas');c.width=Math.ceil(vp.width*sc);c.height=Math.ceil(vp.height*sc);
   await page.render({canvasContext:c.getContext('2d'),viewport:page.getViewport({scale:sc})}).promise;
   const r={c,sc};baseCache.set(key,r);while(baseCache.size>8)baseCache.delete(baseCache.keys().next().value);
@@ -1284,7 +1288,7 @@ class Pane{
     this.s=1;this.cx=0;this.cy=0;this.fitS=1;this.W=0;this.H=0;this.dpr=1;this.pending=null;
     this.xf={tx:0,ty:0,rot:0,mirror:false};this.hidden=new Set();
     this.pageNo=1;this.page=null;this.pw=0;this.ph=0;
-    this.P={base:null,baseSc:1,hi:null,hv:null,task:null,timer:0};this.raf=0;this.orig=false;this.keepXf=null;
+    this.P={base:null,baseSc:1,mid:null,midSc:0,midTask:null,midTimer:0,hi:null,hv:null,task:null,timer:0};this.raf=0;this.orig=false;this.keepXf=null;
     const ch=document.createElement('div');ch.className='pxf';ch.hidden=true;
     ch.innerHTML='<span></span><button data-a="o" title="Показать как в файле, не сбрасывая поворот (O)"></button><button data-a="r" title="Сбросить поворот для этого файла (0)">сбросить</button>';
     el.appendChild(ch);this.chip=ch;
@@ -1301,6 +1305,7 @@ class Pane{
     this.cv.width=Math.round(this.W*this.dpr);this.cv.height=Math.round(this.H*this.dpr);
     if(this.pending&&this.doc)this.applyView(this.pending);
     else if(this.doc&&this.doc.bbox){ // окно поменяло размер: вписанный чертёж — вписать заново, приближенный — сохранить относительный масштаб
+      if(this.isPdf&&this.page&&Math.abs(baseScale({width:this.pw,height:this.ph},this)/this.P.baseSc-1)>0.02)this.rebase();
       if(this.fitted){this.fit();return;}
       const of=this.fitS;this.fitS=this.fitView().s;if(of&&this.fitS)this.s*=this.fitS/of;}
     this.draw();
@@ -1333,40 +1338,73 @@ class Pane{
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
     c.fillText(t,this.W/2,this.H/2);
   }
+  /* PDF рисуется из трёх слоёв:
+     base — весь лист ровно в масштабе «показать всё» (чёткий в исходном виде);
+     mid  — весь лист крупнее (до 4096 px), готовится в фоне: быстрое приближение без ожидания;
+     hi   — видимая часть с запасом вокруг ровно в текущем масштабе: перерисовывается только после остановки
+            и только если вышли за запас или поменяли масштаб, поэтому перетаскивание не вызывает перерисовок. */
   paintPdf(){
-    const c=this.ctx,d=this.dpr,s=this.s,P=this.P;
+    const c=this.ctx,d=this.dpr,s=this.s,P=this.P,t=s*d;
     const L=this.W/2-this.cx*s,T=this.H/2-(this.ph-this.cy)*s;
-    c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
-    if(SET.pdfDark)c.filter=PDF_INV;
-    c.drawImage(P.base,L*d,T*d,this.pw*s*d,this.ph*s*d);
-    const h=P.hv;
-    if(P.hi&&h)c.drawImage(P.hi,(this.W/2+(h.x0-this.cx)*s)*d,(this.H/2-((this.ph-h.y0)-this.cy)*s)*d,(h.x1-h.x0)*s*d,(h.y1-h.y0)*s*d);
+    const flt=pdfFilter();if(flt)c.filter=flt;
+    const lv=[[P.base,P.baseSc]];if(P.mid)lv.push([P.mid,P.midSc]);
+    let src=lv[lv.length-1];for(const x of lv)if(x[1]>=t*0.98){src=x;break;}
+    const exact=Math.abs(src[1]/t-1)<0.01;
+    c.imageSmoothingEnabled=!exact;c.imageSmoothingQuality='high';
+    if(exact)c.drawImage(src[0],Math.round(L*d),Math.round(T*d));
+    else c.drawImage(src[0],L*d,T*d,this.pw*s*d,this.ph*s*d);
+    const h=P.hv;let hiOk=false;
+    if(P.hi&&h){
+      const same=Math.abs(h.s/s-1)<1e-9,X=(this.W/2+(h.x0-this.cx)*s)*d,Y=(this.H/2-((this.ph-h.y0)-this.cy)*s)*d;
+      c.imageSmoothingEnabled=!same;
+      if(same)c.drawImage(P.hi,Math.round(X),Math.round(Y));else c.drawImage(P.hi,X,Y,(h.x1-h.x0)*s*d,(h.y1-h.y0)*s*d);
+      if(same){const v=this.viewRect();hiOk=v.x0>=h.x0-1e-6&&v.x1<=h.x1+1e-6&&v.y0>=h.y0-1e-6&&v.y1<=h.y1+1e-6;}
+    }
     c.filter='none';
-    c.strokeStyle=lum(pdfBg())>150?'#a9aeb6':'#3a3f47';c.lineWidth=1;c.strokeRect(L*d-0.5,T*d-0.5,this.pw*s*d+1,this.ph*s*d+1);
-    const need=s*d>P.baseSc*1.05;
-    const same=h&&h.s===s&&h.cx===this.cx&&h.cy===this.cy&&h.W===this.W&&h.H===this.H;
-    if(!need){P.hi=null;P.hv=null;}
-    else if(!same){clearTimeout(P.timer);P.timer=setTimeout(()=>this.renderHi(),160);}
+    c.strokeStyle=lum(pdfBg())>150?'#a9aeb6':'#3a3f47';c.lineWidth=1;c.strokeRect(Math.round(L*d)-0.5,Math.round(T*d)-0.5,Math.round(this.pw*s*d)+1,Math.round(this.ph*s*d)+1);
+    clearTimeout(P.timer);
+    if(!exact&&!hiOk)P.timer=setTimeout(()=>this.renderHi(),90);
   }
-  /* чёткий слой — только видимая часть листа (раньше он заливал белым и поля вокруг листа) */
+  async rebase(){ // пересобрать base под новый размер окна (без мигания: старый остаётся до готовности)
+    const page=this.page,tok=this.tok;if(!page)return;clearTimeout(this.P.rbTimer);
+    this.P.rbTimer=setTimeout(async()=>{let b=null;try{b=await renderBase(page,this.it.key+'|'+this.pageNo,this);}catch(e){}
+      if(!b||tok!==this.tok||this.page!==page)return;this.P.base=b.c;this.P.baseSc=b.sc;this.P.mid=null;this.scheduleMid();this.draw();},200);
+  }
+  viewRect(){ // видимая часть листа в пунктах PDF (y вниз), обрезанная по листу
+    const s=this.s;return {x0:Math.max(0,this.cx-this.W/2/s),x1:Math.min(this.pw,this.cx+this.W/2/s),
+      y0:Math.max(0,this.ph-(this.cy+this.H/2/s)),y1:Math.min(this.ph,this.ph-(this.cy-this.H/2/s))};
+  }
   async renderHi(){
     const page=this.page;if(!page||!this.el.isConnected||!this.W)return;
-    const P=this.P,hv={s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,tok:this.tok};
-    const x0=Math.max(0,hv.cx-hv.W/2/hv.s),x1=Math.min(this.pw,hv.cx+hv.W/2/hv.s);
-    const y0=Math.max(0,this.ph-(hv.cy+hv.H/2/hv.s)),y1=Math.min(this.ph,this.ph-(hv.cy-hv.H/2/hv.s));
-    if(x1<=x0||y1<=y0)return;
-    Object.assign(hv,{x0,y0,x1,y1});
+    const P=this.P,s=this.s,S=s*this.dpr,v=this.viewRect();if(v.x1<=v.x0||v.y1<=v.y0)return;
+    // запас вокруг видимой части — по половине окна с каждой стороны, но не больше ~24 Мп
+    let m=0.5;const vw=this.W/s,vh=this.H/s;
+    while(m>0&&((Math.min(this.pw,v.x1+vw*m)-Math.max(0,v.x0-vw*m))*(Math.min(this.ph,v.y1+vh*m)-Math.max(0,v.y0-vh*m))*S*S>24e6))m-=0.1;
+    m=Math.max(0,m);
+    const hv={s,tok:this.tok,x0:Math.max(0,v.x0-vw*m),x1:Math.min(this.pw,v.x1+vw*m),y0:Math.max(0,v.y0-vh*m),y1:Math.min(this.ph,v.y1+vh*m)};
     if(P.task){try{P.task.cancel();}catch(e){}}
-    const S=hv.s*this.dpr,c=document.createElement('canvas');
-    c.width=Math.max(1,Math.round((x1-x0)*S));c.height=Math.max(1,Math.round((y1-y0)*S));
-    const task=page.render({canvasContext:c.getContext('2d'),viewport:page.getViewport({scale:S,offsetX:-x0*S,offsetY:-y0*S})});
+    const c=document.createElement('canvas');
+    c.width=Math.max(1,Math.round((hv.x1-hv.x0)*S));c.height=Math.max(1,Math.round((hv.y1-hv.y0)*S));
+    const task=page.render({canvasContext:c.getContext('2d'),viewport:page.getViewport({scale:S,offsetX:-hv.x0*S,offsetY:-hv.y0*S})});
     P.task=task;
     try{await task.promise;}catch(e){return;}
     if(P.task!==task)return;P.task=null;
     if(hv.tok!==this.tok||this.page!==page)return;
     P.hi=c;P.hv=hv;this.draw();
   }
-  pdfReset(){const P=this.P;if(P.task){try{P.task.cancel();}catch(e){}}P.task=null;clearTimeout(P.timer);P.base=null;P.hi=null;P.hv=null;this.page=null;}
+  scheduleMid(){ // крупный растр всего листа — в фоне, после показа
+    const P=this.P;clearTimeout(P.midTimer);
+    P.midTimer=setTimeout(async()=>{
+      const page=this.page,tok=this.tok;if(!page||!this.el.isConnected)return;
+      const sc=Math.min(P.baseSc*3,4096/Math.max(this.pw,this.ph));if(!(sc>P.baseSc*1.3))return;
+      const c=document.createElement('canvas');c.width=Math.ceil(this.pw*sc);c.height=Math.ceil(this.ph*sc);
+      const task=page.render({canvasContext:c.getContext('2d'),viewport:page.getViewport({scale:sc})});P.midTask=task;
+      try{await task.promise;}catch(e){return;}
+      if(tok!==this.tok||this.page!==page)return;P.mid=c;P.midSc=sc;P.midTask=null;this.draw();
+    },350);
+  }
+  pdfReset(){const P=this.P;for(const k of ['task','midTask'])if(P[k]){try{P[k].cancel();}catch(e){}P[k]=null;}clearTimeout(P.timer);clearTimeout(P.midTimer);
+    P.base=null;P.mid=null;P.midSc=0;P.hi=null;P.hv=null;this.page=null;}
   async pdfShowPage(n,sv){
     const doc=this.doc,tok=++this.tok;this.pdfReset();this.loading=true;this.draw();
     let page;try{page=await doc.pdf.getPage(n);}catch(e){if(tok===this.tok){this.loading=false;this.draw();this.onUpdate();}return;}
@@ -1378,6 +1416,7 @@ class Pane{
     this.page=page;this.pageNo=n;this.pw=vp.width;this.ph=vp.height;this.P.base=b.c;this.P.baseSc=b.sc;
     doc.bbox=[0,0,vp.width,vp.height];this.loading=false;
     this.applyView(sv&&sv.page===n?sv:'fit');
+    this.scheduleMid();
     this.onUpdate();
   }
   async show(it){
@@ -2047,9 +2086,10 @@ function fillBgSel(){
     sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
     col.oninput=()=>changeSet(key,col.value);
   }
-  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
+  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=SET.pdfBold?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
 }
 $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
+$('sPdfBold').onchange=e=>{SET.pdfBold=e.target.value==='1';saveSet();panes.forEach(p=>p.draw());};
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;saveSet();panes.forEach(p=>p.draw());};
 function cycleLineK(){const v=[1,1.6,2.4];SET.lineK=v[(v.indexOf(SET.lineK)+1)%3]||1;saveSet();panes.forEach(p=>p.draw());$('sLineK').value=String(SET.lineK);
   flash('Линии DXF: '+({1:'тонкие',1.6:'средние',2.4:'жирные'})[SET.lineK]);}
@@ -2351,6 +2391,7 @@ function gridCols(){const t=$('grid').children;if(t.length<2)return 1;const y=t[
 function pageRows(){const t=$('grid').children[0];return t?Math.max(1,Math.floor($('gridWrap').clientHeight/(t.offsetHeight+8))):1;}
 document.addEventListener('keydown',e=>{
   const k=e.key;
+  if(e.ctrlKey||e.altKey||e.metaKey)return;   // Ctrl+R, Ctrl+F, Ctrl+L, Ctrl+0, Ctrl+Shift+B … — браузеру
   for(const id of ['logPanel','histPanel'])if(!$(id).hidden){if(k==='Escape')$(id).hidden=true;return;}
   if(k==='Escape'&&!$('setPanel').hidden){$('setPanel').hidden=true;return;}
   if(k==='Escape'&&!$('pinPanel').hidden){$('pinPanel').hidden=true;return;}
@@ -2387,7 +2428,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='Escape'){if(VW.cmp&&docked()&&!VW.full)showItem(VW.idx);else if(VW.full)setFull(false);else h=false;}
   else if(/^[lLдД]$/.test(k)&&VW.cmp)$('vSync').click();
   else if(/^[rRкК]$/.test(k))$('vSide').click();
-  else if(/^[bBиИ]$/.test(k))cycleLineK();
+  else if(/^[wWцЦ]$/.test(k))cycleLineK();
   else if(/^[qQйЙ]$/.test(k))$('vRotL').click();
   else if(/^[eEуУ]$/.test(k))$('vRotR').click();
   else if(/^[mMьЬ]$/.test(k))$('vMir').click();

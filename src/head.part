@@ -113,11 +113,11 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 .pane{position:relative;min-width:0;min-height:0;overflow:hidden}
 .pane canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
 .pcap{display:none;position:absolute;left:6px;top:6px;z-index:2;background:rgba(20,22,26,.78);color:#e6e6e6;font-size:12px;padding:3px 4px 3px 8px;border-radius:6px;
-  max-width:calc(100% - 12px);gap:6px;align-items:center;pointer-events:auto;flex-wrap:wrap}
+  max-width:calc(100% - 12px);gap:6px;align-items:center;pointer-events:none;flex-wrap:wrap}
 .pcap .cn{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;max-width:100%}
 .pcap .ch{background:rgba(255,255,255,.14);border-radius:4px;padding:0 6px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .pcap .ch.dim{background:rgba(78,161,255,.28)}
-.pcap .ch.dup{background:#d9822b;color:#fff;cursor:help}
+.pcap .ch.dup{background:#d9822b;color:#fff;cursor:help;pointer-events:auto}
 #stage.multi .pcap,#stage.capone .pcap{display:flex}
 #stage.multi .pane.active{outline:2px solid var(--acc);outline-offset:-2px;z-index:1}
 #stage.multi .pane.active .pcap{background:var(--acc);color:#fff}
@@ -206,7 +206,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.2.1</small></div>
+  <div class="brand">DXF <small>+PDF · v3.3</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -306,8 +306,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
-  <div class="set-row"><span>Линии DXF на экране (B)</span><select id="sLineK"><option value="1">тонкие</option><option value="1.6">средние</option><option value="2.4">жирные</option></select></div>
+  <div class="set-row"><span>Линии DXF на экране (W)</span><select id="sLineK"><option value="1">тонкие</option><option value="1.6">средние</option><option value="2.4">жирные</option></select></div>
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
+  <div class="set-row"><span>Тонкие линии PDF</span><select id="sPdfBold"><option value="0">как в файле</option><option value="1">темнее (чётче на большом листе)</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
   <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>
   <div class="set-sec">Пары чертёж ⇄ DXF</div>
