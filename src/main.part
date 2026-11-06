@@ -316,7 +316,7 @@ function applyFilter(){
   const q=$('filter').value.trim().toLowerCase(),ty=$('typeSel').value;
   const cf=CMP&&CMP.filter;
   const fm=folderMode()&&!q,eff=effDir();
-  view=items.filter(it=>(!cf||(CMP.map.get(it)||{}).st===cf)&&(fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/')))&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
+  view=items.filter(it=>(!cf||cmpMatch(it,cf))&&(fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/')))&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
   VW.idx=cur?view.indexOf(cur):-1;
   const g=$('grid');io.disconnect();g.textContent='';
   const fr=document.createDocumentFragment();
@@ -589,6 +589,7 @@ class Pane{
     this.draw();
   }
   fitView(){
+    if(this.ov&&this.ov.bb)return fitView({bbox:this.ov.bb},null,this.W,this.H,0.05);
     if(this.isPdf&&this.cont&&this.pg.length){ // непрерывный режим: текущая страница целиком в окне, соседние — выше и ниже
       const e=this.curPage()||this.pg[0],s=Math.min(this.W*0.96/this.pw,this.H*0.96/e.h);return {s,cx:this.pw/2,cy:this.ph-(e.oy+e.h/2)};}
     return fitView(this.doc,this.xf,this.W,this.H,this.isPdf?0.02:0.05);
@@ -615,6 +616,7 @@ class Pane{
     const bg=this.it&&this.it.type==='pdf'?pdfBg():dxfBg();
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();return;}
+    if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);return;}
     if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
@@ -827,7 +829,8 @@ class Pane{
       if(this.doc&&!this.isPdf&&this.doc.bbox&&e.pointerType==='mouse'){const [wx,wy]=mApply(mInv(xfMat(this.xf)),...this.s2w(x,y));$('vCoord').textContent=`X ${fmt(wx+this.doc.origin[0])}   Y ${fmt(wy+this.doc.origin[1])}`;}
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
-      if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
+      if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
+      else if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
       else if(ptrs.size===2){
         const [a,b]=[...ptrs.values()];
         const m0=[(a.x+b.x)/2,(a.y+b.y)/2],d0=Math.hypot(a.x-b.x,a.y-b.y);
@@ -911,6 +914,7 @@ function gridStage(){
 new ResizeObserver(()=>{if(VW.set.length>1)gridStage();}).observe($('stage'));
 
 function showSet(set,act=0){
+  if(OV&&!OV.keep)ovClear();
   VW.set=set;layoutStage();VW.active=Math.max(0,Math.min(act,set.length-1));
   set.forEach((x,k)=>panes[k].show(x));
   panes.forEach((p,k)=>p.el.classList.toggle('active',set.length>1&&k===VW.active));
@@ -974,6 +978,7 @@ function updateBar(){
   const cur=curItem(),ap=panes[VW.active],has=!!cur&&VW.set.length>0;
   const cmp=!!VW.cmp&&VW.set.length===2;
   $('vSync').hidden=!(cmp&&VW.set[0].type===VW.set[1].type);$('vSync').classList.toggle('on',SET.sync);
+  $('vOv').hidden=!(OV||(cmp&&VW.set[0].type==='dxf'&&VW.set[1].type==='dxf'));$('vOv').classList.toggle('on',!!OV);
   $('vMon').hidden=FOLLOW||!(MON.win||screen.isExtended);$('vMon').classList.toggle('on',!!MON.win);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
@@ -1667,19 +1672,48 @@ function cmpSet(arr,name,rid){
   }
   CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:''};
   $('cmpFilter').value='';updCmp();applyFilter();
+  cmpDeep(CMP);
 }
-function updCmp(){
-  for(const it of items){const c=CMP&&CMP.map.get(it),b=it.cmpb;
-    if(!c){b.hidden=true;continue;}
-    b.hidden=false;b.className='cmpb '+c.st;b.textContent=c.st==='same'?'=':c.st==='diff'?'≠':'нов';
-    b.title=c.st==='same'?'Совпадает с «'+CMP.name+'» (имя и размер) — клик: открыть рядом'
-      :c.st==='diff'?'Отличается от «'+CMP.name+'»: '+c.why+' — клик: открыть рядом'+(c.others.length>1?' ('+c.others.length+' версии там)':'')
+function cmpMatch(it,cf){const st=(CMP.map.get(it)||{}).st;return cf==='chg'?(st==='diff'||st==='geo'):st===cf;}
+/* точная проверка: содержимое файлов побайтно; у DXF с разным содержимым — сравнение геометрии (совмещение + допуск) */
+async function cmpDeep(C){
+  const todo=[...C.map.entries()].filter(([a,c])=>c.st==='same'||(c.st==='diff'&&a.type==='dxf'&&c.b.type==='dxf'));
+  C.deep={n:todo.length,done:0};updCmp();
+  const eqBytes=async(f1,f2)=>{if(f1.size!==f2.size)return false;const [x,y]=await Promise.all([f1.arrayBuffer(),f2.arrayBuffer()]);
+    const A=new Uint8Array(x),B=new Uint8Array(y);for(let i=0;i<A.length;i++)if(A[i]!==B[i])return false;return true;};
+  for(const [a,c] of todo){
+    if(CMP!==C)return;
+    try{
+      if(c.st==='same'&&await eqBytes(a.file,c.b.file)){c.why='';}
+      else if(a.type==='dxf'&&c.b.type==='dxf'){
+        const [da,db]=await Promise.all([getDoc(a),getDoc(c.b)]);if(CMP!==C)return;
+        const r=await geoCompare(da,db,SET.tol);if(CMP!==C)return;
+        const base=c.st==='same'?'содержимое отличается (пересохранён)':c.why;
+        if(r.same){c.st='geo';c.why=base+'; геометрия та же (допуск '+SET.tol+' мм)';}
+        else{c.st='diff';c.why=base+'; геометрия отличается'+(r.fail?': '+r.fail:' (мест: '+r.clusters.length+')');}
+      }else if(c.st==='same'){c.st='diff';c.why='содержимое отличается (имя и размер те же)';}
+    }catch(e){c.why=(c.why?c.why+'; ':'')+'не проверено: '+e.message;}
+    C.deep.done++;
+    if(C.deep.done%5===0||C.deep.done===C.deep.n){updCmp();if(CMP.filter)applyFilter();}else{const it=a;updBadge(it);}
+  }
+  C.deep=null;updCmp();if(CMP&&CMP.filter)applyFilter();
+}
+function updBadge(it){const c=CMP&&CMP.map.get(it),b=it.cmpb;
+    if(!c){b.hidden=true;return;}
+    b.hidden=false;b.className='cmpb '+c.st;b.textContent=c.st==='same'?'=':c.st==='diff'?'≠':c.st==='geo'?'≈':'нов';
+    const more=c.others&&c.others.length>1?' ('+c.others.length+' версии там)':'';
+    b.title=c.st==='same'?'Совпадает с «'+CMP.name+'»'+(CMP.deep?' (имя и размер; содержимое проверяется…)':' — файлы одинаковые побайтно')+' — клик: открыть рядом'
+      :c.st==='geo'?'Пересохранён: '+c.why+' — клик: открыть'+more
+      :c.st==='diff'?'Отличается от «'+CMP.name+'»: '+c.why+' — клик: открыть'+more
       :'В «'+CMP.name+'» такого обозначения нет';}
+function updCmp(){
+  for(const it of items)updBadge(it);
   $('cmpBar').hidden=!CMP;$('btnCmp').classList.toggle('on',!!CMP);
   if(!CMP)return;
-  let n={same:0,diff:0,new:0};for(const c of CMP.map.values())n[c.st]++;
+  let n={same:0,diff:0,new:0,geo:0};for(const c of CMP.map.values())n[c.st]++;
   $('cmpInfo').innerHTML='';const s=document.createElement('span');
-  s.innerHTML='Сравнение с «<b></b>»: &nbsp;<b>= '+n.same+'</b> совпадают · <b>≠ '+n.diff+'</b> отличаются · <b>'+n.new+'</b> новых';
+  s.innerHTML='Сравнение с «<b></b>»: &nbsp;<b>= '+n.same+'</b> одинаковые · <b>≈ '+n.geo+'</b> пересохранены · <b>≠ '+n.diff+'</b> отличаются · <b>'+n.new+'</b> новых'+
+    (CMP.deep?' · <i>проверка содержимого '+CMP.deep.done+' / '+CMP.deep.n+'…</i>':'');
   s.querySelector('b').textContent=CMP.name;$('cmpInfo').appendChild(s);
   $('cmpOnlyBtn').textContent='Только там: '+CMP.onlyB.length;$('cmpOnlyBtn').disabled=!CMP.onlyB.length;
 }
@@ -1688,8 +1722,91 @@ function cmpOpen(a,b,manual){
   const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}
   closePairPanel();showSet([a,b],0);VW.cmp={a,b,manual:!!manual};updateBar();
   if(!docked())setFull(true);
+  if(VW.ovMode&&a.type==='dxf'&&b.type==='dxf'){ovStart();return;}
   setTimeout(()=>{const p=panes[0];if(p&&p.doc&&SET.sync)p.changed();},400);
 }
+/* =====================================================================
+   НАЛОЖЕНИЕ двух DXF: совмещение (авто + вручную) и подсветка отличий
+   красное — есть только в первой детали, зелёное — только во второй, серое — совпадает (в пределах допуска)
+   ===================================================================== */
+let OV=null;
+if(!(SET.tol>0))SET.tol=0.1;
+function ovClear(){OV=null;for(const p of panes)if(p.ov){p.ov=null;}$('ovBar').hidden=true;}
+async function ovStart(M,keepView){
+  const c=VW.cmp||(OV&&{a:OV.a,b:OV.b});if(!c)return;const a=c.a,b=c.b;
+  if(a.type!=='dxf'||b.type!=='dxf'){flash('Наложение — только для двух DXF');return;}
+  VW.ovMode=true;
+  const tok={},again=OV&&OV.a===a&&OV.b===b&&OV.res;   // пересчёт после ручной подгонки — старая картинка видна до готовности
+  if(again){OV.tok=tok;}else OV={a,b,tok,keep:true};
+  if(!(panes[0]&&panes[0].it===a&&VW.set.length===1))showSet([a],0);
+  OV.keep=false;VW.cmp=c;
+  const p=panes[0];if(!again)p.ov={busy:true};$('ovBar').hidden=false;
+  const top=x=>x.path.split('/')[0],nA=a.name===b.name?top(a):a.name,nB=a.name===b.name?(b.cmpB&&CMP?CMP.name:top(b)):b.name;
+  $('ovNa').textContent='только в '+nA;$('ovNa').parentNode.title='Красным — есть только в «'+a.path+'»';
+  $('ovNb').textContent='только в '+nB;$('ovNb').parentNode.title='Зелёным — есть только в «'+b.path+'»';
+  $('ovTol').value=String(SET.tol);$('ovRes').className='';$('ovRes').textContent=again?'Пересчитываю…':'Совмещаю…';$('ovNum').textContent='';
+  updateBar();
+  let da,db;try{[da,db]=await Promise.all([getDoc(a),getDoc(b)]);}catch(e){if(OV&&OV.tok===tok){$('ovRes').textContent='Файл не открылся';}return;}
+  if(!OV||OV.tok!==tok)return;
+  let r;const t0=performance.now();
+  try{r=await geoCompare(da,db,SET.tol,M||null);}catch(e){if(OV&&OV.tok===tok)$('ovRes').textContent='Не удалось сравнить: '+e.message;return;}
+  if(!OV||OV.tok!==tok||p.ov===null)return;
+  if(r.fail){$('ovRes').textContent=r.fail;return;}
+  if(M&&OV.M!==M)return;   // пока считали, деталь сдвинули ещё — дождаться следующего пересчёта
+  OV.res=r;OV.M=r.M;OV.D=null;OV.cur=-1;OV.ms=Math.round(performance.now()-t0);
+  const bb=r.bbA.slice();for(const o of r.LB)for(let i=0;i<o.length;i+=2){bb[0]=Math.min(bb[0],o[i]);bb[1]=Math.min(bb[1],o[i+1]);bb[2]=Math.max(bb[2],o[i]);bb[3]=Math.max(bb[3],o[i+1]);}
+  p.ov={res:r,bb};
+  if(!keepView){p.fitted=true;p.applyView('fit');}else p.draw();
+  ovInfo();
+}
+function ovInfo(){
+  const r=OV&&OV.res;if(!r)return;const e=$('ovRes'),n=r.clusters.length;
+  const sz=v=>fmt(v[0])+'×'+fmt(v[1]);
+  if(r.same){e.className='ok';e.textContent='✓ Совпадает (допуск '+SET.tol+' мм)';}
+  else{e.className='bad';e.textContent='Отличий: '+n+' · совпадает '+Math.floor(r.a.frac*1000)/10+'% / '+Math.floor(r.b.frac*1000)/10+'%';}
+  e.title='Габарит: '+sz(r.sizeA)+' и '+sz(r.sizeB)+(r.mir?' · вторая деталь отражена':'')+' · '+OV.ms+' мс';
+  $('ovNum').textContent=n?(OV.cur>=0?(OV.cur+1)+' / '+n:n+' шт.'):'';
+  $('ovPrev').disabled=$('ovNext').disabled=!n;
+}
+function ovGo(d){
+  const r=OV&&OV.res;if(!r||!r.clusters.length)return;const n=r.clusters.length;
+  OV.cur=OV.cur<0?(d>0?0:n-1):(OV.cur+d+n)%n;const c=r.clusters[OV.cur],p=panes[0];
+  const w=Math.max(c[2]-c[0],c[3]-c[1],Math.max(r.sizeA[0],r.sizeA[1])*0.04);
+  const s=Math.min(p.W/(w*2.2),p.H/(w*2.2));p.fitted=false;p.s=p.clampS(s);p.cx=(c[0]+c[2])/2;p.cy=(c[1]+c[3])/2;p.draw();ovInfo();
+}
+/* ручная подгонка второй детали: сдвиг (Shift+перетаскивание), поворот на 90°, зеркало — затем пересчёт отличий */
+function ovApply(D){
+  if(!OV||!OV.res)return;OV.M=GEO.mul(D,OV.M);OV.D=OV.D?GEO.mul(D,OV.D):D;panes[0].draw();
+  clearTimeout(OV.t);OV.t=setTimeout(()=>ovStart(OV.M,true),250);
+}
+function ovNudge(p,dx,dy){ovApply([1,0,0,1,dx,dy]);}
+function ovCenterB(){const r=OV.res,L=r.LB;let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;const D=OV.D||[1,0,0,1,0,0];
+  for(const o of L)for(let i=0;i<o.length;i+=2){const x=D[0]*o[i]+D[2]*o[i+1]+D[4],y=D[1]*o[i]+D[3]*o[i+1]+D[5];x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  return [(x0+x1)/2,(y0+y1)/2];}
+function ovRot(deg,mir){if(!OV||!OV.res)return;const [cx,cy]=ovCenterB(),a=deg*Math.PI/180,c=Math.cos(a),s=Math.sin(a),m=mir?-1:1;
+  const R=[c*m,s*m,-s,c,0,0];ovApply(GEO.mul([1,0,0,1,cx,cy],GEO.mul(R,[1,0,0,1,-cx,-cy])));}
+function ovPaint(p,c,d){
+  const o=p.ov,r=o.res,D=OV&&OV.D,s=p.s;
+  c.save();c.setTransform(s*d,0,0,-s*d,(p.W/2-p.cx*s)*d,(p.H/2+p.cy*s)*d);c.lineCap='round';c.lineJoin='round';
+  const light=lum(dxfBg())>150,base=light?'#6b7078':'#9aa0a8';
+  const poly=(L,M)=>{c.beginPath();for(const q of L){
+      if(M){c.moveTo(M[0]*q[0]+M[2]*q[1]+M[4],M[1]*q[0]+M[3]*q[1]+M[5]);for(let i=2;i<q.length;i+=2)c.lineTo(M[0]*q[i]+M[2]*q[i+1]+M[4],M[1]*q[i]+M[3]*q[i+1]+M[5]);}
+      else{c.moveTo(q[0],q[1]);for(let i=2;i<q.length;i+=2)c.lineTo(q[i],q[i+1]);}}c.stroke();};
+  const runs=(R,M)=>{c.beginPath();for(const q of R){const f=(i)=>M?[M[0]*q.x[i]+M[2]*q.y[i]+M[4],M[1]*q.x[i]+M[3]*q.y[i]+M[5]]:[q.x[i],q.y[i]];
+      c.moveTo(...f(0));for(let i=1;i<q.x.length;i++)c.lineTo(...f(i));}c.stroke();};
+  c.lineWidth=1.2*(SET.lineK||1)/s;c.strokeStyle=base;poly(r.LA);
+  if(D){c.strokeStyle='#4ea1ff';poly(r.LB,D);}            // вторая деталь двигается — отличия пересчитываются после остановки
+  else{c.globalAlpha=0.9;c.strokeStyle=base;poly(r.LB);c.globalAlpha=1;
+    c.lineWidth=3*(SET.lineK||1)/s;c.strokeStyle='#ff4d4d';runs(r.a.runs);c.strokeStyle='#39d353';runs(r.b.runs);
+    if(OV&&OV.cur>=0&&r.clusters[OV.cur]){const q=r.clusters[OV.cur],g=8/s;c.setLineDash([6/s,4/s]);c.lineWidth=1.5/s;c.strokeStyle='#ffd23f';c.strokeRect(q[0]-g,q[1]-g,q[2]-q[0]+2*g,q[3]-q[1]+2*g);c.setLineDash([]);}}
+  c.restore();
+}
+function ovEnd(){const c=VW.cmp;VW.ovMode=false;ovClear();if(c)showSet([c.a,c.b],0);updateBar();}
+$('vOv').onclick=()=>{if(OV)ovEnd();else ovStart();};
+$('ovEnd').onclick=ovEnd;$('ovPrev').onclick=()=>ovGo(-1);$('ovNext').onclick=()=>ovGo(1);
+$('ovAuto').onclick=()=>{if(OV){OV.D=null;ovStart(null,false);}};
+$('ovRotL').onclick=()=>ovRot(90);$('ovRotR').onclick=()=>ovRot(-90);$('ovMir').onclick=()=>ovRot(0,true);
+$('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,true);};
 function cmpOpenFor(a){
   const c=CMP&&CMP.map.get(a);if(!c)return;
   if(c.st==='new'){showItem(view.indexOf(a));if(!docked())setFull(true);flash('В «'+CMP.name+'» нет файла с обозначением '+a.name);return;}
@@ -1804,6 +1921,10 @@ document.addEventListener('keydown',e=>{
   else if(k==='Tab'&&monOn())monTab(e.shiftKey?-1:1);
   else if(k==='Tab'){if(VW.set.length>1){const n=VW.set.length;setActive(panes[(VW.active+(e.shiftKey?-1:1)+n)%n]);}else cyclePair(e.shiftKey?-1:1);}
   else if(k==='Enter'){if(docked()&&!VW.full&&VW.idx>=0)setFull(true);else h=false;}
+  else if(k==='Escape'&&OV)ovEnd();
+  else if(/^[nNтТ]$/.test(k)&&!$('vOv').hidden)$('vOv').click();
+  else if((k===','||k==='б'||k==='Б')&&OV)ovGo(-1);
+  else if((k==='.'||k==='ю'||k==='Ю')&&OV)ovGo(1);
   else if(k==='Escape'){if(VW.cmp&&docked()&&!VW.full)showItem(VW.idx);else if(VW.full)setFull(false);else h=false;}
   else if(/^[lLдД]$/.test(k)&&VW.cmp)$('vSync').click();
   else if(/^[rRкК]$/.test(k))$('vSide').click();

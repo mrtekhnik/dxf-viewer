@@ -36,7 +36,14 @@ input[type=range]{width:110px}
 #selBar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;border:1px solid var(--acc);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .tile.sel{outline:2px dashed var(--warn);outline-offset:-3px}
 .cmpb{position:absolute;left:4px;top:4px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff}
-.cmpb.same{background:#2e8b57}.cmpb.diff{background:#d9822b}.cmpb.new{background:#3a7bd5}
+.cmpb.same{background:#2e8b57}.cmpb.diff{background:#d9822b}.cmpb.new{background:#3a7bd5}.cmpb.geo{background:#6f9a3a}.cmpb.chk{background:#5a6270}
+#ovBar{display:flex;gap:8px;align-items:center;padding:4px 8px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;overflow-x:auto;white-space:nowrap}
+#ovBar[hidden]{display:none}
+#ovBar>*{flex:none}#ovBar .sp{flex:1}
+.ovk{display:inline-flex;align-items:center;gap:5px;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+.ovk i{display:inline-block;width:14px;height:4px;border-radius:2px}.ovk .ova{background:#ff4d4d}.ovk .ovb{background:#39d353}
+#ovRes{font-weight:600}#ovRes.ok{color:#39d353}#ovRes.bad{color:#ff8c4d}
+#ovNum{padding:0 6px;color:var(--mut)}.ovh{color:var(--mut);font-size:12px}
 body.follower header,body.follower #updBar,body.follower #status,body.follower #work,body.follower #cmpBar{display:none!important}
 #updBar{background:var(--on);padding:6px 10px;display:flex;gap:10px;align-items:center}
 
@@ -216,7 +223,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.4</small></div>
+  <div class="brand">DXF <small>+PDF · v3.5</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -238,7 +245,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <div id="updBar" hidden>Доступна новая версия<button id="updBtn">Обновить</button></div>
 <div id="status"></div>
 <div id="cmpBar" hidden><span id="cmpInfo"></span><span class="sp"></span>
-  <label>Показать <select id="cmpFilter"><option value="">все</option><option value="diff">≠ отличаются</option><option value="new">новые</option><option value="same">= совпадают</option></select></label>
+  <label>Показать <select id="cmpFilter"><option value="">все</option><option value="diff">≠ отличаются</option><option value="new">новые</option><option value="same">= совпадают</option><option value="geo">≈ пересохранены, геометрия та же</option><option value="chg">≠ и ≈ — всё, что менялось</option></select></label>
   <button id="cmpOnlyBtn"></button><button id="cmpEnd" title="Закончить сравнение">✕</button></div>
 <div id="selBar" hidden><span id="selInfo"></span><button id="selGo">Сравнить рядом</button><button id="selClear">✕</button></div>
 <div id="work">
@@ -273,8 +280,19 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
     <button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒 синхронно</button>
+    <button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button>
     <button id="vMon" hidden title="Пара текущего файла — на втором мониторе">🖵 2-й монитор</button>
     <button id="vFull" hidden title="На весь экран (Enter)">⛶</button>
+  </div>
+  <div id="ovBar" hidden>
+    <span class="ovk"><i class="ova"></i><span id="ovNa"></span></span>
+    <span class="ovk"><i class="ovb"></i><span id="ovNb"></span></span>
+    <span id="ovRes"></span>
+    <span class="xfbox"><button id="ovPrev" title="Предыдущее отличие ( , )">‹</button><span id="ovNum"></span><button id="ovNext" title="Следующее отличие ( . )">›</button></span>
+    <span class="sp"></span>
+    <span class="ovh" title="Сдвинуть вторую деталь: Shift + перетаскивание мышью">вторая (Shift+мышь):</span><span class="xfbox" title="Положение второй детали: Shift+перетаскивание — сдвиг"><button id="ovRotL" title="Вторую деталь на 90° против часовой">⟲</button><button id="ovRotR" title="Вторую деталь на 90° по часовой">⟳</button><button id="ovMir" title="Отразить вторую деталь">⇋</button><button id="ovAuto" title="Подобрать положение заново">Авто</button></span>
+    <label title="Расхождение меньше допуска считается совпадением">допуск <select id="ovTol"><option>0.01</option><option>0.05</option><option>0.1</option><option>0.2</option><option>0.5</option><option>1</option></select> мм</label>
+    <button id="ovEnd" title="Вернуться к показу двух окон рядом (Esc)">✕ Наложение</button>
   </div>
   <div id="stageWrap"><div id="stage"></div><div id="stageMsg" hidden></div></div>
   <div class="vinfo"><span id="vDims"></span><span id="vCoord"></span><span class="sp"></span><button id="vWarn" hidden></button></div>
@@ -784,6 +802,190 @@ function DXFCORE(){
 }
 
 /* =====================================================================
+   ГЕОМЕТРИЧЕСКОЕ СРАВНЕНИЕ ДВУХ DXF (этап 2)
+   Без DOM и без глобальных переменных главного потока — можно перенести в Worker.
+     GEO.prep(doc,tol)        — контуры как ломаные (дуги разбиты с ошибкой ≤ tol/10), точки по длине, центр, размер
+     GEO.align(A,B,tol)       — подобрать положение B на A: сдвиг, поворот на любой угол, зеркало → матрица M
+     GEO.diff(A,B,M,tol)      — какие участки A не лежат на B и наоборот (с допуском tol, мм)
+   Матрица M = [a,b,c,d,e,f]:  x' = a·x + c·y + e,  y' = b·x + d·y + f   (как xfMat)
+   ===================================================================== */
+function GEOCORE(){
+  const TAU=Math.PI*2;
+  function bulgeArc(x1,y1,x2,y2,b){ // та же формула, что в ядре DXF
+    const dx=x2-x1,dy=y2-y1,d=Math.hypot(dx,dy);
+    if(d<1e-12||Math.abs(b)<1e-7)return null;
+    const k=(1-b*b)/(4*b),cx=(x1+x2)/2-dy*k,cy=(y1+y2)/2+dx*k;
+    return {cx,cy,r:d*(1+b*b)/(4*Math.abs(b)),a0:Math.atan2(y1-cy,x1-cx),a1:Math.atan2(y2-cy,x2-cx),ccw:b>0};
+  }
+  /* дуга от a0 до a1 (ccw — против часовой) → точки */
+  function arcPts(o,cx,cy,r,a0,a1,ccw,chord,first){
+    let sw=ccw?a1-a0:a0-a1;while(sw<=1e-12)sw+=TAU;if(sw>TAU)sw=TAU;
+    const st=chord<r?2*Math.acos(1-chord/r):Math.PI/2,n=Math.max(2,Math.min(4000,Math.ceil(sw/st)));
+    for(let i=first?0:1;i<=n;i++){const a=a0+(ccw?1:-1)*sw*i/n;o.push(cx+r*Math.cos(a),cy+r*Math.sin(a));}
+  }
+  function flatten(doc,chord){
+    const L=[];
+    for(const G of doc.groups||[]){if(G.off)continue;
+      for(const p of G.prims){
+        if(p[0]==='L')L.push([p[1],p[2],p[3],p[4]]);
+        else if(p[0]==='C'){const o=[];arcPts(o,p[1],p[2],p[3],0,TAU,true,chord,true);L.push(o);}
+        else if(p[0]==='A'){const o=[];arcPts(o,p[1],p[2],p[3],p[4],p[5],true,chord,true);L.push(o);}
+        else if(p[0]==='P'){const a=p[2],n=a.length/3,segs=p[1]?n:n-1;if(n<2)continue;const o=[a[0],a[1]];
+          for(let i=0;i<segs;i++){const j=(i+1)%n,x1=a[i*3],y1=a[i*3+1],x2=a[j*3],y2=a[j*3+1],b=a[i*3+2];
+            const A=b?bulgeArc(x1,y1,x2,y2,b):null;
+            if(A)arcPts(o,A.cx,A.cy,A.r,A.a0,A.a1,A.ccw,chord,false);else o.push(x2,y2);}
+          L.push(o);}
+      }}
+    return L;
+  }
+  /* точки вдоль ломаных с шагом step (концы — всегда) */
+  function sample(L,step){
+    const P=[];
+    for(let k=0;k<L.length;k++){const o=L[k],xs=[],ys=[];
+      for(let i=0;i+3<o.length;i+=2){const x1=o[i],y1=o[i+1],x2=o[i+2],y2=o[i+3],d=Math.hypot(x2-x1,y2-y1),n=Math.max(1,Math.ceil(d/step));
+        for(let j=i?1:0;j<=n;j++){xs.push(x1+(x2-x1)*j/n);ys.push(y1+(y2-y1)*j/n);}}
+      if(xs.length)P.push({k,x:xs,y:ys});}
+    return P;
+  }
+  const xfL=(L,M)=>L.map(o=>{const r=new Array(o.length);for(let i=0;i<o.length;i+=2){const x=o[i],y=o[i+1];r[i]=M[0]*x+M[2]*y+M[4];r[i+1]=M[1]*x+M[3]*y+M[5];}return r;});
+  const mul=(A,B)=>[A[0]*B[0]+A[2]*B[1],A[1]*B[0]+A[3]*B[1],A[0]*B[2]+A[2]*B[3],A[1]*B[2]+A[3]*B[3],A[0]*B[4]+A[2]*B[5]+A[4],A[1]*B[4]+A[3]*B[5]+A[5]];
+  /* сетка отрезков — быстрый поиск ближайшей точки */
+  function index(L,cell){
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(const o of L)for(let i=0;i<o.length;i+=2){const x=o[i],y=o[i+1];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+    if(!(x1>=x0))return null;
+    const nx=Math.max(1,Math.min(2048,Math.ceil((x1-x0)/cell)+1)),ny=Math.max(1,Math.min(2048,Math.ceil((y1-y0)/cell)+1)),cw=Math.max((x1-x0)/(nx-0.5),1e-9),ch=Math.max((y1-y0)/(ny-0.5),1e-9);
+    const cells=new Map(),S=[];
+    for(const o of L)for(let i=0;i+3<o.length;i+=2){const a=o[i],b=o[i+1],c=o[i+2],d=o[i+3],id=S.length;S.push(a,b,c,d);
+      const i0=Math.floor((Math.min(a,c)-x0)/cw),i1=Math.floor((Math.max(a,c)-x0)/cw),j0=Math.floor((Math.min(b,d)-y0)/ch),j1=Math.floor((Math.max(b,d)-y0)/ch);
+      for(let ii=i0;ii<=i1;ii++)for(let jj=j0;jj<=j1;jj++){const key=jj*nx+ii;let e=cells.get(key);if(!e)cells.set(key,e=[]);e.push(id);}}
+    return {x0,y0,cw,ch,nx,ny,cells,S};
+  }
+  /* ближайшая точка в радиусе R: [d,px,py] или null; any — достаточно любой точки ближе R (быстрее) */
+  function nearest(I,x,y,R,any){
+    if(!I)return null;const S=I.S;let best=R*R,bx=0,by=0,hit=false;
+    const i0=Math.max(0,Math.floor((x-R-I.x0)/I.cw)),i1=Math.min(I.nx-1,Math.floor((x+R-I.x0)/I.cw)),j0=Math.max(0,Math.floor((y-R-I.y0)/I.ch)),j1=Math.min(I.ny-1,Math.floor((y+R-I.y0)/I.ch));
+    for(let jj=j0;jj<=j1;jj++)for(let ii=i0;ii<=i1;ii++){const e=I.cells.get(jj*I.nx+ii);if(!e)continue;
+      for(let k=0;k<e.length;k++){const id=e[k],a=S[id],b=S[id+1],dx=S[id+2]-a,dy=S[id+3]-b,l2=dx*dx+dy*dy;
+        let t=l2>0?((x-a)*dx+(y-b)*dy)/l2:0;t=t<0?0:t>1?1:t;const px=a+t*dx,py=b+t*dy,ex=x-px,ey=y-py,q=ex*ex+ey*ey;
+        if(q<=best){best=q;bx=px;by=py;hit=true;if(any)return [Math.sqrt(q),px,py];}}}
+    return hit?[Math.sqrt(best),bx,by]:null;
+  }
+  function prep(doc,tol){
+    const L=flatten(doc,Math.max(tol/10,1e-4));
+    let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity,len=0;
+    for(const o of L)for(let i=0;i<o.length;i+=2){const x=o[i],y=o[i+1];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;if(i)len+=Math.hypot(x-o[i-2],y-o[i-1]);}
+    const size=Math.max(x1-x0,y1-y0)||1;
+    // центр и главные оси — по точкам, равномерно распределённым по длине контура
+    const P=sample(L,Math.max(len/1500,size/2000,1e-6));let n=0,mx=0,my=0;
+    for(const p of P)for(let i=0;i<p.x.length;i++){mx+=p.x[i];my+=p.y[i];n++;}
+    mx/=n||1;my/=n||1;let sxx=0,syy=0,sxy=0;
+    for(const p of P)for(let i=0;i<p.x.length;i++){const dx=p.x[i]-mx,dy=p.y[i]-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;}
+    const ang=0.5*Math.atan2(2*sxy,sxx-syy);
+    const pts=[];for(const p of P)for(let i=0;i<p.x.length;i++)pts.push(p.x[i],p.y[i]);
+    return {L,bbox:[x0,y0,x1,y1],size,len,cx:mx,cy:my,ang,pts,n:L.length};
+  }
+  /* сколько точек B (после M) лежат на A ближе r — оценка совмещения */
+  function score(IA,B,M,r,maxN){
+    const p=B.pts,N=p.length/2,stp=Math.max(1,Math.floor(N/maxN));let s=0,c=0;
+    for(let i=0;i<N;i+=stp){const x=p[i*2],y=p[i*2+1],X=M[0]*x+M[2]*y+M[4],Y=M[1]*x+M[3]*y+M[5];const q=nearest(IA,X,Y,r);s+=q?1-q[0]/r:0;c++;}
+    return c?s/c:0;
+  }
+  /* уточнение: ICP — ближайшие точки + жёсткое совмещение (сдвиг и поворот, зеркало не меняется) */
+  function icp(IA,B,M,r0,rMin,iters){
+    const p=B.pts,N=p.length/2,stp=Math.max(1,Math.floor(N/600));let r=r0;
+    for(let it=0;it<iters;it++){
+      let n=0,px=0,py=0,qx=0,qy=0;const P=[],Q=[];
+      for(let i=0;i<N;i+=stp){const x=p[i*2],y=p[i*2+1],X=M[0]*x+M[2]*y+M[4],Y=M[1]*x+M[3]*y+M[5];const q=nearest(IA,X,Y,r);
+        if(q){P.push(X,Y);Q.push(q[1],q[2]);px+=X;py+=Y;qx+=q[1];qy+=q[2];n++;}}
+      if(n<3)break;px/=n;py/=n;qx/=n;qy/=n;let sxx=0,sxy=0;
+      for(let i=0;i<P.length;i+=2){const ax=P[i]-px,ay=P[i+1]-py,bx=Q[i]-qx,by=Q[i+1]-qy;sxx+=ax*bx+ay*by;sxy+=ax*by-ay*bx;}
+      const t=Math.atan2(sxy,sxx),c=Math.cos(t),s=Math.sin(t);
+      const D=[c,s,-s,c,qx-(c*px-s*py),qy-(s*px+c*py)];M=mul(D,M);
+      if(Math.abs(t)<1e-7&&Math.hypot(D[4],D[5])<rMin*0.01)r=Math.max(rMin,r*0.5);else r=Math.max(rMin,r*0.7);
+    }
+    return M;
+  }
+  /* подбор положения B на A */
+  function align(A,B,tol){
+    const size=Math.max(A.size,B.size),IA=index(A.L,Math.max(size/150,tol*2));
+    const cand=[],seen=new Set();
+    for(const mir of [false,true]){
+      const bAng=mir?Math.PI-B.ang:B.ang;
+      const angs=[];for(let k=0;k<4;k++){angs.push(A.ang-bAng+k*Math.PI/2);angs.push(k*Math.PI/2);}
+      for(let a of angs){a=((a%TAU)+TAU)%TAU;const key=(mir?'m':'')+Math.round(a*1e4);if(seen.has(key))continue;seen.add(key);
+        const c=Math.cos(a),s=Math.sin(a),m=mir?-1:1;
+        // B: сдвинуть центр в 0, отразить (x→−x), повернуть, сдвинуть в центр A
+        const R=[c*m,s*m,-s,c,0,0];const M=mul([1,0,0,1,A.cx,A.cy],mul(R,[1,0,0,1,-B.cx,-B.cy]));
+        cand.push({M,mir,a});}
+    }
+    for(const C of cand)C.sc=score(IA,B,C.M,size*0.02,300);
+    cand.sort((x,y)=>y.sc-x.sc);
+    let best=null;
+    for(const C of cand.slice(0,4)){const M=icp(IA,B,C.M,size*0.05,Math.max(tol,size*1e-5),40);const sc=score(IA,B,M,Math.max(tol*3,size*0.002),1500);
+      if(!best||sc>best.sc)best={M,sc,mir:C.mir};}
+    return best;
+  }
+  /* отличия: участки A, которых нет на B (после M), и наоборот */
+  function diff(A,B,M,tol){
+    const size=Math.max(A.size,B.size),step=Math.max(tol*1.5,size/4000),cell=Math.max(size/256,tol*4);
+    const LB=xfL(B.L,M),IA=index(A.L,cell),IB=index(LB,cell);
+    const side=(L,I)=>{const P=sample(L,step);let bad=0,all=0;const runs=[];
+      for(const p of P){let run=null;
+        for(let i=0;i<p.x.length;i++){const ok=!!nearest(I,p.x[i],p.y[i],tol,true);all++;if(!ok)bad++;
+          if(!ok){if(!run){run={x:[],y:[]};if(i)run.x.push(p.x[i-1]),run.y.push(p.y[i-1]);}run.x.push(p.x[i]);run.y.push(p.y[i]);}
+          else if(run){run.x.push(p.x[i]);run.y.push(p.y[i]);runs.push(run);run=null;}}
+        if(run)runs.push(run);}
+      // одиночная «плохая» точка между хорошими — шум разбиения дуг, не отличие
+      const real=runs.filter(r=>r.x.length>3||Math.hypot(r.x[r.x.length-1]-r.x[0],r.y[r.y.length-1]-r.y[0])>tol*4);
+      let blen=0;for(const r of real)for(let i=1;i<r.x.length;i++)blen+=Math.hypot(r.x[i]-r.x[i-1],r.y[i]-r.y[i-1]);
+      return {runs:real,bad:blen,frac:all?1-bad/all:1};};
+    const a=side(A.L,IB),b=side(LB,IA);
+    // группы отличий — рядом лежащие участки обеих сторон
+    const boxes=[];
+    for(const [s,rs] of [['a',a.runs],['b',b.runs]])for(const r of rs){let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      for(let i=0;i<r.x.length;i++){x0=Math.min(x0,r.x[i]);x1=Math.max(x1,r.x[i]);y0=Math.min(y0,r.y[i]);y1=Math.max(y1,r.y[i]);}boxes.push([x0,y0,x1,y1]);}
+    const g=size*0.01,cl=[];
+    for(const b0 of boxes){let m=null;
+      for(const c of cl)if(b0[0]<=c[2]+g&&b0[2]>=c[0]-g&&b0[1]<=c[3]+g&&b0[3]>=c[1]-g){m=c;break;}
+      if(m){m[0]=Math.min(m[0],b0[0]);m[1]=Math.min(m[1],b0[1]);m[2]=Math.max(m[2],b0[2]);m[3]=Math.max(m[3],b0[3]);}else cl.push(b0.slice());}
+    for(let ch=true;ch;){ch=false;for(let i=0;i<cl.length;i++)for(let j=cl.length-1;j>i;j--){const p=cl[i],q=cl[j];
+      if(q[0]<=p[2]+g&&q[2]>=p[0]-g&&q[1]<=p[3]+g&&q[3]>=p[1]-g){p[0]=Math.min(p[0],q[0]);p[1]=Math.min(p[1],q[1]);p[2]=Math.max(p[2],q[2]);p[3]=Math.max(p[3],q[3]);cl.splice(j,1);ch=true;}}}
+    cl.sort((p,q)=>(q[3]+q[1])-(p[3]+p[1])||(p[0]-q[0]));  // сверху вниз, слева направо
+    return {LB,a,b,clusters:cl,same:!a.runs.length&&!b.runs.length};
+  }
+  /* всё сразу: подготовка, совмещение, отличия */
+  function compare(docA,docB,tol,M0){ // M0 — положение B задано вручную (без автоподбора)
+    const A=prep(docA,tol),B=prep(docB,tol);
+    if(!A.n||!B.n)return {A,B,M:[1,0,0,1,0,0],fail:'Нет геометрии для сравнения'};
+    const al=M0?{M:M0,mir:M0[0]*M0[3]-M0[1]*M0[2]<0}:align(A,B,tol);const M=al?al.M:[1,0,0,1,0,0];
+    return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]]},diff(A,B,M,tol));
+  }
+  return {prep,align,diff,compare,mul};
+}
+const GEO=GEOCORE();
+/* сравнение в отдельном потоке, чтобы окно не замирало на больших файлах */
+const geoCompare=(()=>{
+  let w=null,seq=0;const wait=new Map();
+  function start(){
+    try{
+      const src='const GEO=('+GEOCORE.toString()+')();onmessage=e=>{const {id,a,b,tol,M}=e.data;let r,err=null;try{r=GEO.compare(a,b,tol,M);'+
+        'r={M:r.M,mir:r.mir,same:r.same,fail:r.fail,clusters:r.clusters||[],a:r.a?{runs:r.a.runs,bad:r.a.bad,frac:r.a.frac}:null,b:r.b?{runs:r.b.runs,bad:r.b.bad,frac:r.b.frac}:null,'+
+        'LA:r.A.L,LB:r.LB||[],sizeA:r.sizeA,sizeB:r.sizeB,bbA:r.A.bbox};}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});};';
+      w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
+      w.onmessage=e=>{const p=wait.get(e.data.id);if(!p)return;wait.delete(e.data.id);e.data.err?p.rej(new Error(e.data.err)):p.res(e.data.r);};
+      w.onerror=()=>{for(const p of wait.values())p.rej(new Error('Сбой потока сравнения'));wait.clear();w=null;};
+    }catch(e){w=null;}
+  }
+  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,prims:G.prims}))});
+  return (docA,docB,tol,M)=>{
+    if(!w)start();
+    if(!w){const r=GEO.compare(docA,docB,tol,M);return Promise.resolve(Object.assign(r,{LA:r.A.L,bbA:r.A.bbox}));}
+    const id=++seq;return new Promise((res,rej)=>{wait.set(id,{res,rej});w.postMessage({id,a:slim(docA),b:slim(docB),tol,M:M||null});});
+  };
+})();
+
+/* =====================================================================
    ОСНОВНОЙ ПОТОК
    ===================================================================== */
 const Core=DXFCORE();
@@ -1101,7 +1303,7 @@ function applyFilter(){
   const q=$('filter').value.trim().toLowerCase(),ty=$('typeSel').value;
   const cf=CMP&&CMP.filter;
   const fm=folderMode()&&!q,eff=effDir();
-  view=items.filter(it=>(!cf||(CMP.map.get(it)||{}).st===cf)&&(fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/')))&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
+  view=items.filter(it=>(!cf||cmpMatch(it,cf))&&(fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/')))&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
   VW.idx=cur?view.indexOf(cur):-1;
   const g=$('grid');io.disconnect();g.textContent='';
   const fr=document.createDocumentFragment();
@@ -1374,6 +1576,7 @@ class Pane{
     this.draw();
   }
   fitView(){
+    if(this.ov&&this.ov.bb)return fitView({bbox:this.ov.bb},null,this.W,this.H,0.05);
     if(this.isPdf&&this.cont&&this.pg.length){ // непрерывный режим: текущая страница целиком в окне, соседние — выше и ниже
       const e=this.curPage()||this.pg[0],s=Math.min(this.W*0.96/this.pw,this.H*0.96/e.h);return {s,cx:this.pw/2,cy:this.ph-(e.oy+e.h/2)};}
     return fitView(this.doc,this.xf,this.W,this.H,this.isPdf?0.02:0.05);
@@ -1400,6 +1603,7 @@ class Pane{
     const bg=this.it&&this.it.type==='pdf'?pdfBg():dxfBg();
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();return;}
+    if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);return;}
     if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
@@ -1612,7 +1816,8 @@ class Pane{
       if(this.doc&&!this.isPdf&&this.doc.bbox&&e.pointerType==='mouse'){const [wx,wy]=mApply(mInv(xfMat(this.xf)),...this.s2w(x,y));$('vCoord').textContent=`X ${fmt(wx+this.doc.origin[0])}   Y ${fmt(wy+this.doc.origin[1])}`;}
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
-      if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
+      if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
+      else if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
       else if(ptrs.size===2){
         const [a,b]=[...ptrs.values()];
         const m0=[(a.x+b.x)/2,(a.y+b.y)/2],d0=Math.hypot(a.x-b.x,a.y-b.y);
@@ -1696,6 +1901,7 @@ function gridStage(){
 new ResizeObserver(()=>{if(VW.set.length>1)gridStage();}).observe($('stage'));
 
 function showSet(set,act=0){
+  if(OV&&!OV.keep)ovClear();
   VW.set=set;layoutStage();VW.active=Math.max(0,Math.min(act,set.length-1));
   set.forEach((x,k)=>panes[k].show(x));
   panes.forEach((p,k)=>p.el.classList.toggle('active',set.length>1&&k===VW.active));
@@ -1759,6 +1965,7 @@ function updateBar(){
   const cur=curItem(),ap=panes[VW.active],has=!!cur&&VW.set.length>0;
   const cmp=!!VW.cmp&&VW.set.length===2;
   $('vSync').hidden=!(cmp&&VW.set[0].type===VW.set[1].type);$('vSync').classList.toggle('on',SET.sync);
+  $('vOv').hidden=!(OV||(cmp&&VW.set[0].type==='dxf'&&VW.set[1].type==='dxf'));$('vOv').classList.toggle('on',!!OV);
   $('vMon').hidden=FOLLOW||!(MON.win||screen.isExtended);$('vMon').classList.toggle('on',!!MON.win);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
@@ -2452,19 +2659,48 @@ function cmpSet(arr,name,rid){
   }
   CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:''};
   $('cmpFilter').value='';updCmp();applyFilter();
+  cmpDeep(CMP);
 }
-function updCmp(){
-  for(const it of items){const c=CMP&&CMP.map.get(it),b=it.cmpb;
-    if(!c){b.hidden=true;continue;}
-    b.hidden=false;b.className='cmpb '+c.st;b.textContent=c.st==='same'?'=':c.st==='diff'?'≠':'нов';
-    b.title=c.st==='same'?'Совпадает с «'+CMP.name+'» (имя и размер) — клик: открыть рядом'
-      :c.st==='diff'?'Отличается от «'+CMP.name+'»: '+c.why+' — клик: открыть рядом'+(c.others.length>1?' ('+c.others.length+' версии там)':'')
+function cmpMatch(it,cf){const st=(CMP.map.get(it)||{}).st;return cf==='chg'?(st==='diff'||st==='geo'):st===cf;}
+/* точная проверка: содержимое файлов побайтно; у DXF с разным содержимым — сравнение геометрии (совмещение + допуск) */
+async function cmpDeep(C){
+  const todo=[...C.map.entries()].filter(([a,c])=>c.st==='same'||(c.st==='diff'&&a.type==='dxf'&&c.b.type==='dxf'));
+  C.deep={n:todo.length,done:0};updCmp();
+  const eqBytes=async(f1,f2)=>{if(f1.size!==f2.size)return false;const [x,y]=await Promise.all([f1.arrayBuffer(),f2.arrayBuffer()]);
+    const A=new Uint8Array(x),B=new Uint8Array(y);for(let i=0;i<A.length;i++)if(A[i]!==B[i])return false;return true;};
+  for(const [a,c] of todo){
+    if(CMP!==C)return;
+    try{
+      if(c.st==='same'&&await eqBytes(a.file,c.b.file)){c.why='';}
+      else if(a.type==='dxf'&&c.b.type==='dxf'){
+        const [da,db]=await Promise.all([getDoc(a),getDoc(c.b)]);if(CMP!==C)return;
+        const r=await geoCompare(da,db,SET.tol);if(CMP!==C)return;
+        const base=c.st==='same'?'содержимое отличается (пересохранён)':c.why;
+        if(r.same){c.st='geo';c.why=base+'; геометрия та же (допуск '+SET.tol+' мм)';}
+        else{c.st='diff';c.why=base+'; геометрия отличается'+(r.fail?': '+r.fail:' (мест: '+r.clusters.length+')');}
+      }else if(c.st==='same'){c.st='diff';c.why='содержимое отличается (имя и размер те же)';}
+    }catch(e){c.why=(c.why?c.why+'; ':'')+'не проверено: '+e.message;}
+    C.deep.done++;
+    if(C.deep.done%5===0||C.deep.done===C.deep.n){updCmp();if(CMP.filter)applyFilter();}else{const it=a;updBadge(it);}
+  }
+  C.deep=null;updCmp();if(CMP&&CMP.filter)applyFilter();
+}
+function updBadge(it){const c=CMP&&CMP.map.get(it),b=it.cmpb;
+    if(!c){b.hidden=true;return;}
+    b.hidden=false;b.className='cmpb '+c.st;b.textContent=c.st==='same'?'=':c.st==='diff'?'≠':c.st==='geo'?'≈':'нов';
+    const more=c.others&&c.others.length>1?' ('+c.others.length+' версии там)':'';
+    b.title=c.st==='same'?'Совпадает с «'+CMP.name+'»'+(CMP.deep?' (имя и размер; содержимое проверяется…)':' — файлы одинаковые побайтно')+' — клик: открыть рядом'
+      :c.st==='geo'?'Пересохранён: '+c.why+' — клик: открыть'+more
+      :c.st==='diff'?'Отличается от «'+CMP.name+'»: '+c.why+' — клик: открыть'+more
       :'В «'+CMP.name+'» такого обозначения нет';}
+function updCmp(){
+  for(const it of items)updBadge(it);
   $('cmpBar').hidden=!CMP;$('btnCmp').classList.toggle('on',!!CMP);
   if(!CMP)return;
-  let n={same:0,diff:0,new:0};for(const c of CMP.map.values())n[c.st]++;
+  let n={same:0,diff:0,new:0,geo:0};for(const c of CMP.map.values())n[c.st]++;
   $('cmpInfo').innerHTML='';const s=document.createElement('span');
-  s.innerHTML='Сравнение с «<b></b>»: &nbsp;<b>= '+n.same+'</b> совпадают · <b>≠ '+n.diff+'</b> отличаются · <b>'+n.new+'</b> новых';
+  s.innerHTML='Сравнение с «<b></b>»: &nbsp;<b>= '+n.same+'</b> одинаковые · <b>≈ '+n.geo+'</b> пересохранены · <b>≠ '+n.diff+'</b> отличаются · <b>'+n.new+'</b> новых'+
+    (CMP.deep?' · <i>проверка содержимого '+CMP.deep.done+' / '+CMP.deep.n+'…</i>':'');
   s.querySelector('b').textContent=CMP.name;$('cmpInfo').appendChild(s);
   $('cmpOnlyBtn').textContent='Только там: '+CMP.onlyB.length;$('cmpOnlyBtn').disabled=!CMP.onlyB.length;
 }
@@ -2473,8 +2709,91 @@ function cmpOpen(a,b,manual){
   const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}
   closePairPanel();showSet([a,b],0);VW.cmp={a,b,manual:!!manual};updateBar();
   if(!docked())setFull(true);
+  if(VW.ovMode&&a.type==='dxf'&&b.type==='dxf'){ovStart();return;}
   setTimeout(()=>{const p=panes[0];if(p&&p.doc&&SET.sync)p.changed();},400);
 }
+/* =====================================================================
+   НАЛОЖЕНИЕ двух DXF: совмещение (авто + вручную) и подсветка отличий
+   красное — есть только в первой детали, зелёное — только во второй, серое — совпадает (в пределах допуска)
+   ===================================================================== */
+let OV=null;
+if(!(SET.tol>0))SET.tol=0.1;
+function ovClear(){OV=null;for(const p of panes)if(p.ov){p.ov=null;}$('ovBar').hidden=true;}
+async function ovStart(M,keepView){
+  const c=VW.cmp||(OV&&{a:OV.a,b:OV.b});if(!c)return;const a=c.a,b=c.b;
+  if(a.type!=='dxf'||b.type!=='dxf'){flash('Наложение — только для двух DXF');return;}
+  VW.ovMode=true;
+  const tok={},again=OV&&OV.a===a&&OV.b===b&&OV.res;   // пересчёт после ручной подгонки — старая картинка видна до готовности
+  if(again){OV.tok=tok;}else OV={a,b,tok,keep:true};
+  if(!(panes[0]&&panes[0].it===a&&VW.set.length===1))showSet([a],0);
+  OV.keep=false;VW.cmp=c;
+  const p=panes[0];if(!again)p.ov={busy:true};$('ovBar').hidden=false;
+  const top=x=>x.path.split('/')[0],nA=a.name===b.name?top(a):a.name,nB=a.name===b.name?(b.cmpB&&CMP?CMP.name:top(b)):b.name;
+  $('ovNa').textContent='только в '+nA;$('ovNa').parentNode.title='Красным — есть только в «'+a.path+'»';
+  $('ovNb').textContent='только в '+nB;$('ovNb').parentNode.title='Зелёным — есть только в «'+b.path+'»';
+  $('ovTol').value=String(SET.tol);$('ovRes').className='';$('ovRes').textContent=again?'Пересчитываю…':'Совмещаю…';$('ovNum').textContent='';
+  updateBar();
+  let da,db;try{[da,db]=await Promise.all([getDoc(a),getDoc(b)]);}catch(e){if(OV&&OV.tok===tok){$('ovRes').textContent='Файл не открылся';}return;}
+  if(!OV||OV.tok!==tok)return;
+  let r;const t0=performance.now();
+  try{r=await geoCompare(da,db,SET.tol,M||null);}catch(e){if(OV&&OV.tok===tok)$('ovRes').textContent='Не удалось сравнить: '+e.message;return;}
+  if(!OV||OV.tok!==tok||p.ov===null)return;
+  if(r.fail){$('ovRes').textContent=r.fail;return;}
+  if(M&&OV.M!==M)return;   // пока считали, деталь сдвинули ещё — дождаться следующего пересчёта
+  OV.res=r;OV.M=r.M;OV.D=null;OV.cur=-1;OV.ms=Math.round(performance.now()-t0);
+  const bb=r.bbA.slice();for(const o of r.LB)for(let i=0;i<o.length;i+=2){bb[0]=Math.min(bb[0],o[i]);bb[1]=Math.min(bb[1],o[i+1]);bb[2]=Math.max(bb[2],o[i]);bb[3]=Math.max(bb[3],o[i+1]);}
+  p.ov={res:r,bb};
+  if(!keepView){p.fitted=true;p.applyView('fit');}else p.draw();
+  ovInfo();
+}
+function ovInfo(){
+  const r=OV&&OV.res;if(!r)return;const e=$('ovRes'),n=r.clusters.length;
+  const sz=v=>fmt(v[0])+'×'+fmt(v[1]);
+  if(r.same){e.className='ok';e.textContent='✓ Совпадает (допуск '+SET.tol+' мм)';}
+  else{e.className='bad';e.textContent='Отличий: '+n+' · совпадает '+Math.floor(r.a.frac*1000)/10+'% / '+Math.floor(r.b.frac*1000)/10+'%';}
+  e.title='Габарит: '+sz(r.sizeA)+' и '+sz(r.sizeB)+(r.mir?' · вторая деталь отражена':'')+' · '+OV.ms+' мс';
+  $('ovNum').textContent=n?(OV.cur>=0?(OV.cur+1)+' / '+n:n+' шт.'):'';
+  $('ovPrev').disabled=$('ovNext').disabled=!n;
+}
+function ovGo(d){
+  const r=OV&&OV.res;if(!r||!r.clusters.length)return;const n=r.clusters.length;
+  OV.cur=OV.cur<0?(d>0?0:n-1):(OV.cur+d+n)%n;const c=r.clusters[OV.cur],p=panes[0];
+  const w=Math.max(c[2]-c[0],c[3]-c[1],Math.max(r.sizeA[0],r.sizeA[1])*0.04);
+  const s=Math.min(p.W/(w*2.2),p.H/(w*2.2));p.fitted=false;p.s=p.clampS(s);p.cx=(c[0]+c[2])/2;p.cy=(c[1]+c[3])/2;p.draw();ovInfo();
+}
+/* ручная подгонка второй детали: сдвиг (Shift+перетаскивание), поворот на 90°, зеркало — затем пересчёт отличий */
+function ovApply(D){
+  if(!OV||!OV.res)return;OV.M=GEO.mul(D,OV.M);OV.D=OV.D?GEO.mul(D,OV.D):D;panes[0].draw();
+  clearTimeout(OV.t);OV.t=setTimeout(()=>ovStart(OV.M,true),250);
+}
+function ovNudge(p,dx,dy){ovApply([1,0,0,1,dx,dy]);}
+function ovCenterB(){const r=OV.res,L=r.LB;let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;const D=OV.D||[1,0,0,1,0,0];
+  for(const o of L)for(let i=0;i<o.length;i+=2){const x=D[0]*o[i]+D[2]*o[i+1]+D[4],y=D[1]*o[i]+D[3]*o[i+1]+D[5];x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  return [(x0+x1)/2,(y0+y1)/2];}
+function ovRot(deg,mir){if(!OV||!OV.res)return;const [cx,cy]=ovCenterB(),a=deg*Math.PI/180,c=Math.cos(a),s=Math.sin(a),m=mir?-1:1;
+  const R=[c*m,s*m,-s,c,0,0];ovApply(GEO.mul([1,0,0,1,cx,cy],GEO.mul(R,[1,0,0,1,-cx,-cy])));}
+function ovPaint(p,c,d){
+  const o=p.ov,r=o.res,D=OV&&OV.D,s=p.s;
+  c.save();c.setTransform(s*d,0,0,-s*d,(p.W/2-p.cx*s)*d,(p.H/2+p.cy*s)*d);c.lineCap='round';c.lineJoin='round';
+  const light=lum(dxfBg())>150,base=light?'#6b7078':'#9aa0a8';
+  const poly=(L,M)=>{c.beginPath();for(const q of L){
+      if(M){c.moveTo(M[0]*q[0]+M[2]*q[1]+M[4],M[1]*q[0]+M[3]*q[1]+M[5]);for(let i=2;i<q.length;i+=2)c.lineTo(M[0]*q[i]+M[2]*q[i+1]+M[4],M[1]*q[i]+M[3]*q[i+1]+M[5]);}
+      else{c.moveTo(q[0],q[1]);for(let i=2;i<q.length;i+=2)c.lineTo(q[i],q[i+1]);}}c.stroke();};
+  const runs=(R,M)=>{c.beginPath();for(const q of R){const f=(i)=>M?[M[0]*q.x[i]+M[2]*q.y[i]+M[4],M[1]*q.x[i]+M[3]*q.y[i]+M[5]]:[q.x[i],q.y[i]];
+      c.moveTo(...f(0));for(let i=1;i<q.x.length;i++)c.lineTo(...f(i));}c.stroke();};
+  c.lineWidth=1.2*(SET.lineK||1)/s;c.strokeStyle=base;poly(r.LA);
+  if(D){c.strokeStyle='#4ea1ff';poly(r.LB,D);}            // вторая деталь двигается — отличия пересчитываются после остановки
+  else{c.globalAlpha=0.9;c.strokeStyle=base;poly(r.LB);c.globalAlpha=1;
+    c.lineWidth=3*(SET.lineK||1)/s;c.strokeStyle='#ff4d4d';runs(r.a.runs);c.strokeStyle='#39d353';runs(r.b.runs);
+    if(OV&&OV.cur>=0&&r.clusters[OV.cur]){const q=r.clusters[OV.cur],g=8/s;c.setLineDash([6/s,4/s]);c.lineWidth=1.5/s;c.strokeStyle='#ffd23f';c.strokeRect(q[0]-g,q[1]-g,q[2]-q[0]+2*g,q[3]-q[1]+2*g);c.setLineDash([]);}}
+  c.restore();
+}
+function ovEnd(){const c=VW.cmp;VW.ovMode=false;ovClear();if(c)showSet([c.a,c.b],0);updateBar();}
+$('vOv').onclick=()=>{if(OV)ovEnd();else ovStart();};
+$('ovEnd').onclick=ovEnd;$('ovPrev').onclick=()=>ovGo(-1);$('ovNext').onclick=()=>ovGo(1);
+$('ovAuto').onclick=()=>{if(OV){OV.D=null;ovStart(null,false);}};
+$('ovRotL').onclick=()=>ovRot(90);$('ovRotR').onclick=()=>ovRot(-90);$('ovMir').onclick=()=>ovRot(0,true);
+$('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,true);};
 function cmpOpenFor(a){
   const c=CMP&&CMP.map.get(a);if(!c)return;
   if(c.st==='new'){showItem(view.indexOf(a));if(!docked())setFull(true);flash('В «'+CMP.name+'» нет файла с обозначением '+a.name);return;}
@@ -2589,6 +2908,10 @@ document.addEventListener('keydown',e=>{
   else if(k==='Tab'&&monOn())monTab(e.shiftKey?-1:1);
   else if(k==='Tab'){if(VW.set.length>1){const n=VW.set.length;setActive(panes[(VW.active+(e.shiftKey?-1:1)+n)%n]);}else cyclePair(e.shiftKey?-1:1);}
   else if(k==='Enter'){if(docked()&&!VW.full&&VW.idx>=0)setFull(true);else h=false;}
+  else if(k==='Escape'&&OV)ovEnd();
+  else if(/^[nNтТ]$/.test(k)&&!$('vOv').hidden)$('vOv').click();
+  else if((k===','||k==='б'||k==='Б')&&OV)ovGo(-1);
+  else if((k==='.'||k==='ю'||k==='Ю')&&OV)ovGo(1);
   else if(k==='Escape'){if(VW.cmp&&docked()&&!VW.full)showItem(VW.idx);else if(VW.full)setFull(false);else h=false;}
   else if(/^[lLдД]$/.test(k)&&VW.cmp)$('vSync').click();
   else if(/^[rRкК]$/.test(k))$('vSide').click();
