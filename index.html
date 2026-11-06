@@ -157,6 +157,11 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 .pp-c{cursor:pointer;color:var(--fg);word-break:break-all;border-top:1px solid var(--line2)}
 .pp-c:hover{background:var(--hover)}
 .pp-s{padding:10px 10px 6px;color:var(--mut);font-size:12px;border-top:1px solid var(--line);margin-top:4px}
+.pk-for{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
+.pk:hover,.pk.cur{background:var(--hover,#2b2f36)}
+.pk .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pk .pd{grid-column:1;color:var(--mut);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk .ps{grid-row:1/3;grid-column:2;text-align:right;font-size:12px;color:var(--mut);align-self:center}.pk .ps b{color:#39d353}
 .pp-empty{padding:6px 10px;color:var(--mut);font-size:13px}
 .set-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 12px}
 .set-row select{min-width:170px}
@@ -275,6 +280,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button></span>
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
+    <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
@@ -325,6 +331,14 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div id="cmpRecent"></div>
   <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), сравниваются имя и размер. Содержимое читается только при открытии файлов рядом.</div>
   <input id="inCmp" type="file" webkitdirectory multiple hidden>
+</div>
+<div id="pickPanel" class="pop" hidden>
+  <div class="pp-h"><b>Сравнить с…</b><span class="sp"></span><button id="pickFile" title="Любой DXF — с сервера, из архива, с диска">Файл с диска…</button><button id="pickClose">✕</button></div>
+  <div class="pp-row"><span id="pickFor" class="pk-for"></span></div>
+  <div class="pp-row"><input id="pickQ" type="search" placeholder="Поиск по имени или папке" style="flex:1"></div>
+  <div id="pickInfo" class="pp-empty"></div>
+  <div id="pickList"></div>
+  <input id="pickInput" type="file" accept=".dxf" hidden>
 </div>
 <div id="onlyPanel" class="pop" hidden style="right:auto;left:8px">
   <div class="pp-h"><b id="onlyTitle"></b><span class="sp"></span><button id="onlyClose">✕</button></div>
@@ -1966,6 +1980,7 @@ function updateBar(){
   const cmp=!!VW.cmp&&VW.set.length===2;
   $('vSync').hidden=!(cmp&&VW.set[0].type===VW.set[1].type);$('vSync').classList.toggle('on',SET.sync);
   $('vOv').hidden=!(OV||(cmp&&VW.set[0].type==='dxf'&&VW.set[1].type==='dxf'));$('vOv').classList.toggle('on',!!OV);
+  $('vWith').hidden=FOLLOW||!(has&&cur&&cur.type==='dxf');
   $('vMon').hidden=FOLLOW||!(MON.win||screen.isExtended);$('vMon').classList.toggle('on',!!MON.win);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
@@ -2794,9 +2809,62 @@ $('ovEnd').onclick=ovEnd;$('ovPrev').onclick=()=>ovGo(-1);$('ovNext').onclick=()
 $('ovAuto').onclick=()=>{if(OV){OV.D=null;ovStart(null,false);}};
 $('ovRotL').onclick=()=>ovRot(90);$('ovRotR').onclick=()=>ovRot(-90);$('ovMir').onclick=()=>ovRot(0,true);
 $('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,true);};
+/* =====================================================================
+   «Сравнить с…»: выбрать вторую деталь вручную — имена старых файлов могут не совпадать,
+   поэтому список отсортирован по похожести габарита (поворот не важен), есть поиск и «Файл с диска…»
+   ===================================================================== */
+const PICK={a:null,tok:0,list:[],sig:new Map()};
+function pickCands(a){
+  const src=CMP?CMP.items.concat(items):items,seen=new Set(),out=[];
+  for(const it of src){if(it===a||it.type!=='dxf'||seen.has(it.key))continue;seen.add(it.key);out.push(it);}
+  return out;
+}
+async function pickSig(it){ // «отпечаток» детали, не зависящий от поворота: габарит вдоль главных осей и длина всех контуров
+  if(PICK.sig.has(it.key))return PICK.sig.get(it.key);
+  let v=null;
+  try{const doc=await getDoc(it),g=GEO.prep(doc,0.5),c=Math.cos(g.ang),sn=Math.sin(g.ang),p=g.pts;
+    let u0=Infinity,u1=-Infinity,w0=Infinity,w1=-Infinity;
+    for(let i=0;i<p.length;i+=2){const x=p[i]-g.cx,y=p[i+1]-g.cy,u=x*c+y*sn,w=-x*sn+y*c;if(u<u0)u0=u;if(u>u1)u1=u;if(w<w0)w0=w;if(w>w1)w1=w;}
+    if(p.length)v=[Math.min(u1-u0,w1-w0),Math.max(u1-u0,w1-w0),g.len];
+  }catch(e){}
+  PICK.sig.set(it.key,v);await new Promise(r=>setTimeout(r,0));return v;
+}
+function pickScore(p,q){if(!p||!q)return -1;const r=(a,b)=>Math.abs(a-b)/Math.max(a,b,1);
+  return Math.max(0,1-(r(p[0],q[0])+r(p[1],q[1]))*1.5-r(p[2],q[2])*0.5);}
+async function pickOpen(a){
+  a=a||curItem();if(!a||a.type!=='dxf')return;
+  PICK.a=a;const tok=++PICK.tok;$('pickPanel').hidden=false;$('pickQ').value='';
+  $('pickFor').textContent='для: '+a.path;
+  PICK.list=pickCands(a).map(it=>({it,sc:-1,other:!!(CMP&&CMP.items.includes(it))}));pickRender();
+  const sa=await pickSig(a);if(tok!==PICK.tok)return;
+  PICK.sa=sa;let n=0;
+  for(const r of PICK.list){ // по очереди, сначала из той же «ветки» имени
+    if(tok!==PICK.tok||$('pickPanel').hidden)return;
+    r.sc=pickScore(sa,await pickSig(r.it));n++;
+    if(n%8===0||n===PICK.list.length){$('pickInfo').textContent=n<PICK.list.length?'Подбираю похожие по габариту: '+n+' / '+PICK.list.length+'…':'';pickRender();}
+  }
+  $('pickInfo').textContent=PICK.list.length?'':'Других DXF нет — откройте общую папку, «⇆ Сравнить» с другой папкой или «Файл с диска…»';
+}
+function pickRender(){
+  const L=$('pickList'),q=$('pickQ').value.trim().toLowerCase();L.textContent='';
+  const rows=PICK.list.filter(r=>!q||r.it.path.toLowerCase().includes(q)).sort((x,y)=>(y.sc+(y.other?0.01:0)-x.sc-(x.other?0.01:0))||x.it.name.localeCompare(y.it.name,'ru',{numeric:true})).slice(0,120);
+  for(const r of rows){const d=document.createElement('div');d.className='pk';
+    const sg=PICK.sig.get(r.it.key),dir=r.it.path.includes('/')?r.it.path.slice(0,r.it.path.lastIndexOf('/')):'';
+    d.innerHTML='<span class="pn"></span><span class="ps"></span><span class="pd"></span>';
+    d.querySelector('.pn').textContent=r.it.name;d.querySelector('.pd').textContent=(r.other?'⇆ ':'')+dir;
+    d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>как эта</b>':r.sc>0.85?'<br>похожа':'')):'…';
+    d.title='Габарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';
+    d.onclick=()=>pickGo(r.it);L.appendChild(d);}
+}
+function pickGo(b){const a=PICK.a;pickClose();if(!a)return;VW.ovMode=true;cmpOpen(a,b,true);}
+function pickClose(){PICK.tok++;$('pickPanel').hidden=true;}
+$('vWith').onclick=()=>pickOpen();
+$('pickClose').onclick=pickClose;$('pickQ').oninput=pickRender;
+$('pickFile').onclick=()=>$('pickInput').click();
+$('pickInput').onchange=e=>{const f=e.target.files[0];e.target.value='';if(!f)return;const it=makeItem(f,'с диска/'+f.name,null,'с диска');pickGo(it);};
 function cmpOpenFor(a){
   const c=CMP&&CMP.map.get(a);if(!c)return;
-  if(c.st==='new'){showItem(view.indexOf(a));if(!docked())setFull(true);flash('В «'+CMP.name+'» нет файла с обозначением '+a.name);return;}
+  if(c.st==='new'){showItem(view.indexOf(a));if(!docked())setFull(true);if(a.type==='dxf')pickOpen(a);else flash('В «'+CMP.name+'» нет файла с обозначением '+a.name);return;}
   cmpOpen(a,c.b);
 }
 async function cmpFromHandle(h,rid){
@@ -2873,6 +2941,7 @@ document.addEventListener('keydown',e=>{
   if(k==='Escape'&&!$('pairPanel').hidden){closePairPanel();e.preventDefault();return;}
   if(e.target.id==='filter'&&(k==='ArrowDown'||k==='Enter')){e.target.blur();e.preventDefault();if(view.length&&VW.idx<0){if(docked())showItem(0);else{VW.idx=0;markCurrent(view[0]);}}return;}
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
+  if(k==='Escape'&&!$('pickPanel').hidden){pickClose();return;}
   if(k==='Escape'&&SEL.size&&!VW.full){clearSel();return;}
   if(FOLLOW){ // второй монитор: листание передаётся в основное окно
     if(/^(ArrowRight|ArrowLeft|ArrowUp|ArrowDown| |Tab)$/.test(k)||((k==='PageDown'||k==='PageUp')&&!(panes[VW.active]&&panes[VW.active].isPdf&&panes[VW.active].doc.pages>1))){
@@ -2910,6 +2979,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='Enter'){if(docked()&&!VW.full&&VW.idx>=0)setFull(true);else h=false;}
   else if(k==='Escape'&&OV)ovEnd();
   else if(/^[nNтТ]$/.test(k)&&!$('vOv').hidden)$('vOv').click();
+  else if(/^[vVмМ]$/.test(k)&&!$('vWith').hidden)pickOpen();
   else if((k===','||k==='б'||k==='Б')&&OV)ovGo(-1);
   else if((k==='.'||k==='ю'||k==='Ю')&&OV)ovGo(1);
   else if(k==='Escape'){if(VW.cmp&&docked()&&!VW.full)showItem(VW.idx);else if(VW.full)setFull(false);else h=false;}
