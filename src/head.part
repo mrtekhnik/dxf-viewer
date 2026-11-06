@@ -266,7 +266,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
-    <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +3 (обычно 0)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
+    <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
     <button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒 синхронно</button>
@@ -318,7 +318,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
   <div class="set-row"><span>Линии DXF на экране (W)</span><select id="sLineK"><option value="1">тонкие</option><option value="1.6">средние</option><option value="2.4">жирные</option></select></div>
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
-  <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — как в файле</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — обычно</option><option value="1">+1 — темнее</option><option value="2">+2 — ещё темнее</option><option value="3">+3 — максимум</option></select></div>
+  <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>При запуске</span><select id="sReopen"><option value="1">открывать последнюю папку</option><option value="0">пустое окно</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>

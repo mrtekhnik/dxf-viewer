@@ -269,7 +269,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
-    <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +3 (обычно 0)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
+    <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
     <button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒 синхронно</button>
@@ -321,7 +321,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
   <div class="set-row"><span>Линии DXF на экране (W)</span><select id="sLineK"><option value="1">тонкие</option><option value="1.6">средние</option><option value="2.4">жирные</option></select></div>
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
-  <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — как в файле</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — обычно</option><option value="1">+1 — темнее</option><option value="2">+2 — ещё темнее</option><option value="3">+3 — максимум</option></select></div>
+  <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>При запуске</span><select id="sReopen"><option value="1">открывать последнюю папку</option><option value="0">пустое окно</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
@@ -811,9 +811,9 @@ const PDF_INV='invert(1) hue-rotate(180deg)';
 /* насыщенность линий PDF: ступени −2…+3, по умолчанию 0.
    Не contrast() — он светло-серые края тонких линий выбеливал, и линии пропадали.
    Гамма-коррекция: белое остаётся белым, чёрное — чёрным, всё серое (тонкие линии, мелкий текст) только темнеет. */
-const PDF_LV={'-2':1,'-1':1.35,'0':1.8,'1':2.6,'2':3.8,'3':5.5};
-const PDF_LVN={'-2':'как в файле','-1':'чуть светлее','0':'обычно','1':'темнее','2':'ещё темнее','3':'максимум'};
-const LV_MIN=-2,LV_MAX=3;
+const PDF_LV={'-2':0.6,'-1':0.8,'0':1,'1':1.35,'2':1.8,'3':2.6,'4':3.8};
+const PDF_LVN={'-2':'светлее','-1':'чуть светлее','0':'как в файле','1':'чуть темнее','2':'темнее','3':'ещё темнее','4':'максимум'};
+const LV_MIN=-2,LV_MAX=4;
 if(!(SET.pdfLv>=LV_MIN&&SET.pdfLv<=LV_MAX))SET.pdfLv=0;
 (()=>{const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('width','0');svg.setAttribute('height','0');svg.style.position='absolute';
   let x='';for(const k in PDF_LV){if(PDF_LV[k]===1)continue;const e=PDF_LV[k];
@@ -2237,7 +2237,7 @@ $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
 $('sPdfBold').onchange=e=>setContrast(+e.target.value,true);
 function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;saveSet();$('sPdfBold').value=String(v);$('vCtN').textContent='линии '+lvTxt(v);panes.forEach(p=>p.draw());
   try{MON.win&&MON.win.postMessage({t:'set'},'*');}catch(e){}
-  if(!quiet)flash('Линии PDF: '+lvTxt(v)+' — '+PDF_LVN[v]+' (от −2 до +3, клавиши [ и ])');}
+  if(!quiet)flash('Линии PDF: '+lvTxt(v)+' — '+PDF_LVN[v]+' (от −2 до +4, клавиши [ и ])');}
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;SET.lw=false;saveSet();panes.forEach(p=>p.draw());updateBar();};
@@ -2600,6 +2600,7 @@ document.addEventListener('keydown',e=>{
   else if(/^[mMьЬ]$/.test(k))$('vMir').click();
   else if(k==='0')apDo(p=>p.setXf({rot:0,mirror:false}));
   else if(/^[oOщЩ]$/.test(k))apDo(p=>p.toggleOrig());
+  else if((k==='Home'||k==='End')&&docked()&&!VW.full&&view.length)showItem(k==='Home'?0:view.length-1);  // окно рядом: первый / последний файл
   else if(k==='Home'||/^[fFаА]$/.test(k))$('vFit').click();
   else if((k==='+'||k==='=')&&ap)ap.zoomAt(ap.W/2,ap.H/2,1.25);
   else if((k==='-'||k==='_')&&ap)ap.zoomAt(ap.W/2,ap.H/2,0.8);

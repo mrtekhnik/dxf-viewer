@@ -26,9 +26,9 @@ const PDF_INV='invert(1) hue-rotate(180deg)';
 /* насыщенность линий PDF: ступени −2…+3, по умолчанию 0.
    Не contrast() — он светло-серые края тонких линий выбеливал, и линии пропадали.
    Гамма-коррекция: белое остаётся белым, чёрное — чёрным, всё серое (тонкие линии, мелкий текст) только темнеет. */
-const PDF_LV={'-2':1,'-1':1.35,'0':1.8,'1':2.6,'2':3.8,'3':5.5};
-const PDF_LVN={'-2':'как в файле','-1':'чуть светлее','0':'обычно','1':'темнее','2':'ещё темнее','3':'максимум'};
-const LV_MIN=-2,LV_MAX=3;
+const PDF_LV={'-2':0.6,'-1':0.8,'0':1,'1':1.35,'2':1.8,'3':2.6,'4':3.8};
+const PDF_LVN={'-2':'светлее','-1':'чуть светлее','0':'как в файле','1':'чуть темнее','2':'темнее','3':'ещё темнее','4':'максимум'};
+const LV_MIN=-2,LV_MAX=4;
 if(!(SET.pdfLv>=LV_MIN&&SET.pdfLv<=LV_MAX))SET.pdfLv=0;
 (()=>{const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('width','0');svg.setAttribute('height','0');svg.style.position='absolute';
   let x='';for(const k in PDF_LV){if(PDF_LV[k]===1)continue;const e=PDF_LV[k];
@@ -1452,7 +1452,7 @@ $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
 $('sPdfBold').onchange=e=>setContrast(+e.target.value,true);
 function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;saveSet();$('sPdfBold').value=String(v);$('vCtN').textContent='линии '+lvTxt(v);panes.forEach(p=>p.draw());
   try{MON.win&&MON.win.postMessage({t:'set'},'*');}catch(e){}
-  if(!quiet)flash('Линии PDF: '+lvTxt(v)+' — '+PDF_LVN[v]+' (от −2 до +3, клавиши [ и ])');}
+  if(!quiet)flash('Линии PDF: '+lvTxt(v)+' — '+PDF_LVN[v]+' (от −2 до +4, клавиши [ и ])');}
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;SET.lw=false;saveSet();panes.forEach(p=>p.draw());updateBar();};
@@ -1815,6 +1815,7 @@ document.addEventListener('keydown',e=>{
   else if(/^[mMьЬ]$/.test(k))$('vMir').click();
   else if(k==='0')apDo(p=>p.setXf({rot:0,mirror:false}));
   else if(/^[oOщЩ]$/.test(k))apDo(p=>p.toggleOrig());
+  else if((k==='Home'||k==='End')&&docked()&&!VW.full&&view.length)showItem(k==='Home'?0:view.length-1);  // окно рядом: первый / последний файл
   else if(k==='Home'||/^[fFаА]$/.test(k))$('vFit').click();
   else if((k==='+'||k==='=')&&ap)ap.zoomAt(ap.W/2,ap.H/2,1.25);
   else if((k==='-'||k==='_')&&ap)ap.zoomAt(ap.W/2,ap.H/2,0.8);
