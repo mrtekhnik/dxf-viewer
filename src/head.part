@@ -47,6 +47,13 @@ body.follower header,body.follower #updBar,body.follower #status,body.follower #
 .tr .tn{overflow:hidden;text-overflow:ellipsis;flex:1}
 .tr .tc{color:var(--mut);font-size:11px;margin-left:6px;flex:none}
 .tr.all{font-weight:600}
+#vCtN{padding:0 6px;color:var(--mut);font-size:12px;white-space:nowrap;align-self:center}
+#empty .reopen{font-size:15px;padding:8px 16px;border-color:var(--acc)}
+body.kbtree .tr.sel{outline:2px solid var(--acc);outline-offset:-2px}
+.ftile .fico{font-size:42px;color:var(--mut)}
+#grid.list .ftile .fico{font-size:22px}
+.ftile.up .fico{font-size:34px}
+.ftile .nm{font-weight:600}
 .tree-h{display:flex;align-items:center;padding:4px 8px 6px;color:var(--mut);font-size:12px;border-bottom:1px solid var(--line2);margin-bottom:4px}
 .tree-h .sp{flex:1}
 .tree-h button{padding:2px 7px;font-size:12px}
@@ -206,12 +213,13 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.3</small></div>
+  <div class="brand">DXF <small>+PDF · v3.4</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
   <button id="btnHist" title="История просмотров">История</button>
   <button id="btnTree" hidden title="Дерево папок изделия">Папки ▸</button>
+  <button id="btnBrowse" hidden title="Как в Проводнике: вложенные папки плитками, файлы только этой папки (Backspace — наверх)">📁</button>
   <input id="filter" type="search" placeholder="Фильтр по имени">
   <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
   <button id="btnLayout" title="Сетка миниатюр или список"></button>
@@ -257,7 +265,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button></span>
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
-    <button id="vLw" class="on hide-m" title="Показывать толщины линий из файла">Толщины</button>
+    <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
+    <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Контраст линий PDF, 0…4 (по умолчанию 2)">контраст 2</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
+    <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
     <button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒 синхронно</button>
     <button id="vMon" hidden title="Пара текущего файла — на втором мониторе">🖵 2-й монитор</button>
@@ -308,7 +318,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
   <div class="set-row"><span>Линии DXF на экране (W)</span><select id="sLineK"><option value="1">тонкие</option><option value="1.6">средние</option><option value="2.4">жирные</option></select></div>
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
-  <div class="set-row"><span>Тонкие линии PDF</span><select id="sPdfBold"><option value="0">как в файле</option><option value="1">темнее (чётче на большом листе)</option></select></div>
+  <div class="set-row"><span>Контраст линий PDF ( [ и ] )</span><select id="sPdfBold"><option value="0">0 — как в файле</option><option value="1">1 — чуть темнее</option><option value="2">2 — темнее (обычно)</option><option value="3">3 — ещё темнее</option><option value="4">4 — максимум</option></select></div>
+  <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
+  <div class="set-row"><span>При запуске</span><select id="sReopen"><option value="1">открывать последнюю папку</option><option value="0">пустое окно</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
   <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>
   <div class="set-sec">Пары чертёж ⇄ DXF</div>

@@ -12,7 +12,7 @@ async def main():
     for i in range(8): await pg.mouse.wheel(0,-300); await pg.wait_for_timeout(50)
     await pg.wait_for_timeout(1500)
     info=await pg.evaluate("""(()=>{const p=panes[0],d=p.dpr;const L=p.W/2-p.cx*p.s,T=p.H/2-(p.ph-p.cy)*p.s;const g=(x,y)=>[...p.ctx.getImageData(Math.round(x*d),Math.round(y*d),1,1).data].slice(0,3);
-      return {hi:!!p.P.hi, outside:g(Math.max(2,L-20),Math.max(2,T-20)), inside:g(L+5,T+5)}})()""")
+      return {hi:!!p.pg[0].hi, outside:g(Math.max(2,L-20),Math.max(2,T-20)), inside:g(L+5,T+5)}})()""")
     print(info); await pg.screenshot(path='s_edge.png')
     # phone portrait side mode
     pg2=await b.new_page(viewport={'width':390,'height':800},is_mobile=True,has_touch=True,device_scale_factor=2)
