@@ -8,7 +8,7 @@ const LS={get(k,d){try{const v=localStorage.getItem('dxfv.'+k);return v===null?d
           set(k,v){try{localStorage.setItem('dxfv.'+k,JSON.stringify(v));}catch(e){}}};
 
 /* ---------- Настройки, тема, фон ---------- */
-const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,pdfBold:false,pdfContrast:-1,pdfCont:true,reopen:true,browse:'all',texts:true,lineK:1,hView:'list',sync:true,capV:{name:1,dims:1,spec:1,dir:0,date:0,size:0,single:1},pairScope:'dir',monMain:'pdf',layout:'grid',preview:false,listW:380,prevW:480,treeW:270,side:false,lw:true,tree:true,
+const SET=Object.assign({theme:'dark',bgDxf:'auto',bgPdf:'auto',pdfDark:false,pdfBold:false,pdfLv:0,pdfCont:true,reopen:true,browse:'all',texts:true,lineK:1,hView:'list',sync:true,capV:{name:1,dims:1,spec:1,dir:0,date:0,size:0,single:1},pairScope:'dir',monMain:'pdf',layout:'grid',preview:false,listW:380,prevW:480,treeW:270,side:false,lw:true,tree:true,
   capGrid:{name:1,wrap:0,type:0,size:0,date:0,dir:0},capList:{name:1,type:1,size:1,date:1,dir:1}},LS.get('set',{}));
 if(SET.bg){const o={dark:'#0f1012',gray:'#3a3d42',light:'#ffffff'}[SET.bg];if(o){if(SET.bgDxf==='auto')SET.bgDxf=o;if(SET.bgPdf==='auto')SET.bgPdf=o;}delete SET.bg;}
 if(SET.layout==='explorer'){SET.layout='list';SET.preview=true;}
@@ -23,10 +23,19 @@ const bgKey=()=>dxfBg()+'|'+pdfBg()+'|'+(SET.pdfDark?1:0);
 const PDF_INV='invert(1) hue-rotate(180deg)';
 /* «тонкие линии темнее»: полутона сглаживания дотягиваются до чёрного (на белом листе), цвета почти не меняются */
 /* контраст PDF: ступени 0…4, по умолчанию 2 (= прежнее «темнее») */
-const PDF_CT=['','contrast(1.4) saturate(0.9)','contrast(1.9) saturate(0.8)','contrast(2.6) saturate(0.7)','contrast(3.5) saturate(0.6)'];
-const PDF_CTN=['как в файле','чуть темнее','темнее','ещё темнее','максимум'];
-if(!(SET.pdfContrast>=0&&SET.pdfContrast<=4))SET.pdfContrast=2;
-const pdfFilter=()=>[PDF_CT[SET.pdfContrast]||'',SET.pdfDark?PDF_INV:''].filter(Boolean).join(' ');
+/* насыщенность линий PDF: ступени −2…+3, по умолчанию 0.
+   Не contrast() — он светло-серые края тонких линий выбеливал, и линии пропадали.
+   Гамма-коррекция: белое остаётся белым, чёрное — чёрным, всё серое (тонкие линии, мелкий текст) только темнеет. */
+const PDF_LV={'-2':1,'-1':1.35,'0':1.8,'1':2.6,'2':3.8,'3':5.5};
+const PDF_LVN={'-2':'как в файле','-1':'чуть светлее','0':'обычно','1':'темнее','2':'ещё темнее','3':'максимум'};
+const LV_MIN=-2,LV_MAX=3;
+if(!(SET.pdfLv>=LV_MIN&&SET.pdfLv<=LV_MAX))SET.pdfLv=0;
+(()=>{const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('width','0');svg.setAttribute('height','0');svg.style.position='absolute';
+  let x='';for(const k in PDF_LV){if(PDF_LV[k]===1)continue;const e=PDF_LV[k];
+    x+='<filter id="pdflv'+k+'" color-interpolation-filters="sRGB"><feComponentTransfer>'+['R','G','B'].map(c=>'<feFunc'+c+' type="gamma" amplitude="1" exponent="'+e+'" offset="0"/>').join('')+'</feComponentTransfer></filter>';}
+  svg.innerHTML=x;(document.body||document.documentElement).appendChild(svg);})();
+const pdfFilter=()=>[PDF_LV[SET.pdfLv]!==1?'url(#pdflv'+SET.pdfLv+')':'',SET.pdfDark?PDF_INV:''].filter(Boolean).join(' ');
+const lvTxt=v=>(v>0?'+':v<0?'−':'')+Math.abs(v);
 /* Цвета линий DXF под фон, как в CAD: на светлом белые → чёрные, очень светлые (жёлтый, голубой) темнее;
    на тёмном чёрные → белые, очень тёмные светлее */
 const colCache=new Map();
@@ -296,7 +305,7 @@ function goDir(d,from){ // перейти в папку; from — откуда �
 function kbMark(t){ // курсор клавиатуры на плитке (папка или файл)
   for(const x of $('grid').querySelectorAll('.tile.cur'))x.classList.remove('cur');
   if(!t)return;t.classList.add('cur');t.scrollIntoView({block:'nearest'});
-  if(t._it){VW.idx=view.indexOf(t._it);monSync();}else VW.idx=-1;
+  if(t._it){const i=view.indexOf(t._it);if(docked()&&!VW.full){showItem(i);t.classList.add('cur');}else{VW.idx=i;monSync();}}else VW.idx=-1;
 }
 function goUp(){const pd=parentDir(curDir);if(pd===null)return false;goDir(pd,curDir);return true;}
 $('btnBrowse').onclick=()=>{SET.browse=SET.browse==='folders'?'all':'folders';saveSet();$('btnBrowse').classList.toggle('on',SET.browse==='folders');applyFilter();
@@ -970,7 +979,7 @@ function updateBar(){
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
   $('vLw').hidden=!anyDxf;$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
-  const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='контраст '+SET.pdfContrast;
+  const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
   $('vPages').hidden=!pg;if(pg)$('vPgNum').textContent=` ${ap.pageNo} / ${ap.doc.pages} `;
@@ -1046,7 +1055,7 @@ $('vRotL').onclick=()=>apDo(p=>p.rotate(90));
 $('vRotR').onclick=()=>apDo(p=>p.rotate(-90));
 $('vMir').onclick=()=>apDo(p=>p.mirror());
 $('vLw').onclick=()=>cycleLineK();
-$('vCtM').onclick=()=>setContrast(SET.pdfContrast-1);$('vCtP').onclick=()=>setContrast(SET.pdfContrast+1);
+$('vCtM').onclick=()=>setContrast(SET.pdfLv-1);$('vCtP').onclick=()=>setContrast(SET.pdfLv+1);
 $('vCont').onclick=()=>{$('sPdfCont').value=SET.pdfCont?'0':'1';$('sPdfCont').onchange({target:$('sPdfCont')});updateBar();flash(SET.pdfCont?'PDF: все страницы подряд':'PDF: по одной странице');};
 $('vWarn').onclick=()=>{const it=curItem();if(it)openLog(it.path);};
 
@@ -1437,13 +1446,13 @@ function fillBgSel(){
     sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
     col.oninput=()=>changeSet(key,col.value);
   }
-  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfContrast);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
+  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfLv);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
 }
 $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
 $('sPdfBold').onchange=e=>setContrast(+e.target.value,true);
-function setContrast(v,quiet){v=Math.max(0,Math.min(4,v));SET.pdfContrast=v;saveSet();$('sPdfBold').value=String(v);$('vCtN').textContent='контраст '+v;panes.forEach(p=>p.draw());
-  try{MON.win&&MON.win.postMessage({t:'set',pdfContrast:v},'*');}catch(e){}
-  if(!quiet)flash('Контраст PDF: '+v+' из 4 — '+PDF_CTN[v]);}
+function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;saveSet();$('sPdfBold').value=String(v);$('vCtN').textContent='линии '+lvTxt(v);panes.forEach(p=>p.draw());
+  try{MON.win&&MON.win.postMessage({t:'set'},'*');}catch(e){}
+  if(!quiet)flash('Линии PDF: '+lvTxt(v)+' — '+PDF_LVN[v]+' (от −2 до +3, клавиши [ и ])');}
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;SET.lw=false;saveSet();panes.forEach(p=>p.draw());updateBar();};
@@ -1745,6 +1754,8 @@ $('selClear').onclick=clearSel;
 
 /* ---------- Клавиатура ---------- */
 /* при листании клавиатурой не подсвечивать плитку под мышью — чтобы не было «второй рамки» */
+// кнопка после клика мышью не держит фокус — иначе Enter/пробел повторно жмут её вместо навигации
+document.addEventListener('pointerup',e=>{const b=e.target.closest&&e.target.closest('button');if(b)setTimeout(()=>b.blur(),0);});
 document.addEventListener('keydown',e=>{if(/^(Arrow|Page|Home|End)/.test(e.key))document.body.classList.add('kbd');},true);
 document.addEventListener('mousemove',()=>{if(document.body.classList.contains('kbd'))document.body.classList.remove('kbd');});
 function gridCols(){const t=$('grid').children;if(t.length<2)return 1;const y=t[0].offsetTop;let n=0;while(n<t.length&&t[n].offsetTop===y)n++;return n||1;}
@@ -1765,8 +1776,9 @@ document.addEventListener('keydown',e=>{
   }
   if(!FOLLOW&&!VW.full&&KB.zone==='tree'&&!$('tree').hidden){if(treeKey(k)){e.preventDefault();return;}}
   if(!FOLLOW&&!VW.full&&k==='Backspace'){e.preventDefault();if(!goUp())toTree();return;}
-  if(!FOLLOW&&!view.length&&!(folderMode()&&gridTiles().length&&!viewerShown()))return;
-  if(!FOLLOW&&!viewerShown()){ // сетка/список без окна просмотра: курсор по плиткам (папки и файлы), Enter или пробел — открыть
+  const tileNav=!FOLLOW&&(!viewerShown()||(docked()&&!VW.full&&folderMode()));  // курсор по плиткам: без окна просмотра, а «по папкам» — и с окном рядом
+  if(!FOLLOW&&!view.length&&!(folderMode()&&gridTiles().length&&tileNav))return;
+  if(tileNav){ // сетка/список без окна просмотра: курсор по плиткам (папки и файлы), Enter или пробел — открыть
     const ts=gridTiles(),list=SET.layout==='list',cols=list?1:gridCols();
     let i=ts.findIndex(t=>t.classList.contains('cur')),h=true;
     if(i<0&&VW.idx>=0)i=ts.indexOf(view[VW.idx].tile);
@@ -1776,7 +1788,7 @@ document.addEventListener('keydown',e=>{
     else if(k==='Home')i=0;else if(k==='End')i=ts.length-1;
     else if(k==='PageDown')i=(i<0?0:i)+cols*pageRows();else if(k==='PageUp')i=(i<0?0:i)-cols*pageRows();
     else if((k==='Enter'||k===' ')&&i>=0){e.preventDefault();const t=ts[i];
-      if(t._dir!==undefined&&!t._it)goDir(t._dir,t.classList.contains('up')?curDir:null);else{showItem(view.indexOf(t._it));setFull(true);}return;}
+      if(t._dir!==undefined&&!t._it)goDir(t._dir,t.classList.contains('up')?curDir:null);else{if(VW.idx!==view.indexOf(t._it)||!docked())showItem(view.indexOf(t._it));setFull(true);}return;}
     else h=false;
     if(h){e.preventDefault();kbMark(ts[Math.min(Math.max(i,0),ts.length-1)]);}
     return;
@@ -1796,8 +1808,8 @@ document.addEventListener('keydown',e=>{
   else if(/^[lLдД]$/.test(k)&&VW.cmp)$('vSync').click();
   else if(/^[rRкК]$/.test(k))$('vSide').click();
   else if(/^[wWцЦ]$/.test(k))cycleLineK();
-  else if(k==='['||k==='х'||k==='Х')setContrast(SET.pdfContrast-1);
-  else if(k===']'||k==='ъ'||k==='Ъ')setContrast(SET.pdfContrast+1);
+  else if(k==='['||k==='х'||k==='Х')setContrast(SET.pdfLv-1);
+  else if(k===']'||k==='ъ'||k==='Ъ')setContrast(SET.pdfLv+1);
   else if(/^[qQйЙ]$/.test(k))$('vRotL').click();
   else if(/^[eEуУ]$/.test(k))$('vRotR').click();
   else if(/^[mMьЬ]$/.test(k))$('vMir').click();
