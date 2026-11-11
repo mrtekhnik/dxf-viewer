@@ -1855,7 +1855,7 @@ function pickRender(){
     const sg=PICK.sig.get(r.it.key),dir=r.it.path.includes('/')?r.it.path.slice(0,r.it.path.lastIndexOf('/')):'';
     d.innerHTML='<span class="pn"></span><span class="ps"></span><span class="pd"></span>';
     d.querySelector('.pn').textContent=r.it.name;d.querySelector('.pd').textContent=(r.other?'⇆ ':'')+dir;
-    d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>как эта</b>':r.sc>0.85?'<br>похожа':'')):'…';
+    d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>размер совпал</b>':r.sc>0.85?'<br>размер близок':'')):'…';
     d.title='Габарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';
     d.onclick=()=>pickGo(r.it);L.appendChild(d);}
 }

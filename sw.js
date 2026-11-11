@@ -1,5 +1,5 @@
 /* Офлайн-кэш «Просмотр DXF». Версия меняется автоматически при каждом изменении index.html. */
-const VER='d4bee43a79';
+const VER='612d065293';
 const CORE=['./','index.html','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png'];
 const LIBS=['lib/pdf.min.js','lib/pdf.worker.min.js'];
 const C_APP='dxfv-app-'+VER, C_LIB='dxfv-lib-3.11.174';
