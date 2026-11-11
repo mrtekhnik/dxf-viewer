@@ -423,7 +423,7 @@ function updateStatus(){
   stTimer=0;
   const done=items.filter(i=>i.log).length,bad=items.filter(i=>i.issues).length;
   if(!flashT)$('status').textContent=items.length?`${curDir?'Папка: '+curDir.split('/').join(' / ')+' · ':''}Файлов: ${items.length}${view.length!==items.length?' (показано '+view.length+')':''} · проверено: ${done} · с замечаниями: ${bad}`:'';
-  $('logBadge').hidden=!bad;$('logBadge').textContent=bad;
+  $('logBadge').hidden=!bad;$('logBadge').textContent=bad;$('btnLog').hidden=!bad;
   if(!$('logPanel').hidden)renderLog();
 }
 function flash(msg){const s=$('status');s.textContent=msg;s.classList.add('flash');clearTimeout(flashT);
@@ -449,6 +449,12 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
+$('verSet').textContent=(document.querySelector('.brand small')||{}).textContent||'';
+$('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
+/* меню «Открыть» */
+$('btnOpen').onclick=e=>{e.stopPropagation();$('openMenu').hidden=!$('openMenu').hidden;};
+document.addEventListener('click',e=>{if(!e.target.closest('.mwrap'))$('openMenu').hidden=true;});
+for(const id of ['btnFolder','btnFiles'])$(id).addEventListener('click',()=>{$('openMenu').hidden=true;});
 $('logClose').onclick=()=>{$('logPanel').hidden=true;};
 $('logPanel').addEventListener('click',e=>{if(e.target.id==='logPanel')$('logPanel').hidden=true;});
 $('logOnly').onchange=renderLog;
@@ -1026,7 +1032,7 @@ function placeViewer(){
   v.classList.toggle('full',VW.full||!d);
   $('vClose').hidden=d;
   $('vFull').hidden=!d;$('vFull').textContent=VW.full?'🗗':'⛶';$('vFull').title=VW.full?'Вернуть в окно (Esc)':'На весь экран (Enter, двойной клик по файлу)';
-  $('btnLayout').textContent=SET.layout==='list'?'▦ Сетка':'☰ Список';$('btnPreview').classList.toggle('on',SET.preview);
+  $('btnGrid').classList.toggle('on',SET.layout!=='list');$('btnList').classList.toggle('on',SET.layout==='list');$('btnPreview').classList.toggle('on',SET.preview);
   layoutStage();
 }
 function setFull(on,fromPop){
@@ -1040,7 +1046,8 @@ function setFull(on,fromPop){
 }
 window.addEventListener('popstate',()=>{if(ignorePop){ignorePop=false;return;}if(VW.full)setFull(false,true);});
 window.addEventListener('resize',()=>{if(document.body.classList.contains('explorer')!==docked()){placeViewer();if(docked()&&VW.idx>=0&&!VW.set.length)showItem(VW.idx);}});
-$('btnLayout').onclick=()=>{SET.layout=SET.layout==='list'?'grid':'list';saveSet();placeViewer();markCurrent(view[VW.idx]);};
+const setLayout=l=>{if(SET.layout===l)return;SET.layout=l;saveSet();placeViewer();markCurrent(view[VW.idx]);};
+$('btnGrid').onclick=()=>setLayout('grid');$('btnList').onclick=()=>setLayout('list');
 $('btnPreview').onclick=()=>{
   if(VW.full)setFull(false);
   SET.preview=!SET.preview;saveSet();

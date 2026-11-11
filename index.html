@@ -18,7 +18,18 @@
 [hidden]{display:none!important}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.35 system-ui,"Segoe UI",Roboto,sans-serif}
 body{display:flex;flex-direction:column;overflow:hidden}
-header{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:var(--panel);border-bottom:1px solid var(--line)}
+header{display:flex;flex-wrap:wrap;gap:6px 0;align-items:center;padding:8px;background:var(--panel);border-bottom:1px solid var(--line)}
+header .grp{display:flex;gap:6px;align-items:center;padding:0 10px;border-left:1px solid var(--line)}
+header .brand+.grp{border-left:0;padding-left:8px}
+header .grp.grow{flex:1 1 150px}header .grp.grow #filter{flex:1;min-width:80px;width:100px}
+header .grp.end{margin-left:auto;padding-right:0}
+header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg button:first-child{border-radius:8px 0 0 8px}header .seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.mwrap{position:relative}
+.menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:170px}
+.menu[hidden]{display:none}.menu button{text-align:left}
+@media (max-width:1700px){header .lbl.a{display:none}header .szbox input{width:80px}}
+@media (max-width:1420px){header .brand{display:none}header .brand+.grp{padding-left:0}}
+@media (max-width:1250px){header .lbl{display:none}}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
 .brand small{color:var(--mut);font-weight:400}
 button{background:var(--btn);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 11px;font:inherit;cursor:pointer;white-space:nowrap}
@@ -233,23 +244,41 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <body>
 <header>
   <div class="brand">DXF <small>+PDF · v3.6</small></div>
-  <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
-  <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
-  <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
-  <button id="btnHist" title="История просмотров">История</button>
-  <button id="btnTree" hidden title="Дерево папок изделия">Папки ▸</button>
-  <button id="btnBrowse" hidden title="Как в Проводнике: вложенные папки плитками, файлы только этой папки (Backspace — наверх)">📁</button>
-  <input id="filter" type="search" placeholder="Фильтр по имени">
-  <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
-  <button id="btnLayout" title="Сетка миниатюр или список"></button>
-  <button id="btnPreview" title="Окно просмотра справа, как в Проводнике">◫ Просмотр</button>
-  <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">Рядом</button>
-  <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><button id="szMinus">−</button><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szPlus">+</button></span>
-  <button id="btnLog">Журнал<span id="logBadge" hidden></span></button>
-  <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ Сравнить</button>
-  <button id="btnClose" hidden title="Закрыть все файлы">Закрыть</button>
-  <button id="btnSet" title="Настройки: тема, фон, подписи">⚙</button>
-  <button id="btnHelp" title="Справка по всем функциям (F1)">?</button>
+  <!-- открыть -->
+  <span class="grp">
+    <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
+      <div id="openMenu" class="menu" hidden>
+        <button id="btnFolder" title="Открыть папку целиком (с подпапками) — заказ, изделие, папка на сервере">📂 Папка…</button>
+        <button id="btnFiles" title="Выбрать отдельные DXF и PDF">📄 Файлы…</button>
+      </div></span>
+    <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ <span class="lbl a">Ярлыки</span></button>
+    <button id="btnHist" title="История просмотров">🕘 <span class="lbl a">История</span></button>
+    <button id="btnClose" hidden title="Закрыть все файлы">✕ <span class="lbl a">Закрыть</span></button>
+  </span>
+  <!-- найти -->
+  <span class="grp grow">
+    <input id="filter" type="search" placeholder="Фильтр по имени">
+    <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
+  </span>
+  <!-- вид -->
+  <span class="grp">
+    <span class="seg"><button id="btnGrid" title="Миниатюры сеткой">▦ <span class="lbl a">Сетка</span></button><button id="btnList" title="Список с датой, размером и папкой">☰ <span class="lbl a">Список</span></button></span>
+    <button id="btnTree" hidden title="Дерево папок слева">🌳 <span class="lbl">Дерево</span></button>
+    <button id="btnBrowse" hidden title="Как в Проводнике: вложенные папки плитками, файлы только этой папки (Backspace — наверх)">📁 <span class="lbl">По папкам</span></button>
+    <button id="btnPreview" title="Окно просмотра справа, как в Проводнике">◫ <span class="lbl">Просмотр</span></button>
+    <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szMinus" hidden>−</button><button id="szPlus" hidden>+</button></span>
+  </span>
+  <!-- действия с выделенным файлом -->
+  <span class="grp">
+    <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">⧉ <span class="lbl">Рядом</span></button>
+    <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ <span class="lbl">Сравнить</span></button>
+  </span>
+  <!-- служебное -->
+  <span class="grp end">
+    <button id="btnLog" hidden title="Замечания при чтении файлов, проверка всех файлов, очистка кэша">Журнал<span id="logBadge" hidden></span></button>
+    <button id="btnSet" title="Настройки: тема, фон, подписи, журнал">⚙</button>
+    <button id="btnHelp" title="Справка по всем функциям (F1)">?</button>
+  </span>
   <input id="inFolder" type="file" webkitdirectory multiple hidden>
   <input id="inFiles" type="file" multiple hidden accept=".dxf,.pdf,application/pdf,*/*">
 </header>
@@ -355,7 +384,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </div>
 
 <div id="setPanel" class="pop" hidden>
-  <div class="pp-h"><b>Настройки</b><span class="sp"></span><button id="setClose">✕</button></div>
+  <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
   <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option></select></div>
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
@@ -445,19 +474,19 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <h2>Что это за программа</h2>
 <p>Просмотр развёрток <b>DXF</b> и чертежей <b>PDF</b> прямо в Chrome, без установки и без интернета. Открывает папку заказа или изделия целиком (в том числе с сервера), показывает миниатюры, сама находит, какой DXF относится к какому чертежу, и сравнивает версии деталей.</p>
 <p>Ничего не изменяет и никуда не отправляет — только читает файлы.</p>
-<p class="ver">Справка соответствует версии, указанной слева вверху окна (DXF +PDF · v…). Программа дорабатывается, справка обновляется вместе с ней.</p>
+<p class="ver">Справка соответствует версии, указанной в окне настроек ⚙ (на широком экране — и слева вверху). Программа дорабатывается, справка обновляется вместе с ней.</p>
 </section>
 
 <section data-t="Открыть файлы">
 <h2>Открыть папку или файлы</h2>
 <ul>
-<li><b>Папка</b> — открыть папку целиком со всеми вложенными (заказ, изделие). Работает и с сетевыми папками на сервере.</li>
-<li><b>Файлы</b> — выбрать отдельные DXF и PDF.</li>
+<li><b>📂 Открыть ▾ → Папка…</b> — открыть папку целиком со всеми вложенными (заказ, изделие). Работает и с сетевыми папками на сервере.</li>
+<li><b>📂 Открыть ▾ → Файлы…</b> — выбрать отдельные DXF и PDF.</li>
 <li>Можно перетащить файлы или папку мышью прямо в окно.</li>
 <li><b>★ Ярлыки</b> — закреплённые папки и файлы: открываются одним кликом. Добавить — кнопкой ★ в просмотре или в окне ярлыков.</li>
-<li><b>История</b> — что и когда смотрели, «подряд» или «группой» по изделиям и папкам; можно открыть снова или очистить.</li>
+<li><b>🕘 История</b> — что и когда смотрели, «подряд» или «группой» по изделиям и папкам; можно открыть снова или очистить.</li>
 <li>При запуске открывается последняя папка (если Chrome сохранил разрешение; иначе — кнопка «▶ Открыть …» на пустом экране). Отключается в ⚙ «При запуске».</li>
-<li><b>✕</b> справа на панели — закрыть все файлы.</li>
+<li><b>✕ Закрыть</b> — закрыть все файлы.</li>
 </ul>
 <p class="note">Chrome спрашивает разрешение на чтение папки — ответьте «Просмотреть файлы». Окно выбора папки Windows показывает только подпапки, файлов в нём не видно — это нормально.</p>
 </section>
@@ -465,22 +494,23 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <section data-t="Сетка и список">
 <h2>Сетка, список, окно просмотра</h2>
 <ul>
-<li><b>▦ Сетка / ☰ Список</b> — миниатюры или строки с датой, размером и папкой. Ползунок справа — размер миниатюр.</li>
+<li>Панель сгруппирована слева направо: <b>открыть</b> (📂 ★ 🕘 ✕) · <b>найти</b> (фильтр, тип) · <b>вид</b> (сетка/список, дерево, по папкам, просмотр, размер) · <b>действия с выделенным файлом</b> (Рядом, Сравнить) · <b>служебное</b> (Журнал, ⚙, ?). На узком экране подписи сворачиваются в значки — название видно во всплывающей подсказке.</li>
+<li><b>▦ Сетка / ☰ Список</b> — миниатюры или строки с датой, размером и папкой. Ползунок — размер миниатюр (или Ctrl + колесо над списком).</li>
 <li><b>◫ Просмотр</b> — окно просмотра справа от списка, как в Проводнике: выбранный файл сразу виден крупно.</li>
 <li><b>Фильтр по имени</b> — оставляет файлы, в имени или пути которых есть набранный текст (например, обозначение). <b>Все / DXF / PDF</b> — тип файлов.</li>
 <li><b>Один клик</b> — выделить файл, <b>двойной клик</b> или <kbd>Enter</kbd> — открыть. В ⚙ можно выбрать «открывать одним кликом». На телефоне — одно касание.</li>
 <li><b>Ctrl+клик</b> по двум файлам — выбрать для сравнения (внизу появится «Сравнить рядом»).</li>
-<li><b>Рядом</b> на панели — открыть выделенный файл сразу с его парой: чертёж и все его развёртки одновременно (<kbd>R</kbd>).</li>
+<li><b>⧉ Рядом</b> на панели — открыть выделенный файл сразу с его парой: чертёж и все его развёртки одновременно (<kbd>R</kbd>).</li>
 <li><kbd>Tab</kbd> в сетке — открыть выделенный файл и сразу его пару (у чертежа — развёртку, у развёртки — чертёж).</li>
-<li>Значок с цифрой на миниатюре — замечания при чтении файла (клик — подробности). Значок поворота — для детали запомнен поворот или зеркало.</li>
+<li>Значок с цифрой на миниатюре — замечания при чтении файла (клик — подробности в Журнале). Значок поворота — для детали запомнен поворот или зеркало.</li>
 </ul>
 </section>
 
 <section data-t="Папки и дерево">
 <h2>Дерево папок и показ «как в Проводнике»</h2>
 <ul>
-<li>Если в открытой папке есть подпапки, слева появляется <b>дерево</b> (кнопка <b>Папки ▸</b> — показать/скрыть, граница перетаскивается). Клик по папке — показать её файлы; числа — сколько файлов внутри.</li>
-<li>Кнопка <b>📁</b> — показ <b>«по папкам»</b>: вложенные папки плитками, файлы — только этой папки, плитка «.. наверх». Без неё показываются все файлы выбранной папки со всеми вложенными.</li>
+<li>Если в открытой папке есть подпапки, слева появляется <b>дерево</b> (кнопка <b>🌳 Дерево</b> — показать/скрыть, граница перетаскивается). Клик по папке — показать её файлы; числа — сколько файлов внутри.</li>
+<li>Кнопка <b>📁 По папкам</b> — показ <b>«по папкам»</b>: вложенные папки плитками, файлы — только этой папки, плитка «.. наверх». Без неё показываются все файлы выбранной папки со всеми вложенными.</li>
 </ul>
 <h3>Клавиши</h3>
 <table>
@@ -653,7 +683,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <h2>Обновления и офлайн</h2>
 <ul>
 <li>Программа работает без интернета. Когда выходит новая версия, вверху появляется полоса «Доступна новая версия → Обновить».</li>
-<li><b>Журнал</b> (на панели, с числом) — замечания при чтении файлов: что не удалось прочитать или нарисовать. Там же «Проверить все файлы» и «Очистить кэш» — построить миниатюры заново, если что-то показывается не так.</li>
+<li><b>Журнал</b> (появляется на панели с числом, когда есть замечания; всегда доступен в ⚙ → «Журнал…») — замечания при чтении файлов: что не удалось прочитать или нарисовать. Там же «Проверить все файлы» и «Очистить кэш» — построить миниатюры заново, если что-то показывается не так.</li>
 </ul>
 </section>
 
@@ -1763,7 +1793,7 @@ function updateStatus(){
   stTimer=0;
   const done=items.filter(i=>i.log).length,bad=items.filter(i=>i.issues).length;
   if(!flashT)$('status').textContent=items.length?`${curDir?'Папка: '+curDir.split('/').join(' / ')+' · ':''}Файлов: ${items.length}${view.length!==items.length?' (показано '+view.length+')':''} · проверено: ${done} · с замечаниями: ${bad}`:'';
-  $('logBadge').hidden=!bad;$('logBadge').textContent=bad;
+  $('logBadge').hidden=!bad;$('logBadge').textContent=bad;$('btnLog').hidden=!bad;
   if(!$('logPanel').hidden)renderLog();
 }
 function flash(msg){const s=$('status');s.textContent=msg;s.classList.add('flash');clearTimeout(flashT);
@@ -1789,6 +1819,12 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
+$('verSet').textContent=(document.querySelector('.brand small')||{}).textContent||'';
+$('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
+/* меню «Открыть» */
+$('btnOpen').onclick=e=>{e.stopPropagation();$('openMenu').hidden=!$('openMenu').hidden;};
+document.addEventListener('click',e=>{if(!e.target.closest('.mwrap'))$('openMenu').hidden=true;});
+for(const id of ['btnFolder','btnFiles'])$(id).addEventListener('click',()=>{$('openMenu').hidden=true;});
 $('logClose').onclick=()=>{$('logPanel').hidden=true;};
 $('logPanel').addEventListener('click',e=>{if(e.target.id==='logPanel')$('logPanel').hidden=true;});
 $('logOnly').onchange=renderLog;
@@ -2366,7 +2402,7 @@ function placeViewer(){
   v.classList.toggle('full',VW.full||!d);
   $('vClose').hidden=d;
   $('vFull').hidden=!d;$('vFull').textContent=VW.full?'🗗':'⛶';$('vFull').title=VW.full?'Вернуть в окно (Esc)':'На весь экран (Enter, двойной клик по файлу)';
-  $('btnLayout').textContent=SET.layout==='list'?'▦ Сетка':'☰ Список';$('btnPreview').classList.toggle('on',SET.preview);
+  $('btnGrid').classList.toggle('on',SET.layout!=='list');$('btnList').classList.toggle('on',SET.layout==='list');$('btnPreview').classList.toggle('on',SET.preview);
   layoutStage();
 }
 function setFull(on,fromPop){
@@ -2380,7 +2416,8 @@ function setFull(on,fromPop){
 }
 window.addEventListener('popstate',()=>{if(ignorePop){ignorePop=false;return;}if(VW.full)setFull(false,true);});
 window.addEventListener('resize',()=>{if(document.body.classList.contains('explorer')!==docked()){placeViewer();if(docked()&&VW.idx>=0&&!VW.set.length)showItem(VW.idx);}});
-$('btnLayout').onclick=()=>{SET.layout=SET.layout==='list'?'grid':'list';saveSet();placeViewer();markCurrent(view[VW.idx]);};
+const setLayout=l=>{if(SET.layout===l)return;SET.layout=l;saveSet();placeViewer();markCurrent(view[VW.idx]);};
+$('btnGrid').onclick=()=>setLayout('grid');$('btnList').onclick=()=>setLayout('list');
 $('btnPreview').onclick=()=>{
   if(VW.full)setFull(false);
   SET.preview=!SET.preview;saveSet();

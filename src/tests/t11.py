@@ -27,7 +27,7 @@ async def main():
     await pg.keyboard.press('Escape'); await pg.wait_for_timeout(400)
     print('viewer hidden after esc:', await pg.is_hidden('#viewer'))
     # 3 explorer mode
-    await pg.click('#btnLayout'); await pg.click('#btnPreview'); await pg.wait_for_timeout(500)
+    await pg.evaluate("$(SET.layout==='list'?'btnGrid':'btnList').click()"); await pg.click('#btnPreview'); await pg.wait_for_timeout(500)
     await pg.locator('.tile', has_text='Общий').click(); await pg.wait_for_timeout(2000)
     await pg.screenshot(path='s_expl.png')
     await pg.keyboard.press('ArrowDown'); await pg.wait_for_timeout(1000); print('explorer down ->', await name(pg))

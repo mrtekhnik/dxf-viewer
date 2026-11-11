@@ -17,13 +17,13 @@ async def main():
     await pg.keyboard.press('Enter'); await pg.wait_for_timeout(800); print('enter -> full:', await pg.evaluate('VW.full'), await pg.inner_text('#vName'))
     await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)
     # list without preview
-    await pg.click('#btnLayout'); await pg.wait_for_timeout(200); await pg.keyboard.press('ArrowDown'); await pg.wait_for_timeout(100)
+    await pg.evaluate("$(SET.layout==='list'?'btnGrid':'btnList').click()"); await pg.wait_for_timeout(200); await pg.keyboard.press('ArrowDown'); await pg.wait_for_timeout(100)
     print('list sel:', await pg.locator('.tile.cur .nm').inner_text(), '| viewer hidden', await pg.is_hidden('#viewer'))
     # preview on with list
     await pg.click('#btnPreview'); await pg.wait_for_timeout(1200); await pg.keyboard.press('ArrowRight'); await pg.wait_for_timeout(800)
     print('list+preview:', await pg.inner_text('#vName')); await pg.screenshot(path='lp.png')
     # grid + preview
-    await pg.click('#btnLayout'); await pg.wait_for_timeout(1200); await pg.keyboard.press('ArrowDown'); await pg.wait_for_timeout(800)
+    await pg.evaluate("$(SET.layout==='list'?'btnGrid':'btnList').click()"); await pg.wait_for_timeout(1200); await pg.keyboard.press('ArrowDown'); await pg.wait_for_timeout(800)
     print('grid+preview:', await pg.inner_text('#vName')); await pg.screenshot(path='gp.png')
     print('errors:', errs); await ctx.close()
 asyncio.run(main())

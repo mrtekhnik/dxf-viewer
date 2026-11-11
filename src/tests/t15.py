@@ -13,7 +13,7 @@ async def main():
     await pg.locator('.tr', has_text='02.01 Боковина').click(); await pg.wait_for_timeout(1500)
     print('status:', await pg.inner_text('#status')); print('tiles:', await pg.locator('#grid .tile .nm').all_inner_texts())
     await pg.screenshot(path='s_tree.png')
-    await pg.click('#btnLayout'); await pg.wait_for_timeout(1200); await pg.screenshot(path='s_tree_expl.png')
+    await pg.evaluate("$(SET.layout==='list'?'btnGrid':'btnList').click()"); await pg.wait_for_timeout(1200); await pg.screenshot(path='s_tree_expl.png')
     await pg.locator('.tr.all').click(); await pg.wait_for_timeout(500); print('all:', await pg.locator('#grid .tile').count())
     pg2=await b.new_page(viewport={'width':390,'height':800},is_mobile=True,has_touch=True)
     await pg2.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")

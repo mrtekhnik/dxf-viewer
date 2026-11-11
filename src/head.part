@@ -15,7 +15,18 @@
 [hidden]{display:none!important}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:14px/1.35 system-ui,"Segoe UI",Roboto,sans-serif}
 body{display:flex;flex-direction:column;overflow:hidden}
-header{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:8px;background:var(--panel);border-bottom:1px solid var(--line)}
+header{display:flex;flex-wrap:wrap;gap:6px 0;align-items:center;padding:8px;background:var(--panel);border-bottom:1px solid var(--line)}
+header .grp{display:flex;gap:6px;align-items:center;padding:0 10px;border-left:1px solid var(--line)}
+header .brand+.grp{border-left:0;padding-left:8px}
+header .grp.grow{flex:1 1 150px}header .grp.grow #filter{flex:1;min-width:80px;width:100px}
+header .grp.end{margin-left:auto;padding-right:0}
+header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg button:first-child{border-radius:8px 0 0 8px}header .seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.mwrap{position:relative}
+.menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:170px}
+.menu[hidden]{display:none}.menu button{text-align:left}
+@media (max-width:1700px){header .lbl.a{display:none}header .szbox input{width:80px}}
+@media (max-width:1420px){header .brand{display:none}header .brand+.grp{padding-left:0}}
+@media (max-width:1250px){header .lbl{display:none}}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
 .brand small{color:var(--mut);font-weight:400}
 button{background:var(--btn);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 11px;font:inherit;cursor:pointer;white-space:nowrap}
@@ -230,23 +241,41 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <body>
 <header>
   <div class="brand">DXF <small>+PDF · v3.6</small></div>
-  <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
-  <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
-  <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
-  <button id="btnHist" title="История просмотров">История</button>
-  <button id="btnTree" hidden title="Дерево папок изделия">Папки ▸</button>
-  <button id="btnBrowse" hidden title="Как в Проводнике: вложенные папки плитками, файлы только этой папки (Backspace — наверх)">📁</button>
-  <input id="filter" type="search" placeholder="Фильтр по имени">
-  <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
-  <button id="btnLayout" title="Сетка миниатюр или список"></button>
-  <button id="btnPreview" title="Окно просмотра справа, как в Проводнике">◫ Просмотр</button>
-  <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">Рядом</button>
-  <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><button id="szMinus">−</button><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szPlus">+</button></span>
-  <button id="btnLog">Журнал<span id="logBadge" hidden></span></button>
-  <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ Сравнить</button>
-  <button id="btnClose" hidden title="Закрыть все файлы">Закрыть</button>
-  <button id="btnSet" title="Настройки: тема, фон, подписи">⚙</button>
-  <button id="btnHelp" title="Справка по всем функциям (F1)">?</button>
+  <!-- открыть -->
+  <span class="grp">
+    <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
+      <div id="openMenu" class="menu" hidden>
+        <button id="btnFolder" title="Открыть папку целиком (с подпапками) — заказ, изделие, папка на сервере">📂 Папка…</button>
+        <button id="btnFiles" title="Выбрать отдельные DXF и PDF">📄 Файлы…</button>
+      </div></span>
+    <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ <span class="lbl a">Ярлыки</span></button>
+    <button id="btnHist" title="История просмотров">🕘 <span class="lbl a">История</span></button>
+    <button id="btnClose" hidden title="Закрыть все файлы">✕ <span class="lbl a">Закрыть</span></button>
+  </span>
+  <!-- найти -->
+  <span class="grp grow">
+    <input id="filter" type="search" placeholder="Фильтр по имени">
+    <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
+  </span>
+  <!-- вид -->
+  <span class="grp">
+    <span class="seg"><button id="btnGrid" title="Миниатюры сеткой">▦ <span class="lbl a">Сетка</span></button><button id="btnList" title="Список с датой, размером и папкой">☰ <span class="lbl a">Список</span></button></span>
+    <button id="btnTree" hidden title="Дерево папок слева">🌳 <span class="lbl">Дерево</span></button>
+    <button id="btnBrowse" hidden title="Как в Проводнике: вложенные папки плитками, файлы только этой папки (Backspace — наверх)">📁 <span class="lbl">По папкам</span></button>
+    <button id="btnPreview" title="Окно просмотра справа, как в Проводнике">◫ <span class="lbl">Просмотр</span></button>
+    <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szMinus" hidden>−</button><button id="szPlus" hidden>+</button></span>
+  </span>
+  <!-- действия с выделенным файлом -->
+  <span class="grp">
+    <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">⧉ <span class="lbl">Рядом</span></button>
+    <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ <span class="lbl">Сравнить</span></button>
+  </span>
+  <!-- служебное -->
+  <span class="grp end">
+    <button id="btnLog" hidden title="Замечания при чтении файлов, проверка всех файлов, очистка кэша">Журнал<span id="logBadge" hidden></span></button>
+    <button id="btnSet" title="Настройки: тема, фон, подписи, журнал">⚙</button>
+    <button id="btnHelp" title="Справка по всем функциям (F1)">?</button>
+  </span>
   <input id="inFolder" type="file" webkitdirectory multiple hidden>
   <input id="inFiles" type="file" multiple hidden accept=".dxf,.pdf,application/pdf,*/*">
 </header>
@@ -352,7 +381,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </div>
 
 <div id="setPanel" class="pop" hidden>
-  <div class="pp-h"><b>Настройки</b><span class="sp"></span><button id="setClose">✕</button></div>
+  <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
   <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option></select></div>
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
