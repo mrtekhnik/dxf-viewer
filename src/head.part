@@ -326,7 +326,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="pp-h"><b>Сравнить с папкой</b><span class="sp"></span><button id="cmpClose">✕</button></div>
   <div class="pin-add"><button id="cmpPick">📁 Выбрать папку…</button></div>
   <div id="cmpRecent"></div>
-  <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), сравниваются имя и размер. Содержимое читается только при открытии файлов рядом.</div>
+  <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), проверяется содержимое: = одинаковые, ≈ пересохранён (геометрия DXF та же), ≠ отличается. Если в сетке выделен файл — сразу откроется его сравнение; не нашлась пара по имени — список похожих по габариту.</div>
   <input id="inCmp" type="file" webkitdirectory multiple hidden>
 </div>
 <div id="pickPanel" class="pop" hidden>

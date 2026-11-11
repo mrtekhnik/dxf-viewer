@@ -329,7 +329,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="pp-h"><b>Сравнить с папкой</b><span class="sp"></span><button id="cmpClose">✕</button></div>
   <div class="pin-add"><button id="cmpPick">📁 Выбрать папку…</button></div>
   <div id="cmpRecent"></div>
-  <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), сравниваются имя и размер. Содержимое читается только при открытии файлов рядом.</div>
+  <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), проверяется содержимое: = одинаковые, ≈ пересохранён (геометрия DXF та же), ≠ отличается. Если в сетке выделен файл — сразу откроется его сравнение; не нашлась пара по имени — список похожих по габариту.</div>
   <input id="inCmp" type="file" webkitdirectory multiple hidden>
 </div>
 <div id="pickPanel" class="pop" hidden>
@@ -2694,7 +2694,7 @@ function cmpKey(it){
   return it.type+':'+d;
 }
 function cmpSet(arr,name,rid){
-  const ct=$('grid').querySelector('.tile.cur'),focus=docked()&&!VW.full?curItem():(ct&&ct._it)||null;  // выделенный файл — сразу открыть его сравнение
+  const ct=$('grid').querySelector('.tile.cur'),focus=docked()&&!VW.full?curItem():(ct&&ct._it)||(SEL.size===1?[...SEL][0]:null)||null;  // выделенный файл — сразу открыть его сравнение
   const bItems=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).map(x=>{const it=makeItem(x.file,x.path,rid||null,name);it.state=2;it.cmpB=true;return it;});
   const byKey=new Map();for(const b of bItems){const k=cmpKey(b);if(!byKey.has(k))byKey.set(k,[]);byKey.get(k).push(b);}
   const used=new Set(),map=new Map();
@@ -2711,6 +2711,8 @@ function cmpSet(arr,name,rid){
   CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:''};
   $('cmpFilter').value='';updCmp();applyFilter();
   cmpDeep(CMP);
+  const paths=new Set(items.map(it=>it.path+'|'+it.file.size));
+  if(arr.length&&arr.every(x=>paths.has(x.path+'|'+x.file.size))){flash('Для сравнения выбрана та же папка, что открыта, — выберите другую (старый заказ, архив)');return;}
   if(focus&&map.has(focus)&&items.includes(focus))cmpOpenFor(focus);
 }
 function cmpMatch(it,cf){const st=(CMP.map.get(it)||{}).st;return cf==='chg'?(st==='diff'||st==='geo'):st===cf;}
