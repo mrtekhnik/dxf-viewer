@@ -3,6 +3,7 @@ from playwright.async_api import async_playwright
 async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); ctx=await b.new_context(viewport={'width':1400,'height':850}); pg=await ctx.new_page()
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     errs=[]; pg.on('pageerror',lambda e: errs.append('M:'+str(e)))
     await pg.goto('file:///home/claude/dxf-viewer.html')
     # (3) scope

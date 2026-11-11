@@ -36,14 +36,17 @@ input[type=range]{width:110px}
 #selBar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;border:1px solid var(--acc);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .tile.sel{outline:2px dashed var(--warn);outline-offset:-3px}
 .cmpb{position:absolute;left:4px;top:4px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff}
-.cmpb.same{background:#2e8b57}.cmpb.diff{background:#d9822b}.cmpb.new{background:#3a7bd5}.cmpb.geo{background:#6f9a3a}.cmpb.chk{background:#5a6270}
+.cmpb.same{background:#2e8b57}.cmpb.diff{background:#d9822b}.cmpb.new{background:#3a7bd5}.cmpb.geo{background:#6f9a3a}.cmpb.name{background:#8a6fd1}.cmpb.ren{background:#b0679a}.cmpb.pend{opacity:.55}.cmpb.chk{background:#5a6270}
 #ovBar{display:flex;gap:8px;align-items:center;padding:4px 8px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;overflow-x:auto;white-space:nowrap}
 #ovBar[hidden]{display:none}
 #ovBar>*{flex:none}#ovBar .sp{flex:1}
 .ovk{display:inline-flex;align-items:center;gap:5px;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .ovk i{display:inline-block;width:14px;height:4px;border-radius:2px}.ovk .ova{background:#ff4d4d}.ovk .ovb{background:#39d353}
 #ovRes{font-weight:600}#ovRes.ok{color:#39d353}#ovRes.bad{color:#ff8c4d}
-#ovNum{padding:0 6px;color:var(--mut)}.ovh{color:var(--mut);font-size:12px}
+#ovNum{padding:0 6px;color:var(--mut)}
+#ovList{top:96px;right:8px;left:auto;padding:4px 0}
+.ovl{display:flex;gap:8px;padding:7px 12px;cursor:pointer;font-size:13px;border-top:1px solid var(--line)}.ovl:first-child{border-top:0}
+.ovl b{color:#d9a400;min-width:20px}.ovl:hover,.ovl.cur{background:var(--hover,#2b2f36)}.ovh{color:var(--mut);font-size:12px}
 body.follower header,body.follower #updBar,body.follower #status,body.follower #work,body.follower #cmpBar{display:none!important}
 #updBar{background:var(--on);padding:6px 10px;display:flex;gap:10px;align-items:center}
 
@@ -157,6 +160,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 .pp-c{cursor:pointer;color:var(--fg);word-break:break-all;border-top:1px solid var(--line2)}
 .pp-c:hover{background:var(--hover)}
 .pp-s{padding:10px 10px 6px;color:var(--mut);font-size:12px;border-top:1px solid var(--line);margin-top:4px}
+.pin.dis{opacity:.45;cursor:not-allowed}
 .pk-for{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
 .pk:hover,.pk.cur{background:var(--hover,#2b2f36)}
@@ -228,7 +232,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.5</small></div>
+  <div class="brand">DXF <small>+PDF · v3.6</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -239,18 +243,20 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
   <button id="btnLayout" title="Сетка миниатюр или список"></button>
   <button id="btnPreview" title="Окно просмотра справа, как в Проводнике">◫ Просмотр</button>
+  <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">Рядом</button>
   <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><button id="szMinus">−</button><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szPlus">+</button></span>
   <button id="btnLog">Журнал<span id="logBadge" hidden></span></button>
   <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ Сравнить</button>
   <button id="btnClose" hidden title="Закрыть все файлы">Закрыть</button>
   <button id="btnSet" title="Настройки: тема, фон, подписи">⚙</button>
+  <button id="btnHelp" title="Справка по всем функциям (F1)">?</button>
   <input id="inFolder" type="file" webkitdirectory multiple hidden>
   <input id="inFiles" type="file" multiple hidden accept=".dxf,.pdf,application/pdf,*/*">
 </header>
 <div id="updBar" hidden>Доступна новая версия<button id="updBtn">Обновить</button></div>
 <div id="status"></div>
 <div id="cmpBar" hidden><span id="cmpInfo"></span><span class="sp"></span>
-  <label>Показать <select id="cmpFilter"><option value="">все</option><option value="diff">≠ отличаются</option><option value="new">новые</option><option value="same">= совпадают</option><option value="geo">≈ пересохранены, геометрия та же</option><option value="chg">≠ и ≈ — всё, что менялось</option></select></label>
+  <label>Показать <select id="cmpFilter"><option value="">все</option><option value="chg">всё, что менялось</option><option value="diff">≠ отличаются</option><option value="geo">≈ пересохранены, геометрия та же</option><option value="name">имя изменено</option><option value="ren">⇢ переименованы</option><option value="new">нов — нет там</option><option value="same">= одинаковые</option></select></label>
   <button id="cmpOnlyBtn"></button><button id="cmpEnd" title="Закончить сравнение">✕</button></div>
 <div id="selBar" hidden><span id="selInfo"></span><button id="selGo">Сравнить рядом</button><button id="selClear">✕</button></div>
 <div id="work">
@@ -295,11 +301,14 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <span class="ovk"><i class="ovb"></i><span id="ovNb"></span></span>
     <span id="ovRes"></span>
     <span class="xfbox"><button id="ovPrev" title="Предыдущее отличие ( , )">‹</button><span id="ovNum"></span><button id="ovNext" title="Следующее отличие ( . )">›</button></span>
+    <button id="ovListBtn" title="Все отличия словами — клик по строке приближает это место">Список отличий ▾</button>
+    <button id="ovMode" title="Две панели рядом или обе детали в одном окне (N)">Наложение</button>
     <span class="sp"></span>
     <span class="ovh" title="Сдвинуть вторую деталь: Shift + перетаскивание мышью">вторая (Shift+мышь):</span><span class="xfbox" title="Положение второй детали: Shift+перетаскивание — сдвиг"><button id="ovRotL" title="Вторую деталь на 90° против часовой">⟲</button><button id="ovRotR" title="Вторую деталь на 90° по часовой">⟳</button><button id="ovMir" title="Отразить вторую деталь">⇋</button><button id="ovAuto" title="Подобрать положение заново">Авто</button></span>
     <label title="Расхождение меньше допуска считается совпадением">допуск <select id="ovTol"><option>0.01</option><option>0.05</option><option>0.1</option><option>0.2</option><option>0.5</option><option>1</option></select> мм</label>
-    <button id="ovEnd" title="Вернуться к показу двух окон рядом (Esc)">✕ Наложение</button>
+    <button id="ovEnd" title="Показать файлы как есть, без сравнения контуров (Esc)">✕</button>
   </div>
+  <div id="ovList" class="pop" hidden></div>
   <div id="stageWrap"><div id="stage"></div><div id="stageMsg" hidden></div></div>
   <div class="vinfo"><span id="vDims"></span><span id="vCoord"></span><span class="sp"></span><button id="vWarn" hidden></button></div>
 </div>
@@ -355,6 +364,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
+  <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
+  <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
+  <div class="set-row"><span>Открывать файл в сетке и списке</span><select id="sClick"><option value="2">двойным кликом (один клик — выделить)</option><option value="1">одним кликом</option></select></div>
   <div class="set-row"><span>При запуске</span><select id="sReopen"><option value="1">открывать последнюю папку</option><option value="0">пустое окно</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
   <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>
@@ -400,6 +412,255 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   </div>
 </div>
 
+<!-- ============ СПРАВКА (кнопка «?» на панели, клавиша F1). Обновлять вместе с функциями. ============ -->
+<style>
+#helpPanel{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;justify-content:center;align-items:stretch;padding:24px}
+#helpPanel[hidden]{display:none}
+#helpBox{background:var(--panel);color:var(--fg);border:1px solid var(--line);border-radius:12px;width:min(1100px,100%);display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+#helpHead{display:flex;gap:10px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+#helpHead b{font-size:16px}#helpHead input{flex:1;max-width:340px}
+#helpMain{display:flex;min-height:0;flex:1}
+#helpNav{width:230px;flex:none;overflow:auto;border-right:1px solid var(--line);padding:8px 0}
+#helpNav a{display:block;padding:6px 14px;color:var(--fg);text-decoration:none;font-size:13px;cursor:pointer}
+#helpNav a:hover,#helpNav a.cur{background:var(--hover,#2b2f36)}
+#helpBody{flex:1;overflow:auto;padding:6px 24px 30px;font-size:14px;line-height:1.55}
+#helpBody h2{font-size:18px;margin:22px 0 8px;padding-top:6px;border-top:1px solid var(--line)}#helpBody h2:first-child{border-top:0}
+#helpBody h3{font-size:15px;margin:14px 0 4px}
+#helpBody kbd{display:inline-block;min-width:18px;padding:0 5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;font:12px/18px system-ui,sans-serif;text-align:center;background:var(--bg)}
+#helpBody table{border-collapse:collapse;margin:6px 0 10px}#helpBody td{border-top:1px solid var(--line);padding:4px 12px 4px 0;vertical-align:top}
+#helpBody .note{color:var(--mut);font-size:13px}
+#helpBody .ver{color:var(--mut);font-size:12px}
+#helpBody section.hid{display:none}
+#helpBody mark{background:#ffd23f55;color:inherit}
+@media (max-width:760px){#helpPanel{padding:0}#helpNav{display:none}#helpBox{border-radius:0}}
+</style>
+<div id="helpPanel" hidden>
+ <div id="helpBox">
+  <div id="helpHead"><b>Справка</b><input id="helpQ" type="search" placeholder="Найти в справке…"><span style="flex:1"></span><button id="helpClose" title="Закрыть (Esc)">✕</button></div>
+  <div id="helpMain">
+   <nav id="helpNav"></nav>
+   <div id="helpBody">
+
+<section data-t="Что это">
+<h2>Что это за программа</h2>
+<p>Просмотр развёрток <b>DXF</b> и чертежей <b>PDF</b> прямо в Chrome, без установки и без интернета. Открывает папку заказа или изделия целиком (в том числе с сервера), показывает миниатюры, сама находит, какой DXF относится к какому чертежу, и сравнивает версии деталей.</p>
+<p>Ничего не изменяет и никуда не отправляет — только читает файлы.</p>
+<p class="ver">Справка соответствует версии, указанной слева вверху окна (DXF +PDF · v…). Программа дорабатывается, справка обновляется вместе с ней.</p>
+</section>
+
+<section data-t="Открыть файлы">
+<h2>Открыть папку или файлы</h2>
+<ul>
+<li><b>Папка</b> — открыть папку целиком со всеми вложенными (заказ, изделие). Работает и с сетевыми папками на сервере.</li>
+<li><b>Файлы</b> — выбрать отдельные DXF и PDF.</li>
+<li>Можно перетащить файлы или папку мышью прямо в окно.</li>
+<li><b>★ Ярлыки</b> — закреплённые папки и файлы: открываются одним кликом. Добавить — кнопкой ★ в просмотре или в окне ярлыков.</li>
+<li><b>История</b> — что и когда смотрели, «подряд» или «группой» по изделиям и папкам; можно открыть снова или очистить.</li>
+<li>При запуске открывается последняя папка (если Chrome сохранил разрешение; иначе — кнопка «▶ Открыть …» на пустом экране). Отключается в ⚙ «При запуске».</li>
+<li><b>✕</b> справа на панели — закрыть все файлы.</li>
+</ul>
+<p class="note">Chrome спрашивает разрешение на чтение папки — ответьте «Просмотреть файлы». Окно выбора папки Windows показывает только подпапки, файлов в нём не видно — это нормально.</p>
+</section>
+
+<section data-t="Сетка и список">
+<h2>Сетка, список, окно просмотра</h2>
+<ul>
+<li><b>▦ Сетка / ☰ Список</b> — миниатюры или строки с датой, размером и папкой. Ползунок справа — размер миниатюр.</li>
+<li><b>◫ Просмотр</b> — окно просмотра справа от списка, как в Проводнике: выбранный файл сразу виден крупно.</li>
+<li><b>Фильтр по имени</b> — оставляет файлы, в имени или пути которых есть набранный текст (например, обозначение). <b>Все / DXF / PDF</b> — тип файлов.</li>
+<li><b>Один клик</b> — выделить файл, <b>двойной клик</b> или <kbd>Enter</kbd> — открыть. В ⚙ можно выбрать «открывать одним кликом». На телефоне — одно касание.</li>
+<li><b>Ctrl+клик</b> по двум файлам — выбрать для сравнения (внизу появится «Сравнить рядом»).</li>
+<li><b>Рядом</b> на панели — открыть выделенный файл сразу с его парой: чертёж и все его развёртки одновременно (<kbd>R</kbd>).</li>
+<li><kbd>Tab</kbd> в сетке — открыть выделенный файл и сразу его пару (у чертежа — развёртку, у развёртки — чертёж).</li>
+<li>Значок с цифрой на миниатюре — замечания при чтении файла (клик — подробности). Значок поворота — для детали запомнен поворот или зеркало.</li>
+</ul>
+</section>
+
+<section data-t="Папки и дерево">
+<h2>Дерево папок и показ «как в Проводнике»</h2>
+<ul>
+<li>Если в открытой папке есть подпапки, слева появляется <b>дерево</b> (кнопка <b>Папки ▸</b> — показать/скрыть, граница перетаскивается). Клик по папке — показать её файлы; числа — сколько файлов внутри.</li>
+<li>Кнопка <b>📁</b> — показ <b>«по папкам»</b>: вложенные папки плитками, файлы — только этой папки, плитка «.. наверх». Без неё показываются все файлы выбранной папки со всеми вложенными.</li>
+</ul>
+<h3>Клавиши</h3>
+<table>
+<tr><td><kbd>←</kbd> в первом столбце (в списке — всегда)</td><td>перейти в дерево</td></tr>
+<tr><td>в дереве <kbd>↑</kbd> <kbd>↓</kbd> <kbd>Home</kbd> <kbd>End</kbd></td><td>соседняя / первая / последняя папка — её файлы сразу показываются справа</td></tr>
+<tr><td>в дереве <kbd>←</kbd> / <kbd>→</kbd></td><td>свернуть / развернуть ветку; если уже свёрнута — к родительской папке, если развёрнута — к файлам</td></tr>
+<tr><td>в дереве <kbd>Enter</kbd> или <kbd>Esc</kbd></td><td>к файлам</td></tr>
+<tr><td><kbd>Backspace</kbd></td><td>на уровень выше</td></tr>
+<tr><td><kbd>Enter</kbd> на плитке папки</td><td>войти в папку</td></tr>
+</table>
+<p class="note">Рамка вокруг строки дерева показывает, что клавиши сейчас работают в дереве.</p>
+</section>
+
+<section data-t="Просмотр DXF">
+<h2>Просмотр DXF</h2>
+<ul>
+<li>Колесо — масштаб к курсору, перетаскивание — сдвиг, двойной клик или <kbd>F</kbd> — показать всё. На телефоне — двумя пальцами, свайп влево/вправо по листу — соседний файл.</li>
+<li><b>⟲ ⟳ ⇋</b> (<kbd>Q</kbd> <kbd>E</kbd> <kbd>M</kbd>) — повернуть на 90° и отразить. Поворот запоминается для этого файла. <kbd>O</kbd> — на время показать исходное положение, <kbd>0</kbd> — сбросить поворот.</li>
+<li><b>Линии</b> (<kbd>W</kbd>) — толщина линий на экране по кругу: тонкие → средние → жирные → «по файлу» (только если толщины записаны в файле).</li>
+<li>Подпись в углу: имя файла, габарит, материал · толщина · количество из имени, подпапка, дата — что показывать, выбирается в ⚙.</li>
+<li>Внизу — габарит и координаты курсора в мм. Значок замечаний — что в файле не удалось прочитать или нарисовать.</li>
+</ul>
+</section>
+
+<section data-t="Просмотр PDF">
+<h2>Просмотр PDF</h2>
+<ul>
+<li>Многостраничный PDF показывается <b>лентой</b> — страницы друг под другом: колесо прокручивает, <kbd>Ctrl</kbd>+колесо — масштаб, <kbd>PgUp</kbd> <kbd>PgDn</kbd> — к соседней странице. Кнопка <b>⇕</b> или ⚙ — показывать по одной странице.</li>
+<li><b>− линии N +</b> (<kbd>[</kbd> <kbd>]</kbd>) — насыщенность линий: <b>0 — как в файле</b>, −1…−2 светлее, +1…+4 темнее. Тонкие линии при усилении не пропадают.</li>
+<li>Фон PDF (светлый / тёмный / инверсия) — в ⚙.</li>
+<li>Сначала лист рисуется целиком, при приближении видимая часть дорисовывается в полном качестве — через долю секунды после остановки.</li>
+</ul>
+</section>
+
+<section data-t="Пары PDF ⇄ DXF">
+<h2>Чертёж и его развёртки (пары PDF ⇄ DXF)</h2>
+<ul>
+<li>Программа сама находит DXF для чертежа по обозначению (децимальному номеру), даже если имена не совпадают полностью. На один чертёж может быть несколько исполнений — они идут по порядку: основное, затем -01, -02…</li>
+<li><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> — чертёж → развёртка 1 → развёртка 2 → … → чертёж.</li>
+<li><b>Рядом</b> (<kbd>R</kbd>) — чертёж и все его развёртки одновременно.</li>
+<li><b>⇄ связать ▾</b> — если пара не нашлась или нашлась не та: выбрать вручную. Ручные связи запоминаются. По умолчанию пара ищется в пределах папки заказа; «во всех папках» — в ⚙.</li>
+<li>Одинаковые файлы в разных подпапках показываются один раз с пометкой «копии ×N».</li>
+</ul>
+</section>
+
+<section data-t="Два монитора">
+<h2>Два монитора</h2>
+<ul>
+<li>Кнопка <b>🖵 2-й монитор</b> в просмотре (видна, когда подключён второй монитор) открывает второе окно: на одном мониторе чертёж, на другом его развёртки — меняются вместе при листании.</li>
+<li><b>⇄ поменять</b> — поменять мониторы местами (чертежи ↔ развёртки).</li>
+<li>Листать можно с любого монитора. Закрыть — той же кнопкой или закрыв второе окно.</li>
+</ul>
+</section>
+
+<section data-t="Сравнение папок">
+<h2>Сравнение с другой папкой</h2>
+<p>Для сравнения нового заказа со старым, архивом или копией.</p>
+<ol>
+<li>Откройте папку и выберите в дереве, что сравнивать (сравнивается выбранная папка, а не всё дерево).</li>
+<li><b>⇆ Сравнить</b> → <b>Выбрать папку…</b> и укажите <b>другую</b> папку. Папку, открытую сейчас, выбрать нельзя. Внизу окна — папки, с которыми уже сравнивали (путь, сколько файлов, когда).</li>
+<li>На миниатюрах появятся значки, вверху — итог:</li>
+</ol>
+<table>
+<tr><td><b>=</b></td><td>одинаковые: то же имя, то же содержимое</td></tr>
+<tr><td><b>имя</b></td><td>содержимое то же, изменилась часть имени — в подсказке что именно: количество K1 → K2, материал, толщина (DXF), наименование (PDF)</td></tr>
+<tr><td><b>≈</b></td><td>файл пересохранён, но геометрия DXF та же (в пределах допуска; положение детали в файле не важно)</td></tr>
+<tr><td><b>≠</b></td><td>отличается: у DXF — геометрия (сколько мест), у PDF — содержимое</td></tr>
+<tr><td><b>⇢</b></td><td>переименован: пары с тем же обозначением нет, но такой же файл лежит там под другим именем (например …06 → …061)</td></tr>
+<tr><td><b>нов</b></td><td>в той папке такого файла нет</td></tr>
+<tr><td><b>Только там: N</b></td><td>файлы, которые есть только во второй папке</td></tr>
+</table>
+<ul>
+<li>Пока идёт проверка содержимого, значки полупрозрачные, вверху — «проверка N / M».</li>
+<li><b>Показать</b> — фильтр по значкам, например «всё, что менялось».</li>
+<li>Клик по значку — открыть обе версии (для DXF — сразу сравнение контуров). У «нов» для DXF — список похожих деталей, чтобы выбрать вручную.</li>
+<li>Если перед «Сравнить» в списке был выделен файл, его сравнение откроется сразу.</li>
+<li><kbd>←</kbd> <kbd>→</kbd> в просмотре — к следующей паре. <b>✕</b> в строке сравнения — закончить.</li>
+</ul>
+</section>
+
+<section data-t="Сравнение деталей">
+<h2>Сравнение двух деталей DXF</h2>
+<h3>Как выбрать две детали</h3>
+<ul>
+<li><b>⇆ Сравнить с…</b> в просмотре или <kbd>V</kbd> (в сетке — для выделенного файла): список других DXF, <b>сверху похожие по размеру</b> («размер совпал», «размер близок» — это только подсказка, не вывод), поиск, <b>Файл с диска…</b> — любой DXF откуда угодно. Номера и имена могут быть любыми.</li>
+<li>Через сравнение папок — клик по значку ≠ ≈ имя ⇢.</li>
+<li><b>Ctrl+клик</b> по двум файлам → «Сравнить рядом».</li>
+</ul>
+<h3>Что видно</h3>
+<ul>
+<li><b>Две панели</b>: слева деталь из открытой папки, справа — с которой сравниваем, повёрнутая так же. Масштаб и сдвиг общие.</li>
+<li>Серое — совпадает (с точностью до допуска). <b style="color:#ff4d4d">Красное</b> — есть только слева, <b style="color:#39d353">зелёное</b> — только справа.</li>
+<li>Номера ①②③ — отличия. <b>Список отличий ▾</b> описывает их словами: «отверстие Ø20 слева → Ø24 справа», «4 отверстия Ø5 — только слева», «отверстие смещено на 3 мм», «контур изменён: сдвиг ≈ 1,6 мм». Клик по строке приближает это место на обеих панелях.</li>
+<li><b>‹ ›</b> или <kbd>,</kbd> <kbd>.</kbd> — к предыдущему / следующему отличию.</li>
+<li><b>Наложение</b> (<kbd>N</kbd>) — обе детали в одном окне; снова <kbd>N</kbd> — две панели. Выбор запоминается.</li>
+<li><b>Мигание</b> (включается в ⚙): <kbd>пробел</kbd> показывает по очереди только левую, только правую, обе — изменения видно глазом.</li>
+<li>Наведите на итог «Отличий: N» — подсказка с процентом совпадения и габаритами.</li>
+</ul>
+<h3>Если совместилось не так</h3>
+<ul>
+<li>Детали совмещаются сами: сдвиг, поворот на любой угол, зеркало, в том числе по отверстиям и скруглениям, если деталь заметно переделана.</li>
+<li><b>Shift + перетаскивание</b> — сдвинуть вторую деталь; <b>⟲ ⟳ ⇋</b> — повернуть / отразить её; отличия пересчитаются. <b>Авто</b> — подобрать заново.</li>
+<li><b>Допуск</b> (по умолчанию 0,1 мм) — расхождение меньше допуска считается совпадением.</li>
+<li><b>✕</b> или <kbd>Esc</kbd> — показать два файла как есть, без сравнения. В ⚙ можно выбрать «просто рядом» вместо автоматического сравнения.</li>
+</ul>
+<p class="note">Сравниваются линии, дуги, окружности и полилинии; надписи не сравниваются. Ширина реза не учитывается.</p>
+</section>
+
+<section data-t="Настройки">
+<h2>Настройки ⚙</h2>
+<ul>
+<li>Тема (светлая / тёмная / как в системе), фон DXF и PDF, подписи в углу окна просмотра.</li>
+<li>Линии DXF на экране, контраст линий PDF, многостраничный PDF (лентой / по одной странице).</li>
+<li>Поиск пар PDF ⇄ DXF: в папке заказа или во всех папках.</li>
+<li>Открывать файл одним или двойным кликом; при запуске открывать последнюю папку.</li>
+<li>Сравнение двух DXF: сразу сравнивать контуры или просто рядом; мигание.</li>
+</ul>
+</section>
+
+<section data-t="Все клавиши">
+<h2>Все клавиши</h2>
+<p class="note">Русская раскладка тоже работает (Й = Q, У = E и т. д.).</p>
+<h3>Сетка и список</h3>
+<table>
+<tr><td><kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> <kbd>Home</kbd> <kbd>End</kbd> <kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>выделение</td></tr>
+<tr><td><kbd>Enter</kbd> / <kbd>пробел</kbd></td><td>открыть файл или папку</td></tr>
+<tr><td><kbd>Tab</kbd></td><td>открыть файл и сразу его пару</td></tr>
+<tr><td><kbd>R</kbd></td><td>открыть «Рядом» — чертёж и все развёртки</td></tr>
+<tr><td><kbd>V</kbd></td><td>сравнить выделенный DXF с…</td></tr>
+<tr><td><kbd>Backspace</kbd></td><td>на уровень выше</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>снять выбор</td></tr>
+<tr><td><kbd>F1</kbd></td><td>эта справка</td></tr>
+</table>
+<h3>Просмотр</h3>
+<table>
+<tr><td><kbd>←</kbd> <kbd>→</kbd> / <kbd>пробел</kbd></td><td>предыдущий / следующий файл</td></tr>
+<tr><td><kbd>Tab</kbd> <kbd>Shift+Tab</kbd></td><td>чертёж ⇄ развёртки</td></tr>
+<tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>страницы PDF</td></tr>
+<tr><td><kbd>F</kbd> <kbd>Home</kbd> / двойной клик</td><td>показать всё (в окне просмотра рядом со списком Home/End — первый/последний файл)</td></tr>
+<tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>масштаб</td></tr>
+<tr><td><kbd>Q</kbd> <kbd>E</kbd> <kbd>M</kbd> <kbd>0</kbd> <kbd>O</kbd></td><td>повернуть влево / вправо, зеркало, сбросить, исходное положение</td></tr>
+<tr><td><kbd>W</kbd></td><td>линии DXF</td></tr>
+<tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>линии PDF светлее / темнее</td></tr>
+<tr><td><kbd>R</kbd></td><td>рядом: чертёж и все развёртки</td></tr>
+<tr><td><kbd>L</kbd></td><td>синхронный масштаб двух окон</td></tr>
+<tr><td><kbd>V</kbd></td><td>сравнить с…</td></tr>
+<tr><td><kbd>Enter</kbd></td><td>на весь экран (из окна просмотра рядом)</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>назад</td></tr>
+</table>
+<h3>Сравнение деталей</h3>
+<table>
+<tr><td><kbd>,</kbd> <kbd>.</kbd></td><td>предыдущее / следующее отличие</td></tr>
+<tr><td><kbd>N</kbd></td><td>две панели ⇄ наложение</td></tr>
+<tr><td><kbd>пробел</kbd></td><td>мигание (если включено в ⚙)</td></tr>
+<tr><td><kbd>Shift</kbd> + мышь</td><td>сдвинуть вторую деталь</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>без сравнения / назад</td></tr>
+</table>
+</section>
+
+<section data-t="Телефон">
+<h2>На телефоне</h2>
+<ul>
+<li>Откройте адрес программы в Chrome, меню ⋮ → «Добавить на главный экран» — будет как приложение.</li>
+<li>Касание — открыть, двумя пальцами — масштаб, свайп влево/вправо по листу в исходном масштабе — соседний файл.</li>
+<li>На телефоне миниатюры строятся только для видимых файлов, чтобы открытый файл не ждал.</li>
+</ul>
+</section>
+
+<section data-t="Обновления">
+<h2>Обновления и офлайн</h2>
+<ul>
+<li>Программа работает без интернета. Когда выходит новая версия, вверху появляется полоса «Доступна новая версия → Обновить».</li>
+<li><b>Журнал</b> (на панели, с числом) — замечания при чтении файлов: что не удалось прочитать или нарисовать. Там же «Проверить все файлы» и «Очистить кэш» — построить миниатюры заново, если что-то показывается не так.</li>
+</ul>
+</section>
+
+   </div>
+  </div>
+ </div>
+</div>
 <script type="text/plain" id="pdfjsSrc"></script>
 <script type="text/plain" id="pdfWorkerSrc"></script>
 <script>
@@ -907,7 +1168,8 @@ function GEOCORE(){
     for(const p of P)for(let i=0;i<p.x.length;i++){const dx=p.x[i]-mx,dy=p.y[i]-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;}
     const ang=0.5*Math.atan2(2*sxy,sxx-syy);
     const pts=[];for(const p of P)for(let i=0;i<p.x.length;i++)pts.push(p.x[i],p.y[i]);
-    return {L,bbox:[x0,y0,x1,y1],size,len,cx:mx,cy:my,ang,pts,n:L.length,F:feats(doc)};
+    const C=[];for(const G of doc.groups||[]){if(G.off)continue;for(const p of G.prims)if(p[0]==='C')C.push([p[1],p[2],p[3]]);}
+    return {L,bbox:[x0,y0,x1,y1],size,len,cx:mx,cy:my,ang,pts,n:L.length,F:feats(doc),C};
   }
   /* сколько точек B (после M) лежат на A ближе r — оценка совмещения */
   function score(IA,B,M,r,maxN){
@@ -1004,11 +1266,53 @@ function GEOCORE(){
     return {LB,a,b,clusters:cl,same:!a.runs.length&&!b.runs.length};
   }
   /* всё сразу: подготовка, совмещение, отличия */
+  /* описание отличий словами — по каждой группе: отверстия (окружности) и участки контура.
+     «слева» — первая деталь (A), «справа» — вторая (B). */
+  const f1=v=>{const r=Math.round(v*10)/10;return String(r).replace('.',',');};
+  function describe(A,B,M,d,tol){
+    const CB=B.C.map(c=>[M[0]*c[0]+M[2]*c[1]+M[4],M[1]*c[0]+M[3]*c[1]+M[5],c[2]]);
+    const inB=(c,b)=>c[0]>=b[0]-c[2]-tol&&c[0]<=b[2]+c[2]+tol&&c[1]>=b[1]-c[2]-tol&&c[1]<=b[3]+c[2]+tol;
+    const near=(c,L,fr)=>L.find(x=>Math.hypot(x[0]-c[0],x[1]-c[1])<=fr&&x!==c);
+    const usedA=new Set(),usedB=new Set();
+    return d.clusters.map(bb=>{
+      const ca=A.C.filter(c=>inB(c,bb)),cb=CB.filter(c=>inB(c,bb)),items=[];
+      const same=(x,y)=>Math.hypot(x[0]-y[0],x[1]-y[1])<=tol&&Math.abs(x[2]-y[2])<=tol;
+      const ra=ca.filter(c=>!cb.some(y=>same(c,y))),rb=cb.filter(c=>!ca.some(y=>same(c,y)));
+      const grp=new Map(),add=(k,t)=>{const g=grp.get(k)||{n:0,t};g.n++;grp.set(k,g);};
+      for(const c of ra){if(usedA.has(c))continue;
+        const y=rb.find(y=>!usedB.has(y)&&Math.hypot(y[0]-c[0],y[1]-c[1])<=tol);           // тот же центр, другой диаметр
+        if(y){usedA.add(c);usedB.add(y);add('d'+f1(c[2]*2)+'>'+f1(y[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' слева → Ø'+f1(y[2]*2)+' справа');continue;}
+        const z=rb.find(y=>!usedB.has(y)&&Math.abs(y[2]-c[2])<=tol&&Math.hypot(y[0]-c[0],y[1]-c[1])<=Math.max(c[2]*4,A.size*0.05)); // тот же диаметр, сдвинуто
+        if(z){usedA.add(c);usedB.add(z);const dd=Math.hypot(z[0]-c[0],z[1]-c[1]);add('m'+f1(c[2]*2)+'|'+f1(dd),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' смещено на '+f1(dd)+' мм');continue;}
+      }
+      for(const c of ra)if(!usedA.has(c)){usedA.add(c);add('a'+f1(c[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' — только слева');}
+      for(const c of rb)if(!usedB.has(c)){usedB.add(c);add('b'+f1(c[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' — только справа');}
+      for(const g of grp.values())items.push(g.t(g.n));
+      // участки контура, не объяснённые отверстиями
+      const runLen=(rs,circ)=>{let L=0;for(const r of rs){const x0=r.x[0],y0=r.y[0];if(r.x.length<2)continue;
+          let inb=false;for(let i=0;i<r.x.length;i++)if(r.x[i]>=bb[0]-1e-6&&r.x[i]<=bb[2]+1e-6&&r.y[i]>=bb[1]-1e-6&&r.y[i]<=bb[3]+1e-6){inb=true;break;}
+          if(!inb)continue;let mid=Math.floor(r.x.length/2),onC=circ.some(c=>Math.abs(Math.hypot(r.x[mid]-c[0],r.y[mid]-c[1])-c[2])<=tol*2);if(onC)continue;
+          for(let i=1;i<r.x.length;i++)L+=Math.hypot(r.x[i]-r.x[i-1],r.y[i]-r.y[i-1]);}return L;};
+      const la=runLen(d.a.runs,ca),lb=runLen(d.b.runs,cb.map(c=>c));
+      if(la>tol*5||lb>tol*5){
+        if(la>tol*5&&lb>tol*5){ // насколько разошлись: среднее расстояние от участка B до участка A
+          let s=0,n=0;const pa=[];for(const r of d.a.runs)for(let i=0;i<r.x.length;i++)if(r.x[i]>=bb[0]&&r.x[i]<=bb[2]&&r.y[i]>=bb[1]&&r.y[i]<=bb[3])pa.push(r.x[i],r.y[i]);
+          for(const r of d.b.runs)for(let i=0;i<r.x.length;i+=3){if(!(r.x[i]>=bb[0]&&r.x[i]<=bb[2]&&r.y[i]>=bb[1]&&r.y[i]<=bb[3]))continue;let m=Infinity;for(let j=0;j<pa.length;j+=2)m=Math.min(m,Math.hypot(pa[j]-r.x[i],pa[j+1]-r.y[i]));if(isFinite(m)){s+=m;n++;}}
+          const sh=n?s/n:0;
+          const mx=Math.max(la,lb);items.push(sh<=Math.max(1,mx*0.05)&&Math.abs(la-lb)<0.3*mx?'контур изменён: сдвиг ≈ '+f1(sh)+' мм на участке '+f1(Math.max(la,lb))+' мм':'контур изменён: слева '+f1(la)+' мм, справа '+f1(lb)+' мм');
+        }else if(la>tol*5)items.push('участок контура '+f1(la)+' мм — только слева');
+        else items.push('участок контура '+f1(lb)+' мм — только справа');
+      }
+      if(!items.length)items.push('мелкое отличие');
+      return {bb,text:items.join('; ')};
+    });
+  }
   function compare(docA,docB,tol,M0){ // M0 — положение B задано вручную (без автоподбора)
     const A=prep(docA,tol),B=prep(docB,tol);
     if(!A.n||!B.n)return {A,B,M:[1,0,0,1,0,0],fail:'Нет геометрии для сравнения'};
     const al=M0?{M:M0,mir:M0[0]*M0[3]-M0[1]*M0[2]<0}:align(A,B,tol);const M=al?al.M:[1,0,0,1,0,0];
-    return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]]},diff(A,B,M,tol));
+    const d=diff(A,B,M,tol);let desc=[];try{desc=describe(A,B,M,d,tol);}catch(e){desc=d.clusters.map(bb=>({bb,text:'отличие'}));}
+    return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]],desc},d);
   }
   return {prep,align,diff,compare,mul};
 }
@@ -1020,7 +1324,7 @@ const geoCompare=(()=>{
     try{
       const src='const GEO=('+GEOCORE.toString()+')();onmessage=e=>{const {id,a,b,tol,M}=e.data;let r,err=null;try{r=GEO.compare(a,b,tol,M);'+
         'r={M:r.M,mir:r.mir,same:r.same,fail:r.fail,clusters:r.clusters||[],a:r.a?{runs:r.a.runs,bad:r.a.bad,frac:r.a.frac}:null,b:r.b?{runs:r.b.runs,bad:r.b.bad,frac:r.b.frac}:null,'+
-        'LA:r.A.L,LB:r.LB||[],sizeA:r.sizeA,sizeB:r.sizeB,bbA:r.A.bbox};}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});};';
+        'LA:r.A.L,LB:r.LB||[],sizeA:r.sizeA,sizeB:r.sizeB,bbA:r.A.bbox,desc:r.desc||[]};}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});};';
       w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
       w.onmessage=e=>{const p=wait.get(e.data.id);if(!p)return;wait.delete(e.data.id);e.data.err?p.rej(new Error(e.data.err)):p.res(e.data.r);};
       w.onerror=()=>{for(const p of wait.values())p.rej(new Error('Сбой потока сравнения'));wait.clear();w=null;};
@@ -1312,12 +1616,23 @@ function makeItem(file,path,rid,rootName){
   it.meta=t.querySelector('.meta');it.xfb=t.querySelector('.xfb');it.cmpb=t.querySelector('.cmpb');
   it.cmpb.addEventListener('click',e=>{e.stopPropagation();cmpOpenFor(it);});
   it.tile=t;it.tag=t.querySelector('.tag');it.img=t.querySelector('img');it.ph=t.querySelector('.ph');it.badge=t.querySelector('.badge');t._it=it;
-  t.addEventListener('click',e=>{if(e.ctrlKey||e.metaKey){toggleSel(it);return;}const i=view.indexOf(it);if(i<0)return;showItem(i);if(!docked())setFull(true);});
-  t.addEventListener('dblclick',()=>{if(docked())setFull(true);});
+  t.addEventListener('click',e=>{if(e.ctrlKey||e.metaKey){toggleSel(it);return;}const i=view.indexOf(it);if(i<0)return;
+    if(docked()||oneClick()){showItem(i);if(!docked())setFull(true);}else kbMark(t);});   // как в Проводнике: клик — выделить, двойной — открыть
+  t.addEventListener('dblclick',e=>{if(e.ctrlKey||e.metaKey)return;const i=view.indexOf(it);if(i<0)return;if(VW.idx!==i||!viewerShown())showItem(i);setFull(true);});
   return it;
 }
 /* ---------- просмотр «по папкам», как в Проводнике: плитки вложенных папок + файлы только этой папки ---------- */
 let HASSUB=false;
+const oneClick=()=>MOB||SET.click==='1';
+const selTile=()=>{const t=$('grid').querySelector('.tile.cur');return t&&t._it?t._it:null;};
+function openSel(how,d){ // открыть выделенный файл: обычно, «Рядом» или сразу его пару (Tab)
+  const it=selTile()||(VW.idx>=0?view[VW.idx]:null);if(!it){flash('Сначала выделите файл');return;}
+  const i=view.indexOf(it);if(i<0)return;
+  if(how==='side'){SET.side=true;saveSet();}
+  showItem(i);if(!docked())setFull(true);
+  if(how==='pair')setTimeout(()=>cyclePair(d||1),0);
+}
+$('btnSideG').onclick=()=>openSel('side');
 const dirPath=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'';
 const folderMode=()=>SET.browse==='folders'&&HASSUB&&!!TREE_ROOT;
 const effDir=()=>curDir||(TREE_ROOT?TREE_ROOT.path:'');
@@ -1327,7 +1642,7 @@ function folderTiles(){
   const mk=(name,path,n,up)=>{const t=document.createElement('div');t.className='tile ftile'+(up?' up':'');t.title=up?'На уровень выше (Backspace)':path;t._dir=path;
     t.innerHTML='<div class="th"><div class="ph fico"></div></div><div class="tx"><div class="nm"></div><div class="meta"></div></div>';
     t.querySelector('.fico').textContent=up?'⤴':'📁';t.querySelector('.nm').textContent=name;t.querySelector('.meta').textContent=up?'':'файлов: '+n;
-    t.onclick=()=>goDir(path,up?eff:null);return t;};
+    t.onclick=()=>{if(oneClick())goDir(path,up?eff:null);else kbMark(t);};t.ondblclick=()=>goDir(path,up?eff:null);return t;};
   const pd=parentDir(curDir);if(pd!==null)out.push(mk('.. наверх',pd,0,true));
   for(const k of [...node.kids.values()].sort(byName))out.push(mk(k.name,k.path,k.n,false));
   return out;
@@ -1643,6 +1958,7 @@ class Pane{
   clampS(s){return Math.min(Math.max(s,this.fitS/2000),this.fitS*(this.isPdf?200:1e6));}
   zoomAt(x,y,f){this.fitted=false;if(this.isPdf)this.cancelHi();const ns=this.clampS(this.s*f),[wx,wy]=this.s2w(x,y);this.s=ns;this.cx=wx-(x-this.W/2)/ns;this.cy=wy+(y-this.H/2)/ns;this.draw();this.changed();}
   changed(){ // при сравнении второе окно повторяет масштаб и сдвиг (в мм — для одинаковых деталей совпадают)
+    if(this.ov&&this.ov.res){for(const o of panes)if(o!==this&&o.ov&&o.ov.res){o.fitted=this.fitted;o.s=this.s;o.cx=this.cx;o.cy=this.cy;o.draw();}return;}  // сравнение контуров: один вид на обе панели
     if(!VW.cmp||!SET.sync||VW.set.length!==2)return;const o=panes[1-panes.indexOf(this)];
     if(!o||!o.doc||!this.doc||o.isPdf!==this.isPdf)return;o.fitted=this.fitted;o.s=this.s;o.cx=this.cx;o.cy=this.cy;o.draw();
   }
@@ -2014,7 +2330,7 @@ function updateBar(){
   const cur=curItem(),ap=panes[VW.active],has=!!cur&&VW.set.length>0;
   const cmp=!!VW.cmp&&VW.set.length===2;
   $('vSync').hidden=!(cmp&&VW.set[0].type===VW.set[1].type);$('vSync').classList.toggle('on',SET.sync);
-  $('vOv').hidden=!(OV||(cmp&&VW.set[0].type==='dxf'&&VW.set[1].type==='dxf'));$('vOv').classList.toggle('on',!!OV);
+  $('vOv').hidden=!!OV||!(cmp&&VW.set[0].type==='dxf'&&VW.set[1].type==='dxf');$('vOv').classList.toggle('on',!!OV);$('vOv').textContent=OV?(OV.mode==='over'?'Две панели':'Наложение'):'Сравнить контуры';
   $('vWith').hidden=FOLLOW||!(has&&cur&&cur.type==='dxf');
   $('vMon').hidden=FOLLOW||!(MON.win||screen.isExtended);$('vMon').classList.toggle('on',!!MON.win);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
@@ -2488,7 +2804,7 @@ function fillBgSel(){
     sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
     col.oninput=()=>changeSet(key,col.value);
   }
-  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfLv);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
+  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfLv);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sClick').value=SET.click==='1'?'1':'2';$('sCmpGeo').value=SET.cmpGeo===false?'0':'1';$('sBlink').value=SET.blink?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
 }
 $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
 $('sPdfBold').onchange=e=>setContrast(+e.target.value,true);
@@ -2497,6 +2813,9 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
   if(!quiet)flash('Линии PDF: '+lvTxt(v)+' — '+PDF_LVN[v]+' (от −2 до +4, клавиши [ и ])');}
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
+$('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sCmpGeo').onchange=e=>{SET.cmpGeo=e.target.value==='1';saveSet();};
+$('sBlink').onchange=e=>{SET.blink=e.target.value==='1';saveSet();};
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;SET.lw=false;saveSet();panes.forEach(p=>p.draw());updateBar();};
 /* линии DXF: тонкие / средние / жирные / по файлу (толщины из файла — только если они там есть) */
 const LINEMODES=[['тонкие',false,1],['средние',false,1.6],['жирные',false,2.4],['по файлу',true,1]];
@@ -2693,69 +3012,108 @@ function cmpKey(it){
   else{const t=P.b.split(' ')[0];d=t.length>=3&&/\d/.test(t)?t:P.b;}
   return it.type+':'+d;
 }
+/* части имени для сравнения: DXF — обозначение, материал, толщина, количество; PDF — обозначение, наименование */
+function nameParts(it){
+  const base=it.name.replace(/\.(dxf|pdf)$/i,'');
+  if(it.type==='pdf'){const d=DEC.exec(nrm(it.name));const m=/^(\S*\d\S*)\s+(.*)$/.exec(base);
+    return {desig:m?m[1]:(d?d[0]:base),title:m?m[2].trim():''};}
+  const b=base.replace(/[-_ ](form|flat|развертка|развёртка|розгортка)$/i,'');
+  let m=/^(.*?)-([^-]+)-(\d+(?:[.,]\d+)?)-[kKкК](\d+)$/.exec(b);
+  if(m)return {desig:m[1],mat:m[2],thk:m[3].replace(',','.'),qty:m[4]};
+  // старые имена: «… Основа_Ст3_S10-1шт»
+  const q=/(\d+)\s*шт/i.exec(b),t=/(?:^|[\s_-])[SsСс](\d+(?:[.,]\d+)?)(?=$|[\s_-])/.exec(b),mt=/(?:^|[\s_-])((?:Ст|St|AISI|Cynk|Al|08пс|09Г2С|65Г|Zn)[\w.]*)/i.exec(b);
+  const d=/^(\S*\d[\S]*?)(?=[\s_]|-[^\d]|$)/.exec(b);
+  return {desig:d?d[1]:b,mat:mt?mt[1]:'',thk:t?t[1].replace(',','.'):'',qty:q?q[1]:''};
+}
+const PART_N={desig:'обозначение',title:'наименование',mat:'материал',thk:'толщина',qty:'количество'};
+function nameChanges(a,b){ // что поменялось в имени: [{k,from,to}]  (a — открытая папка, b — та, с которой сравниваем)
+  const A=nameParts(a),B=nameParts(b),out=[];
+  for(const k of Object.keys(PART_N))if(k in A||k in B){const x=(A[k]||'').toLowerCase(),y=(B[k]||'').toLowerCase();if(x!==y)out.push({k,from:B[k]||'—',to:A[k]||'—'});}
+  if(!out.length&&a.name!==b.name)out.push({k:'name',from:b.name,to:a.name});
+  return out;
+}
+const chText=ch=>ch.map(c=>(PART_N[c.k]||'имя')+': '+c.from+' → '+c.to).join('; ');
+/* сравнение с другой папкой. Сравнивается папка, выбранная в дереве (или вся открытая, если ничего не выбрано).
+   Пары — по обозначению; содержимое проверяется в фоне (cmpDeep). Статусы:
+     same — одинаковые; name — имя изменено, содержимое то же; geo — пересохранён, геометрия DXF та же;
+     diff — отличается; ren — переименован (пары по обозначению нет, но такой же файл есть под другим именем); new — нет в той папке */
 function cmpSet(arr,name,rid){
   const ct=$('grid').querySelector('.tile.cur'),focus=docked()&&!VW.full?curItem():(ct&&ct._it)||(SEL.size===1?[...SEL][0]:null)||null;  // выделенный файл — сразу открыть его сравнение
+  const scope=items.filter(it=>!curDir||it.path.startsWith(curDir+'/'));
+  const paths=new Set(scope.map(it=>it.path+'|'+it.file.size));
+  if(arr.length&&arr.every(x=>paths.has(x.path+'|'+x.file.size))){flash('Для сравнения выбрана та же папка, что открыта, — выберите другую (старый заказ, архив)');return;}
   const bItems=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).map(x=>{const it=makeItem(x.file,x.path,rid||null,name);it.state=2;it.cmpB=true;return it;});
   const byKey=new Map();for(const b of bItems){const k=cmpKey(b);if(!byKey.has(k))byKey.set(k,[]);byKey.get(k).push(b);}
   const used=new Set(),map=new Map();
-  for(const a of items){
+  for(const a of scope){
     const c=byKey.get(cmpKey(a));
     if(!c){map.set(a,{st:'new'});continue;}
     c.forEach(x=>used.add(x));
-    const same=c.find(x=>x.file.size===a.file.size&&fname(x.path)===fname(a.path));
-    if(same){map.set(a,{st:'same',b:same,others:c});continue;}
-    const best=c.slice().sort((x,y)=>y.file.lastModified-x.file.lastModified)[0];
-    const why=[fname(best.path)!==fname(a.path)?'другое имя: '+best.name:'',best.file.size!==a.file.size?'размер '+fmtSize(best.file.size)+' → '+fmtSize(a.file.size):''].filter(Boolean).join(', ');
-    map.set(a,{st:'diff',b:best,others:c,why});
+    const best=c.find(x=>fname(x.path)===fname(a.path))||c.slice().sort((x,y)=>y.file.lastModified-x.file.lastModified)[0];
+    const ch=nameChanges(a,best);
+    map.set(a,{st:!ch.length&&best.file.size===a.file.size?'same':'diff',b:best,others:c,ch,why:ch.length?chText(ch):'',pend:true});
   }
-  CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:''};
+  CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:'',scope:curDir};
   $('cmpFilter').value='';updCmp();applyFilter();
   cmpDeep(CMP);
-  const paths=new Set(items.map(it=>it.path+'|'+it.file.size));
-  if(arr.length&&arr.every(x=>paths.has(x.path+'|'+x.file.size))){flash('Для сравнения выбрана та же папка, что открыта, — выберите другую (старый заказ, архив)');return;}
-  if(focus&&map.has(focus)&&items.includes(focus))cmpOpenFor(focus);
+  if(focus&&map.has(focus))cmpOpenFor(focus);
 }
-function cmpMatch(it,cf){const st=(CMP.map.get(it)||{}).st;return cf==='chg'?(st==='diff'||st==='geo'):st===cf;}
-/* точная проверка: содержимое файлов побайтно; у DXF с разным содержимым — сравнение геометрии (совмещение + допуск) */
+function cmpMatch(it,cf){const st=(CMP.map.get(it)||{}).st;return cf==='chg'?(st==='diff'||st==='geo'||st==='name'||st==='ren'):st===cf;}
+/* точная проверка в фоне: побайтно; DXF с разным содержимым — по геометрии; непарные — поиск переименованных */
 async function cmpDeep(C){
-  const todo=[...C.map.entries()].filter(([a,c])=>c.st==='same'||(c.st==='diff'&&a.type==='dxf'&&c.b.type==='dxf'));
-  C.deep={n:todo.length,done:0};updCmp();
+  const pairs=[...C.map.entries()].filter(([a,c])=>c.b);
+  const lone=[...C.map.entries()].filter(([a,c])=>c.st==='new');
+  C.deep={n:pairs.length+lone.length,done:0};updCmp();
   const eqBytes=async(f1,f2)=>{if(f1.size!==f2.size)return false;const [x,y]=await Promise.all([f1.arrayBuffer(),f2.arrayBuffer()]);
     const A=new Uint8Array(x),B=new Uint8Array(y);for(let i=0;i<A.length;i++)if(A[i]!==B[i])return false;return true;};
-  for(const [a,c] of todo){
+  const tick=a=>{C.deep.done++;if(C.deep.done%5===0||C.deep.done===C.deep.n){updCmp();if(CMP&&CMP.filter)applyFilter();}else updBadge(a);};
+  for(const [a,c] of pairs){
     if(CMP!==C)return;
     try{
-      if(c.st==='same'&&await eqBytes(a.file,c.b.file)){c.why='';}
+      const nm=c.ch.length?chText(c.ch):'';
+      if(await eqBytes(a.file,c.b.file)){c.st=c.ch.length?'name':'same';c.why=nm;}
       else if(a.type==='dxf'&&c.b.type==='dxf'){
         const [da,db]=await Promise.all([getDoc(a),getDoc(c.b)]);if(CMP!==C)return;
         const r=await geoCompare(da,db,SET.tol);if(CMP!==C)return;
-        const base=c.st==='same'?'содержимое отличается (пересохранён)':c.why;
-        if(r.same){c.st='geo';c.why=base+'; геометрия та же (допуск '+SET.tol+' мм)';}
-        else{c.st='diff';c.why=base+'; геометрия отличается'+(r.fail?': '+r.fail:' (мест: '+r.clusters.length+')');}
-      }else if(c.st==='same'){c.st='diff';c.why='содержимое отличается (имя и размер те же)';}
+        c.geo=r.same?0:(r.clusters||[]).length;
+        if(r.same){c.st='geo';c.why=[nm,'файл пересохранён, геометрия та же (допуск '+SET.tol+' мм)'].filter(Boolean).join('; ');}
+        else{c.st='diff';c.why=[nm,'геометрия отличается'+(r.fail?': '+r.fail:' (мест: '+r.clusters.length+')')].filter(Boolean).join('; ');}
+      }else{c.st='diff';c.why=[nm,'содержимое отличается'].filter(Boolean).join('; ');}
     }catch(e){c.why=(c.why?c.why+'; ':'')+'не проверено: '+e.message;}
-    C.deep.done++;
-    if(C.deep.done%5===0||C.deep.done===C.deep.n){updCmp();if(CMP.filter)applyFilter();}else{const it=a;updBadge(it);}
+    c.pend=false;tick(a);
+  }
+  // переименованные: такой же файл (побайтно) лежит там под другим обозначением
+  const pool=C.onlyB.slice();
+  for(const [a,c] of lone){
+    if(CMP!==C)return;
+    try{for(const b of pool){if(b.type!==a.type||b.file.size!==a.file.size)continue;
+      if(await eqBytes(a.file,b.file)){c.st='ren';c.b=b;c.ch=nameChanges(a,b);c.why=chText(c.ch);pool.splice(pool.indexOf(b),1);C.onlyB.splice(C.onlyB.indexOf(b),1);break;}}}catch(e){}
+    tick(a);
   }
   C.deep=null;updCmp();if(CMP&&CMP.filter)applyFilter();
 }
+const CMP_TXT={same:'=',name:'имя',geo:'≈',diff:'≠',ren:'⇢',new:'нов'};
 function updBadge(it){const c=CMP&&CMP.map.get(it),b=it.cmpb;
     if(!c){b.hidden=true;return;}
-    b.hidden=false;b.className='cmpb '+c.st;b.textContent=c.st==='same'?'=':c.st==='diff'?'≠':c.st==='geo'?'≈':'нов';
-    const more=c.others&&c.others.length>1?' ('+c.others.length+' версии там)':'';
-    b.title=c.st==='same'?'Совпадает с «'+CMP.name+'»'+(CMP.deep?' (имя и размер; содержимое проверяется…)':' — файлы одинаковые побайтно')+' — клик: открыть рядом'
-      :c.st==='geo'?'Пересохранён: '+c.why+' — клик: открыть'+more
-      :c.st==='diff'?'Отличается от «'+CMP.name+'»: '+c.why+' — клик: открыть'+more
-      :'В «'+CMP.name+'» такого обозначения нет';}
+    b.hidden=false;b.className='cmpb '+c.st+(c.pend&&CMP.deep?' pend':'');b.textContent=CMP_TXT[c.st];
+    const more=c.others&&c.others.length>1?' ('+c.others.length+' версии там)':'',W='«'+CMP.name+'»';
+    b.title=c.pend&&CMP.deep?'Проверяется содержимое…'
+      :c.st==='same'?'Одинаковый с '+W+' — клик: открыть рядом'
+      :c.st==='name'?'Имя изменено, содержимое то же: '+c.why+' — клик: открыть рядом'
+      :c.st==='geo'?'Пересохранён: '+c.why+' — клик: открыть рядом'+more
+      :c.st==='diff'?'Отличается от '+W+': '+(c.why||'содержимое')+' — клик: открыть рядом'+more
+      :c.st==='ren'?'Переименован: '+c.why+' — клик: открыть рядом'
+      :'В '+W+' такого файла нет'+(it.type==='dxf'?' — клик: выбрать деталь для сравнения вручную':'');}
 function updCmp(){
   for(const it of items)updBadge(it);
   $('cmpBar').hidden=!CMP;$('btnCmp').classList.toggle('on',!!CMP);
   if(!CMP)return;
-  let n={same:0,diff:0,new:0,geo:0};for(const c of CMP.map.values())n[c.st]++;
+  const n={same:0,name:0,geo:0,diff:0,ren:0,new:0};for(const c of CMP.map.values())n[c.st]++;
   $('cmpInfo').innerHTML='';const s=document.createElement('span');
-  s.innerHTML='Сравнение с «<b></b>»: &nbsp;<b>= '+n.same+'</b> одинаковые · <b>≈ '+n.geo+'</b> пересохранены · <b>≠ '+n.diff+'</b> отличаются · <b>'+n.new+'</b> новых'+
-    (CMP.deep?' · <i>проверка содержимого '+CMP.deep.done+' / '+CMP.deep.n+'…</i>':'');
-  s.querySelector('b').textContent=CMP.name;$('cmpInfo').appendChild(s);
+  const part=(k,t)=>n[k]?' · <b>'+CMP_TXT[k]+' '+n[k]+'</b> '+t:'';
+  s.innerHTML='<b></b> ⇆ <b></b>: '+(part('same','одинаковые')+part('name','имя изменено')+part('geo','пересохранены')+part('diff','отличаются')+part('ren','переименованы')+part('new','новые')).slice(3)+
+    (CMP.deep?' · <i>проверка '+CMP.deep.done+' / '+CMP.deep.n+'…</i>':'');
+  const bs=s.querySelectorAll('b');bs[0].textContent=CMP.scope?CMP.scope.split('/').pop():(items[0]?items[0].path.split('/')[0]:'');bs[1].textContent=CMP.name;$('cmpInfo').appendChild(s);
   $('cmpOnlyBtn').textContent='Только там: '+CMP.onlyB.length;$('cmpOnlyBtn').disabled=!CMP.onlyB.length;
 }
 function cmpEnd(){CMP=null;if(VW.cmp&&!VW.cmp.manual){VW.cmp=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);}updCmp();applyFilter();}
@@ -2763,61 +3121,82 @@ function cmpOpen(a,b,manual){
   const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}
   closePairPanel();showSet([a,b],0);VW.cmp={a,b,manual:!!manual};updateBar();
   if(!docked())setFull(true);
-  if(VW.ovMode&&a.type==='dxf'&&b.type==='dxf'){ovStart();return;}
+  if(a.type==='dxf'&&b.type==='dxf'&&SET.cmpGeo!==false){ovStart();return;}
   setTimeout(()=>{const p=panes[0];if(p&&p.doc&&SET.sync)p.changed();},400);
 }
 /* =====================================================================
-   НАЛОЖЕНИЕ двух DXF: совмещение (авто + вручную) и подсветка отличий
-   красное — есть только в первой детали, зелёное — только во второй, серое — совпадает (в пределах допуска)
+   СРАВНЕНИЕ ДВУХ DXF: детали совмещаются (авто + вручную), отличия подсвечены и описаны словами.
+   Вид «две панели» (по умолчанию): слева открытая деталь, справа — с которой сравниваем, повёрнутая так же;
+     масштаб и сдвиг общие; красное — есть только слева, зелёное — только справа; ①②③ — номера отличий.
+   Вид «наложение» (N): обе детали в одном окне. Мигание (пробел, включается в настройках) — по очереди то одна, то другая.
    ===================================================================== */
 let OV=null;
 if(!(SET.tol>0))SET.tol=0.1;
-function ovClear(){OV=null;for(const p of panes)if(p.ov){p.ov=null;}$('ovBar').hidden=true;}
+if(SET.cmpView!=='over')SET.cmpView='two';
+function ovClear(){OV=null;for(const p of panes)if(p.ov){p.ov=null;}$('ovBar').hidden=true;$('ovList').hidden=true;}
+function ovPanes(){return panes.filter(p=>p.ov);}
 async function ovStart(M,keepView){
-  const c=VW.cmp||(OV&&{a:OV.a,b:OV.b});if(!c)return;const a=c.a,b=c.b;
-  if(a.type!=='dxf'||b.type!=='dxf'){flash('Наложение — только для двух DXF');return;}
-  VW.ovMode=true;
+  const c=VW.cmp||(OV&&{a:OV.a,b:OV.b,manual:true});if(!c)return;const a=c.a,b=c.b;
+  if(a.type!=='dxf'||b.type!=='dxf'){flash('Сравнение контуров — только для двух DXF');return;}
+  VW.plain=false;
   const tok={},again=OV&&OV.a===a&&OV.b===b&&OV.res;   // пересчёт после ручной подгонки — старая картинка видна до готовности
-  if(again){OV.tok=tok;}else OV={a,b,tok,keep:true};
-  if(!(panes[0]&&panes[0].it===a&&VW.set.length===1))showSet([a],0);
+  if(again)OV.tok=tok;else OV={a,b,tok,keep:true,mode:SET.cmpView,blink:null,M:M||null};
+  OV.keep=true;
+  if(OV.mode==='over'){if(!(VW.set.length===1&&panes[0]&&panes[0].it===a))showSet([a],0);}
+  else if(!(VW.set.length===2&&panes[0]&&panes[0].it===a&&panes[1]&&panes[1].it===b))showSet([a,b],0);
   OV.keep=false;VW.cmp=c;
-  const p=panes[0];if(!again)p.ov={busy:true};$('ovBar').hidden=false;
-  const top=x=>x.path.split('/')[0],nA=a.name===b.name?top(a):a.name,nB=a.name===b.name?(b.cmpB&&CMP?CMP.name:top(b)):b.name;
-  $('ovNa').textContent='только в '+nA;$('ovNa').parentNode.title='Красным — есть только в «'+a.path+'»';
-  $('ovNb').textContent='только в '+nB;$('ovNb').parentNode.title='Зелёным — есть только в «'+b.path+'»';
-  $('ovTol').value=String(SET.tol);$('ovRes').className='';$('ovRes').textContent=again?'Пересчитываю…':'Совмещаю…';$('ovNum').textContent='';
+  if(!again)for(const p of panes.slice(0,VW.set.length))p.ov={busy:true};
+  $('ovBar').hidden=false;
+  const top=x=>x.path.split('/')[0],same=a.name===b.name;
+  $('ovNa').textContent=(OV.mode==='over'?'только в ':'слева: ')+(same?top(a):a.name);$('ovNa').parentNode.title='Красным — есть только в «'+a.path+'»';
+  $('ovNb').textContent=(OV.mode==='over'?'только в ':'справа: ')+(same?(b.cmpB&&CMP?CMP.name:top(b)):b.name);$('ovNb').parentNode.title='Зелёным — есть только в «'+b.path+'»';
+  $('ovMode').textContent=OV.mode==='over'?'Две панели':'Наложение';
+  $('ovTol').value=String(SET.tol);$('ovRes').className='';$('ovRes').textContent=again?'Пересчитываю…':'Сравниваю…';$('ovNum').textContent='';
   updateBar();
-  let da,db;try{[da,db]=await Promise.all([getDoc(a),getDoc(b)]);}catch(e){if(OV&&OV.tok===tok){$('ovRes').textContent='Файл не открылся';}return;}
+  let da,db;try{[da,db]=await Promise.all([getDoc(a),getDoc(b)]);}catch(e){if(OV&&OV.tok===tok)$('ovRes').textContent='Файл не открылся';return;}
   if(!OV||OV.tok!==tok)return;
   let r;const t0=performance.now();
   try{r=await geoCompare(da,db,SET.tol,M||null);}catch(e){if(OV&&OV.tok===tok)$('ovRes').textContent='Не удалось сравнить: '+e.message;return;}
-  if(!OV||OV.tok!==tok||p.ov===null)return;
+  if(!OV||OV.tok!==tok)return;
   if(r.fail){$('ovRes').textContent=r.fail;return;}
   if(M&&OV.M!==M)return;   // пока считали, деталь сдвинули ещё — дождаться следующего пересчёта
   OV.res=r;OV.M=r.M;OV.D=null;OV.cur=-1;OV.ms=Math.round(performance.now()-t0);
   const bb=r.bbA.slice();for(const o of r.LB)for(let i=0;i<o.length;i+=2){bb[0]=Math.min(bb[0],o[i]);bb[1]=Math.min(bb[1],o[i+1]);bb[2]=Math.max(bb[2],o[i]);bb[3]=Math.max(bb[3],o[i+1]);}
-  p.ov={res:r,bb};
-  if(!keepView){p.fitted=true;p.applyView('fit');}else p.draw();
-  ovInfo();
+  const sides=OV.mode==='over'?['both']:['a','b'];
+  sides.forEach((sd,i)=>{const p=panes[i];if(!p)return;p.ov={res:r,bb,side:sd};if(!keepView){p.fitted=true;p.applyView('fit');}else p.draw();});
+  ovInfo();ovRenderList();
 }
 function ovInfo(){
   const r=OV&&OV.res;if(!r)return;const e=$('ovRes'),n=r.clusters.length;
   const sz=v=>fmt(v[0])+'×'+fmt(v[1]);
   if(r.same){e.className='ok';e.textContent='✓ Совпадает (допуск '+SET.tol+' мм)';}
-  else{e.className='bad';e.textContent='Отличий: '+n+' · совпадает '+Math.floor(r.a.frac*1000)/10+'% / '+Math.floor(r.b.frac*1000)/10+'%';}
-  e.title='Габарит: '+sz(r.sizeA)+' и '+sz(r.sizeB)+(r.mir?' · вторая деталь отражена':'')+' · '+OV.ms+' мс';
-  $('ovNum').textContent=n?(OV.cur>=0?(OV.cur+1)+' / '+n:n+' шт.'):'';
-  $('ovPrev').disabled=$('ovNext').disabled=!n;
+  else{e.className='bad';e.textContent='Отличий: '+n;}
+  e.title='Совпадает '+Math.floor(r.a.frac*1000)/10+'% контура слева и '+Math.floor(r.b.frac*1000)/10+'% справа · габарит '+sz(r.sizeA)+' и '+sz(r.sizeB)+(r.mir?' · вторая деталь отражена':'')+' · '+OV.ms+' мс';
+  $('ovNum').textContent=n?(OV.cur>=0?(OV.cur+1)+' / '+n:''):'';
+  $('ovPrev').disabled=$('ovNext').disabled=$('ovListBtn').disabled=!n;
+  $('ovListBtn').textContent='Список отличий'+(n?' ('+n+')':'')+' ▾';
+}
+const CIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
+const numTxt=i=>i<20?CIRC[i]:'('+(i+1)+')';
+function ovRenderList(){
+  const L=$('ovList'),r=OV&&OV.res;L.textContent='';if(!r)return;
+  if(!r.clusters.length){L.innerHTML='<div class="pp-empty">Отличий нет</div>';return;}
+  (r.desc&&r.desc.length?r.desc:r.clusters.map(bb=>({bb,text:'отличие'}))).forEach((d,i)=>{
+    const row=document.createElement('div');row.className='ovl'+(i===OV.cur?' cur':'');row.innerHTML='<b></b><span></span>';
+    row.querySelector('b').textContent=numTxt(i);row.querySelector('span').textContent=d.text;
+    row.onclick=()=>{OV.cur=i-1;ovGo(1);};L.appendChild(row);});
 }
 function ovGo(d){
   const r=OV&&OV.res;if(!r||!r.clusters.length)return;const n=r.clusters.length;
-  OV.cur=OV.cur<0?(d>0?0:n-1):(OV.cur+d+n)%n;const c=r.clusters[OV.cur],p=panes[0];
+  OV.cur=OV.cur<0?(d>0?0:n-1):(OV.cur+d+n)%n;const c=r.clusters[OV.cur];
   const w=Math.max(c[2]-c[0],c[3]-c[1],Math.max(r.sizeA[0],r.sizeA[1])*0.04);
-  const s=Math.min(p.W/(w*2.2),p.H/(w*2.2));p.fitted=false;p.s=p.clampS(s);p.cx=(c[0]+c[2])/2;p.cy=(c[1]+c[3])/2;p.draw();ovInfo();
+  for(const p of ovPanes()){const s=Math.min(p.W/(w*2.4),p.H/(w*2.4));p.fitted=false;p.s=p.clampS(s);p.cx=(c[0]+c[2])/2;p.cy=(c[1]+c[3])/2;p.draw();}
+  ovInfo();ovRenderList();
+  const t=r.desc&&r.desc[OV.cur];if(t)flash(numTxt(OV.cur)+' '+t.text);
 }
 /* ручная подгонка второй детали: сдвиг (Shift+перетаскивание), поворот на 90°, зеркало — затем пересчёт отличий */
 function ovApply(D){
-  if(!OV||!OV.res)return;OV.M=GEO.mul(D,OV.M);OV.D=OV.D?GEO.mul(D,OV.D):D;panes[0].draw();
+  if(!OV||!OV.res)return;OV.M=GEO.mul(D,OV.M);OV.D=OV.D?GEO.mul(D,OV.D):D;for(const p of ovPanes())p.draw();
   clearTimeout(OV.t);OV.t=setTimeout(()=>ovStart(OV.M,true),250);
 }
 function ovNudge(p,dx,dy){ovApply([1,0,0,1,dx,dy]);}
@@ -2828,23 +3207,43 @@ function ovRot(deg,mir){if(!OV||!OV.res)return;const [cx,cy]=ovCenterB(),a=deg*M
   const R=[c*m,s*m,-s,c,0,0];ovApply(GEO.mul([1,0,0,1,cx,cy],GEO.mul(R,[1,0,0,1,-cx,-cy])));}
 function ovPaint(p,c,d){
   const o=p.ov,r=o.res,D=OV&&OV.D,s=p.s;
+  let side=o.side;if(side==='both'&&OV&&OV.blink)side=OV.blink;   // мигание: по очереди
   c.save();c.setTransform(s*d,0,0,-s*d,(p.W/2-p.cx*s)*d,(p.H/2+p.cy*s)*d);c.lineCap='round';c.lineJoin='round';
-  const light=lum(dxfBg())>150,base=light?'#6b7078':'#9aa0a8';
+  const light=lum(dxfBg())>150,base=light?'#4b5058':'#c4c9d0',dim=light?'#a0a5ad':'#5d636c';
   const poly=(L,M)=>{c.beginPath();for(const q of L){
       if(M){c.moveTo(M[0]*q[0]+M[2]*q[1]+M[4],M[1]*q[0]+M[3]*q[1]+M[5]);for(let i=2;i<q.length;i+=2)c.lineTo(M[0]*q[i]+M[2]*q[i+1]+M[4],M[1]*q[i]+M[3]*q[i+1]+M[5]);}
       else{c.moveTo(q[0],q[1]);for(let i=2;i<q.length;i+=2)c.lineTo(q[i],q[i+1]);}}c.stroke();};
-  const runs=(R,M)=>{c.beginPath();for(const q of R){const f=(i)=>M?[M[0]*q.x[i]+M[2]*q.y[i]+M[4],M[1]*q.x[i]+M[3]*q.y[i]+M[5]]:[q.x[i],q.y[i]];
-      c.moveTo(...f(0));for(let i=1;i<q.x.length;i++)c.lineTo(...f(i));}c.stroke();};
-  c.lineWidth=1.2*(SET.lineK||1)/s;c.strokeStyle=base;poly(r.LA);
-  if(D){c.strokeStyle='#4ea1ff';poly(r.LB,D);}            // вторая деталь двигается — отличия пересчитываются после остановки
-  else{c.globalAlpha=0.9;c.strokeStyle=base;poly(r.LB);c.globalAlpha=1;
-    c.lineWidth=3*(SET.lineK||1)/s;c.strokeStyle='#ff4d4d';runs(r.a.runs);c.strokeStyle='#39d353';runs(r.b.runs);
-    if(OV&&OV.cur>=0&&r.clusters[OV.cur]){const q=r.clusters[OV.cur],g=8/s;c.setLineDash([6/s,4/s]);c.lineWidth=1.5/s;c.strokeStyle='#ffd23f';c.strokeRect(q[0]-g,q[1]-g,q[2]-q[0]+2*g,q[3]-q[1]+2*g);c.setLineDash([]);}}
+  const runs=R=>{c.beginPath();for(const q of R){c.moveTo(q.x[0],q.y[0]);for(let i=1;i<q.x.length;i++)c.lineTo(q.x[i],q.y[i]);}c.stroke();};
+  const lw=1.3*(SET.lineK||1)/s,hw=3.2*(SET.lineK||1)/s;
+  if(side==='a'||side==='both'){c.lineWidth=lw;c.strokeStyle=base;poly(r.LA);}
+  if(side==='b'||side==='both'){c.lineWidth=lw;c.strokeStyle=D?'#4ea1ff':(side==='both'?base:base);poly(r.LB,D||null);}
+  if(!D){
+    c.lineWidth=hw;
+    if(side==='a'||side==='both'){c.strokeStyle='#ff4d4d';runs(r.a.runs);}
+    if(side==='b'||side==='both'){c.strokeStyle='#39d353';runs(r.b.runs);}
+    // номера отличий и текущее — в рамке
+    c.setTransform(d,0,0,d,0,0);c.font='bold 15px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';
+    r.clusters.forEach((q,i)=>{
+      const X=p.W/2+((q[0]+q[2])/2-p.cx)*s,Y0=p.H/2-(q[3]-p.cy)*s,Y=Y0-14;if(X<-20||X>p.W+20||Y<-20||Y>p.H+20)return;
+      const cur=OV&&OV.cur===i;c.fillStyle=cur?'#ffd23f':'rgba(20,22,26,.85)';c.beginPath();c.arc(X,Y,11,0,Math.PI*2);c.fill();
+      c.lineWidth=1.5;c.strokeStyle='#ffd23f';c.stroke();c.fillStyle=cur?'#111':'#ffd23f';c.fillText(String(i+1),X,Y+0.5);
+      if(cur){const g=8;c.setLineDash([6,4]);c.lineWidth=1.5;c.strokeRect(p.W/2+(q[0]-p.cx)*s-g,p.H/2-(q[3]-p.cy)*s-g,(q[2]-q[0])*s+2*g,(q[3]-q[1])*s+2*g);c.setLineDash([]);}
+    });
+  }
+  if(OV&&OV.blink&&o.side==='both'){c.setTransform(d,0,0,d,0,0);c.font='bold 14px system-ui,sans-serif';c.textAlign='left';c.fillStyle=OV.blink==='a'?'#ff4d4d':'#39d353';
+    c.fillText(OV.blink==='a'?'◀ слева: '+OV.a.name:'▶ справа: '+OV.b.name,12,p.H-14);}
   c.restore();
 }
-function ovEnd(){const c=VW.cmp;VW.ovMode=false;ovClear();if(c)showSet([c.a,c.b],0);updateBar();}
-$('vOv').onclick=()=>{if(OV)ovEnd();else ovStart();};
+function ovMode(m){if(!OV)return;OV.mode=m;SET.cmpView=m;saveSet();OV.blink=null;const M=OV.M;OV.res=null;ovStart(M,false);}
+function ovEnd(){const c=VW.cmp;ovClear();VW.plain=true;if(c)showSet([c.a,c.b],0);updateBar();}
+function ovBlink(){ // пробел в наложении: по очереди только одна деталь, только другая, обе
+  if(!OV||!OV.res)return false;
+  if(OV.mode!=='over'){ovMode('over');}
+  OV.blink=OV.blink==='a'?'b':OV.blink==='b'?null:'a';for(const p of ovPanes())p.draw();return true;}
+$('vOv').onclick=()=>{if(OV)ovMode(OV.mode==='over'?'two':'over');else ovStart();};
+$('ovMode').onclick=()=>ovMode(OV&&OV.mode==='over'?'two':'over');
 $('ovEnd').onclick=ovEnd;$('ovPrev').onclick=()=>ovGo(-1);$('ovNext').onclick=()=>ovGo(1);
+$('ovListBtn').onclick=()=>{$('ovList').hidden=!$('ovList').hidden;ovRenderList();};
 $('ovAuto').onclick=()=>{if(OV){OV.D=null;ovStart(null,false);}};
 $('ovRotL').onclick=()=>ovRot(90);$('ovRotR').onclick=()=>ovRot(-90);$('ovMir').onclick=()=>ovRot(0,true);
 $('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,true);};
@@ -2895,7 +3294,7 @@ function pickRender(){
     d.title='Габарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';
     d.onclick=()=>pickGo(r.it);L.appendChild(d);}
 }
-function pickGo(b){const a=PICK.a;pickClose();if(!a)return;VW.ovMode=true;cmpOpen(a,b,true);}
+function pickGo(b){const a=PICK.a;pickClose();if(!a)return;cmpOpen(a,b,true);}
 function pickClose(){PICK.tok++;$('pickPanel').hidden=true;}
 $('vWith').onclick=()=>pickOpen();
 $('pickClose').onclick=pickClose;$('pickQ').oninput=pickRender;
@@ -2909,28 +3308,50 @@ function cmpOpenFor(a){
 async function cmpFromHandle(h,rid){
   $('cmpPanel').hidden=true;$('status').textContent='Чтение папки для сравнения «'+h.name+'»…';
   const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
-  cmpSet(out,h.name,rid||await rememberRoot(h));updateStatus();
+  const id=rid||await rememberRoot(h);
+  if(id){const L=(LS.get('cmpRecent',[])||[]).filter(x=>x.id!==id);L.unshift({id,name:h.name,t:Date.now(),n:out.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).length});LS.set('cmpRecent',L.slice(0,12));}
+  cmpSet(out,h.name,id);updateStatus();
+}
+/* окно «Сравнить с папкой»: недавние папки сравнения, ярлыки, история.
+   Папку, открытую сейчас (или внутри неё), выбрать нельзя. Путь: Chrome не отдаёт полный путь на диске,
+   поэтому показывается цепочка папок от известной открытой когда-либо папки. */
+async function curDirHandle(){
+  const rid=items[0]&&items[0].rid;if(!rid)return null;
+  try{const rr=await IDB.get(rid,'roots');if(!rr||!rr.h)return null;let h=rr.h;
+    if(curDir)for(const seg of curDir.split('/').slice(1))h=await h.getDirectoryHandle(seg);return h;}catch(e){return null;}
 }
 async function renderCmpPanel(){
   const R=$('cmpRecent');R.textContent='';
   if(!FSA){R.innerHTML='<div class="pp-empty">На этом устройстве — только «Выбрать папку…».</div>';return;}
   const seen=new Set(),list=[];
+  for(const x of LS.get('cmpRecent',[])||[])if(!seen.has(x.id)){seen.add(x.id);list.push({label:x.name,root:x.id,dir:x.name,rootName:x.name,t:x.t,n:x.n,recent:true});}
   for(const p of PINS)if(p.kind==='folder'&&!seen.has(p.root+'|'+p.dir)){seen.add(p.root+'|'+p.dir);list.push({label:'★ '+p.label,root:p.root,dir:p.dir,rootName:p.rootName});}
-  for(const e of HIST)if(e.kind==='folder'&&e.root&&!seen.has(e.root+'|'+e.rootName)&&list.length<14){seen.add(e.root+'|'+e.rootName);list.push({label:e.rootName,root:e.root,dir:e.rootName,rootName:e.rootName});}
-  const cur=items[0]&&items[0].rid;
+  for(const e of HIST)if(e.kind==='folder'&&e.root&&!seen.has(e.root)&&!seen.has(e.root+'|'+e.rootName)&&list.length<16){seen.add(e.root+'|'+e.rootName);list.push({label:e.rootName,root:e.root,dir:e.rootName,rootName:e.rootName});}
+  const cur=await curDirHandle(),roots=((await IDB.all('roots').catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory').sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,30);
+  const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});};
   for(const x of list){
-    if(x.root===cur&&x.dir===x.rootName)continue;
     const r=document.createElement('div');r.className='pin';r.innerHTML='<span class="pi">📁</span><span class="pt"><div class="pl"></div><div class="pp"></div></span>';
-    r.querySelector('.pl').textContent=x.label;r.querySelector('.pp').textContent=x.dir.split('/').join(' / ');
+    r.querySelector('.pl').textContent=x.label;
+    const info=[x.dir.split('/').join(' / ')];if(x.n!=null)info.push('файлов: '+x.n);if(x.t)info.push('сравнивали '+fmtT(x.t));
+    r.querySelector('.pp').textContent=info.join(' · ');R.appendChild(r);
+    // та же папка, что открыта? и где она лежит
+    (async()=>{
+      let h=null;try{const rr=await IDB.get(x.root,'roots');h=rr&&rr.h;if(h&&x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1))h=await h.getDirectoryHandle(seg);}}catch(e){h=null;}
+      if(!h||!cur)return;
+      let self=false;try{self=await h.isSameEntry(cur)||!!(await cur.resolve(h));}catch(e){}
+      if(self){r.classList.add('dis');r.title='Эта папка открыта сейчас — с ней сравнивать нечего';r.querySelector('.pl').textContent=x.label+' — открыта сейчас';return;}
+      for(const rt of roots){try{if(await rt.h.isSameEntry(h))continue;const p=await rt.h.resolve(h);
+        if(p&&p.length){r.querySelector('.pp').textContent=[[rt.name,...p].join(' / ')].concat(info.slice(1)).join(' · ');break;}}catch(e){}}
+    })();
     r.onclick=async()=>{
+      if(r.classList.contains('dis')){flash('Эта папка открыта сейчас — выберите другую (старый заказ, архив)');return;}
       const rr=await IDB.get(x.root,'roots');if(!rr||!rr.h){flash('Доступ не сохранился — выберите папку заново');return;}
       try{let q=await rr.h.queryPermission({mode:'read'});if(q!=='granted')q=await rr.h.requestPermission({mode:'read'});if(q!=='granted')return;}catch(e){return;}
-      let h=rr.h;if(x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1)){try{h=await h.getDirectoryHandle(seg);}catch(e){flash('Папка «'+x.dir+'» не найдена');return;}}}
-      cmpFromHandle(h,x.dir===x.rootName?x.root:null);
+      let hh=rr.h;if(x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1)){try{hh=await hh.getDirectoryHandle(seg);}catch(e){flash('Папка «'+x.dir+'» не найдена');return;}}}
+      cmpFromHandle(hh,x.dir===x.rootName?x.root:null);
     };
-    R.appendChild(r);
   }
-  if(!R.children.length)R.innerHTML='<div class="pp-empty">Здесь появятся ярлыки и недавние папки.</div>';
+  if(!R.children.length)R.innerHTML='<div class="pp-empty">Здесь появятся папки, с которыми уже сравнивали, ярлыки и недавние.</div>';
 }
 $('btnCmp').onclick=()=>{
   if(CMP){if(confirm('Закончить сравнение с «'+CMP.name+'»?'))cmpEnd();return;}
@@ -2995,6 +3416,8 @@ document.addEventListener('keydown',e=>{
     let i=ts.findIndex(t=>t.classList.contains('cur')),h=true;
     if(i<0&&VW.idx>=0)i=ts.indexOf(view[VW.idx].tile);
     if(k==='ArrowLeft'&&(list||i<=0||i%cols===0)&&toTree()){e.preventDefault();return;}  // из первого столбца — в дерево
+    if(k==='Tab'&&i>=0&&ts[i]._it){e.preventDefault();kbMark(ts[i]);openSel('pair',e.shiftKey?-1:1);return;}
+    if(/^[rRкК]$/.test(k)&&i>=0&&ts[i]._it){e.preventDefault();kbMark(ts[i]);openSel('side');return;}
     if(/^[vVмМ]$/.test(k)&&i>=0&&ts[i]._it&&ts[i]._it.type==='dxf'){e.preventDefault();showItem(view.indexOf(ts[i]._it));if(!docked())setFull(true);pickOpen(ts[i]._it);return;}
     if(k==='ArrowRight')i=i<0?0:i+1;else if(k==='ArrowLeft')i=i<0?0:i-1;
     else if(k==='ArrowDown')i=i<0?0:i+cols;else if(k==='ArrowUp')i=i<0?0:i-cols;
@@ -3008,7 +3431,8 @@ document.addEventListener('keydown',e=>{
   }
   const ap=panes[VW.active];let h=true;
   const gridDock=docked()&&!VW.full&&SET.layout!=='list'&&VW.set.length<2;
-  if(k==='ArrowRight'||k===' ')step(1);
+  if(k===' '&&OV&&SET.blink&&ovBlink());   // мигание в сравнении
+  else if(k==='ArrowRight'||k===' ')step(1);
   else if(k==='ArrowLeft'){if(docked()&&!VW.full&&SET.layout==='list'&&VW.idx<=0&&toTree());else step(-1);}
   else if(k==='ArrowDown'||k==='ArrowUp'){const d=k==='ArrowDown'?1:-1;
     if(gridDock)showItem(Math.min(Math.max((VW.idx<0?0:VW.idx)+d*gridCols(),0),view.length-1));else step(d);}
@@ -3017,7 +3441,9 @@ document.addEventListener('keydown',e=>{
   else if(k==='Tab'&&monOn())monTab(e.shiftKey?-1:1);
   else if(k==='Tab'){if(VW.set.length>1){const n=VW.set.length;setActive(panes[(VW.active+(e.shiftKey?-1:1)+n)%n]);}else cyclePair(e.shiftKey?-1:1);}
   else if(k==='Enter'){if(docked()&&!VW.full&&VW.idx>=0)setFull(true);else h=false;}
+  else if(k==='Escape'&&OV&&!$('ovList').hidden)$('ovList').hidden=true;
   else if(k==='Escape'&&OV)ovEnd();
+  else if(/^[nNтТ]$/.test(k)&&OV)ovMode(OV.mode==='over'?'two':'over');
   else if(/^[nNтТ]$/.test(k)&&!$('vOv').hidden)$('vOv').click();
   else if(/^[vVмМ]$/.test(k)&&!$('vWith').hidden)pickOpen();
   else if((k===','||k==='б'||k==='Б')&&OV)ovGo(-1);
@@ -3042,6 +3468,30 @@ document.addEventListener('keydown',e=>{
 });
 
 placeViewer();updateStatus();updateBar();
+
+/* справка: текст — в help.part; здесь только открыть/закрыть, оглавление и поиск */
+function helpOpen(sec){
+  const P=$('helpPanel'),N=$('helpNav'),B=$('helpBody');
+  if(!N.children.length)for(const x of B.querySelectorAll('section')){const a=document.createElement('a');a.textContent=x.dataset.t;a.onclick=()=>{$('helpQ').value='';helpFind();x.scrollIntoView({block:'start'});};N.appendChild(a);}
+  P.hidden=false;if(sec){const x=[...B.querySelectorAll('section')].find(s=>s.dataset.t===sec);if(x)x.scrollIntoView({block:'start'});}
+  setTimeout(()=>$('helpQ').focus(),0);
+}
+function helpFind(){
+  const q=$('helpQ').value.trim().toLowerCase(),B=$('helpBody');
+  for(const m of B.querySelectorAll('mark'))m.replaceWith(document.createTextNode(m.textContent));B.normalize();
+  for(const x of B.querySelectorAll('section')){
+    const hit=!q||x.textContent.toLowerCase().includes(q);x.classList.toggle('hid',!hit);
+    if(q&&hit){const w=document.createTreeWalker(x,NodeFilter.SHOW_TEXT),L=[];while(w.nextNode())L.push(w.currentNode);
+      for(const t of L){const i=t.data.toLowerCase().indexOf(q);if(i<0)continue;const r=t.splitText(i);r.splitText(q.length);const m=document.createElement('mark');m.textContent=r.data;r.replaceWith(m);}}
+  }
+}
+$('btnHelp').onclick=()=>helpOpen();$('helpClose').onclick=()=>{$('helpPanel').hidden=true;};
+$('helpPanel').addEventListener('click',e=>{if(e.target.id==='helpPanel')$('helpPanel').hidden=true;});
+$('helpQ').oninput=helpFind;
+document.addEventListener('keydown',e=>{
+  if(e.key==='F1'){e.preventDefault();$('helpPanel').hidden?helpOpen():($('helpPanel').hidden=true);e.stopImmediatePropagation();return;}
+  if(!$('helpPanel').hidden){if(e.key==='Escape'){$('helpPanel').hidden=true;}e.stopImmediatePropagation();}   // пока открыта справка, клавиши программы не срабатывают
+},true);
 
 /* при запуске — открыть последнюю папку (если браузер сохранил разрешение; иначе кнопка в пустом окне) */
 (async()=>{

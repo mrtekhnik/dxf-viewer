@@ -11,7 +11,7 @@ async def main():
     await pg.select_option('#cmpFilter','chg'); await pg.wait_for_timeout(200); print('filter chg:', await pg.locator('#grid .tile').count()); await pg.select_option('#cmpFilter','')
     await pg.locator('.tile', has_text='200001.003').locator('.cmpb').click(); await pg.wait_for_timeout(1200)
     print('vOv visible', await pg.is_visible('#vOv'))
-    await pg.click('#vOv'); await pg.wait_for_timeout(2000)
+    await pg.wait_for_timeout(1500)
     print('ov:', await pg.inner_text('#ovRes'), '|', await pg.inner_text('#ovNum'), '| panes', await pg.evaluate('VW.set.length'))
     await pg.screenshot(path='t40a.png')
     await pg.keyboard.press('.'); await pg.wait_for_timeout(300); print('next diff', await pg.inner_text('#ovNum'))

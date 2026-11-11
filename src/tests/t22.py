@@ -5,6 +5,7 @@ async def main():
   async with async_playwright() as p:
     ctx=await p.chromium.launch_persistent_context('/tmp/claude-0/t/pf_30a',executable_path='/usr/bin/google-chrome',viewport={'width':1300,'height':800})
     pg=ctx.pages[0]; errs=[]; pg.on('pageerror',lambda e: errs.append(str(e)))
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     await pg.goto(U); await pg.wait_for_timeout(1500)
     d1=base64.b64encode(open('dxf/деталь_01.dxf','rb').read()).decode(); d2=base64.b64encode(open('dxf/деталь_015.dxf','rb').read()).decode(); pdf=base64.b64encode(open('dxf/сборка_СБ.pdf','rb').read()).decode()
     await pg.evaluate("""async ([a,b,c])=>{const root=await navigator.storage.getDirectory();

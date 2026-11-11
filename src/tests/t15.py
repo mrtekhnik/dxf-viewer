@@ -3,6 +3,7 @@ from playwright.async_api import async_playwright
 async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page(viewport={'width':1400,'height':820})
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     errs=[]; pg.on('pageerror',lambda e: errs.append(str(e)))
     await pg.goto('file:///home/claude/dxf-viewer.html'); await pg.set_input_files('#inFolder','tree/Изделие 320'); await pg.wait_for_timeout(1500)
     print('TREE:', (await pg.inner_text('#treeBody')).replace('\n',' '))
@@ -15,6 +16,7 @@ async def main():
     await pg.click('#btnLayout'); await pg.wait_for_timeout(1200); await pg.screenshot(path='s_tree_expl.png')
     await pg.locator('.tr.all').click(); await pg.wait_for_timeout(500); print('all:', await pg.locator('#grid .tile').count())
     pg2=await b.new_page(viewport={'width':390,'height':800},is_mobile=True,has_touch=True)
+    await pg2.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     await pg2.goto('file:///home/claude/dxf-viewer.html'); await pg2.set_input_files('#inFolder','tree/Изделие 320'); await pg2.wait_for_timeout(1000)
     print('mobile tree visible before:', await pg2.is_visible('#tree')); await pg2.tap('#btnTree'); await pg2.wait_for_timeout(300)
     print('after tap:', await pg2.is_visible('#tree')); await pg2.screenshot(path='s_tree_m.png')

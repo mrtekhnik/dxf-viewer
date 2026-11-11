@@ -3,7 +3,7 @@
 
     python src/build.py
 
-Склеивает head.part + core.part + geom.part + main.part, подставляет pdf.js и пишет:
+Склеивает head.part + help.part + core.part + geom.part + main.part, подставляет pdf.js и пишет:
     src/dist/dxf-viewer.html      — один файл, pdf.js внутри, работает офлайн без установки
     src/dist/pwa/                 — приложение для GitHub Pages (index.html, sw.js, manifest, иконки, lib/)
     src/dist/dxf-viewer.src.html  — склеенный исходник без pdf.js (для проверки)
@@ -24,7 +24,7 @@ def rd(p): return open(p, encoding='utf-8', newline='').read()
 def wr(p, t): open(p, 'w', encoding='utf-8', newline='').write(t)
 
 # 0) склейка трёх частей
-s = ''.join(rd(os.path.join(HERE, p)) for p in ('head.part', 'core.part', 'geom.part', 'main.part'))
+s = ''.join(rd(os.path.join(HERE, p)) for p in ('head.part', 'help.part', 'core.part', 'geom.part', 'main.part'))
 wr(os.path.join(DIST, 'dxf-viewer.src.html'), s)
 
 lic = '/* pdf.js 3.11.174 (c) Mozilla Foundation, Apache License 2.0 */\n'

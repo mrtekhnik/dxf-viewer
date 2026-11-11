@@ -4,6 +4,7 @@ JS_DARK="""(()=>{const p=panes[0],c=p.ctx,w=p.cv.width,h=p.cv.height,d=c.getImag
   for(let i=0;i<d.length;i+=4){const l=(d[i]+d[i+1]+d[i+2])/3;if(l<70)k++;else if(l<200)g++;}return {black:k,gray:g}})()"""
 async def run(b,url,label):
   pg=await b.new_page(viewport={'width':1400,'height':850},device_scale_factor=1)
+  await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
   errs=[]; pg.on('pageerror',lambda e: errs.append(str(e)))
   await pg.goto(url); await pg.set_input_files('#inFiles',['dxf/деталь_01.pdf','dxf/тяжёлый_1.pdf']); await pg.wait_for_timeout(1500)
   await pg.keyboard.press('Escape') if await pg.evaluate('VW.full') else None
@@ -32,6 +33,7 @@ async def main():
     await run(b,'file:///tmp/claude-0/t/oldb/src/dist/dxf-viewer.html','СТАРАЯ')
     await run(b,'file:///home/claude/dxf-viewer.html','НОВАЯ ')
     pg=await b.new_page(); await pg.goto('file:///home/claude/dxf-viewer.html'); await pg.set_input_files('#inFiles',['dxf/деталь_01.dxf','dxf/деталь_02_R12.dxf']); await pg.wait_for_timeout(800)
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     await pg.locator('.tile').first.click(); await pg.wait_for_timeout(500)
     s0=await pg.evaluate('[SET.side,SET.lineK]')
     await pg.keyboard.press('Control+r') if False else await pg.evaluate("document.dispatchEvent(new KeyboardEvent('keydown',{key:'r',ctrlKey:true,bubbles:true}));document.dispatchEvent(new KeyboardEvent('keydown',{key:'B',ctrlKey:true,shiftKey:true,bubbles:true}))")

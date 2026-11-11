@@ -4,6 +4,7 @@ async def main():
   async with async_playwright() as p:
     ctx=await p.chromium.launch_persistent_context('/tmp/claude-0/t/pf_x',executable_path='/usr/bin/google-chrome',viewport={'width':1100,'height':700})
     pg=ctx.pages[0]; errs=[]; pg.on('pageerror',lambda e: errs.append(str(e)))
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     await pg.goto('file:///home/claude/dxf-viewer.html'); await pg.set_input_files('#inFiles',['dxf/деталь_01.dxf','dxf/деталь_01.pdf']); await pg.wait_for_timeout(1200)
     await pg.locator('.tile', has_text='деталь_01.dxf').click(); await pg.wait_for_timeout(1200)
     await pg.screenshot(path='x0.png'); print('0:', await pg.inner_text('#vDims'))

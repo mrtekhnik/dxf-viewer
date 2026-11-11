@@ -4,6 +4,7 @@ async def main():
   async with async_playwright() as p:
     ctx=await p.chromium.launch_persistent_context('/tmp/claude-0/t/pf_24',executable_path='/usr/bin/google-chrome',viewport={'width':1400,'height':820})
     pg=ctx.pages[0]; errs=[]; pg.on('pageerror',lambda e: errs.append(str(e))); pg.on('console',lambda m: errs.append(m.text[:150]) if m.type=='error' else None)
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     pg.on('dialog', lambda d: asyncio.ensure_future(d.accept()))
     await pg.goto('file:///home/claude/dxf-viewer.html'); await pg.set_input_files('#inFolder','tree/Изделие 320'); await pg.wait_for_timeout(1800)
     # 1 rotation chip + badge + original toggle

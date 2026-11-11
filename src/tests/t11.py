@@ -4,6 +4,7 @@ async def name(pg): return (await pg.inner_text('#vName')).split('· ')[-1]
 async def main():
   async with async_playwright() as p:
     b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page(viewport={'width':1400,'height':850})
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     errs=[]; pg.on('pageerror',lambda e: errs.append('PAGEERR '+str(e))); pg.on('console',lambda m: errs.append(m.text[:200]) if m.type=='error' else None)
     await pg.goto('file:///home/claude/dxf-viewer.html')
     await pg.set_input_files('#inFolder','kit/Заказ'); await pg.wait_for_timeout(2500)

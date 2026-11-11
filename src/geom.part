@@ -90,7 +90,8 @@ function GEOCORE(){
     for(const p of P)for(let i=0;i<p.x.length;i++){const dx=p.x[i]-mx,dy=p.y[i]-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;}
     const ang=0.5*Math.atan2(2*sxy,sxx-syy);
     const pts=[];for(const p of P)for(let i=0;i<p.x.length;i++)pts.push(p.x[i],p.y[i]);
-    return {L,bbox:[x0,y0,x1,y1],size,len,cx:mx,cy:my,ang,pts,n:L.length,F:feats(doc)};
+    const C=[];for(const G of doc.groups||[]){if(G.off)continue;for(const p of G.prims)if(p[0]==='C')C.push([p[1],p[2],p[3]]);}
+    return {L,bbox:[x0,y0,x1,y1],size,len,cx:mx,cy:my,ang,pts,n:L.length,F:feats(doc),C};
   }
   /* сколько точек B (после M) лежат на A ближе r — оценка совмещения */
   function score(IA,B,M,r,maxN){
@@ -187,11 +188,53 @@ function GEOCORE(){
     return {LB,a,b,clusters:cl,same:!a.runs.length&&!b.runs.length};
   }
   /* всё сразу: подготовка, совмещение, отличия */
+  /* описание отличий словами — по каждой группе: отверстия (окружности) и участки контура.
+     «слева» — первая деталь (A), «справа» — вторая (B). */
+  const f1=v=>{const r=Math.round(v*10)/10;return String(r).replace('.',',');};
+  function describe(A,B,M,d,tol){
+    const CB=B.C.map(c=>[M[0]*c[0]+M[2]*c[1]+M[4],M[1]*c[0]+M[3]*c[1]+M[5],c[2]]);
+    const inB=(c,b)=>c[0]>=b[0]-c[2]-tol&&c[0]<=b[2]+c[2]+tol&&c[1]>=b[1]-c[2]-tol&&c[1]<=b[3]+c[2]+tol;
+    const near=(c,L,fr)=>L.find(x=>Math.hypot(x[0]-c[0],x[1]-c[1])<=fr&&x!==c);
+    const usedA=new Set(),usedB=new Set();
+    return d.clusters.map(bb=>{
+      const ca=A.C.filter(c=>inB(c,bb)),cb=CB.filter(c=>inB(c,bb)),items=[];
+      const same=(x,y)=>Math.hypot(x[0]-y[0],x[1]-y[1])<=tol&&Math.abs(x[2]-y[2])<=tol;
+      const ra=ca.filter(c=>!cb.some(y=>same(c,y))),rb=cb.filter(c=>!ca.some(y=>same(c,y)));
+      const grp=new Map(),add=(k,t)=>{const g=grp.get(k)||{n:0,t};g.n++;grp.set(k,g);};
+      for(const c of ra){if(usedA.has(c))continue;
+        const y=rb.find(y=>!usedB.has(y)&&Math.hypot(y[0]-c[0],y[1]-c[1])<=tol);           // тот же центр, другой диаметр
+        if(y){usedA.add(c);usedB.add(y);add('d'+f1(c[2]*2)+'>'+f1(y[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' слева → Ø'+f1(y[2]*2)+' справа');continue;}
+        const z=rb.find(y=>!usedB.has(y)&&Math.abs(y[2]-c[2])<=tol&&Math.hypot(y[0]-c[0],y[1]-c[1])<=Math.max(c[2]*4,A.size*0.05)); // тот же диаметр, сдвинуто
+        if(z){usedA.add(c);usedB.add(z);const dd=Math.hypot(z[0]-c[0],z[1]-c[1]);add('m'+f1(c[2]*2)+'|'+f1(dd),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' смещено на '+f1(dd)+' мм');continue;}
+      }
+      for(const c of ra)if(!usedA.has(c)){usedA.add(c);add('a'+f1(c[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' — только слева');}
+      for(const c of rb)if(!usedB.has(c)){usedB.add(c);add('b'+f1(c[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' — только справа');}
+      for(const g of grp.values())items.push(g.t(g.n));
+      // участки контура, не объяснённые отверстиями
+      const runLen=(rs,circ)=>{let L=0;for(const r of rs){const x0=r.x[0],y0=r.y[0];if(r.x.length<2)continue;
+          let inb=false;for(let i=0;i<r.x.length;i++)if(r.x[i]>=bb[0]-1e-6&&r.x[i]<=bb[2]+1e-6&&r.y[i]>=bb[1]-1e-6&&r.y[i]<=bb[3]+1e-6){inb=true;break;}
+          if(!inb)continue;let mid=Math.floor(r.x.length/2),onC=circ.some(c=>Math.abs(Math.hypot(r.x[mid]-c[0],r.y[mid]-c[1])-c[2])<=tol*2);if(onC)continue;
+          for(let i=1;i<r.x.length;i++)L+=Math.hypot(r.x[i]-r.x[i-1],r.y[i]-r.y[i-1]);}return L;};
+      const la=runLen(d.a.runs,ca),lb=runLen(d.b.runs,cb.map(c=>c));
+      if(la>tol*5||lb>tol*5){
+        if(la>tol*5&&lb>tol*5){ // насколько разошлись: среднее расстояние от участка B до участка A
+          let s=0,n=0;const pa=[];for(const r of d.a.runs)for(let i=0;i<r.x.length;i++)if(r.x[i]>=bb[0]&&r.x[i]<=bb[2]&&r.y[i]>=bb[1]&&r.y[i]<=bb[3])pa.push(r.x[i],r.y[i]);
+          for(const r of d.b.runs)for(let i=0;i<r.x.length;i+=3){if(!(r.x[i]>=bb[0]&&r.x[i]<=bb[2]&&r.y[i]>=bb[1]&&r.y[i]<=bb[3]))continue;let m=Infinity;for(let j=0;j<pa.length;j+=2)m=Math.min(m,Math.hypot(pa[j]-r.x[i],pa[j+1]-r.y[i]));if(isFinite(m)){s+=m;n++;}}
+          const sh=n?s/n:0;
+          const mx=Math.max(la,lb);items.push(sh<=Math.max(1,mx*0.05)&&Math.abs(la-lb)<0.3*mx?'контур изменён: сдвиг ≈ '+f1(sh)+' мм на участке '+f1(Math.max(la,lb))+' мм':'контур изменён: слева '+f1(la)+' мм, справа '+f1(lb)+' мм');
+        }else if(la>tol*5)items.push('участок контура '+f1(la)+' мм — только слева');
+        else items.push('участок контура '+f1(lb)+' мм — только справа');
+      }
+      if(!items.length)items.push('мелкое отличие');
+      return {bb,text:items.join('; ')};
+    });
+  }
   function compare(docA,docB,tol,M0){ // M0 — положение B задано вручную (без автоподбора)
     const A=prep(docA,tol),B=prep(docB,tol);
     if(!A.n||!B.n)return {A,B,M:[1,0,0,1,0,0],fail:'Нет геометрии для сравнения'};
     const al=M0?{M:M0,mir:M0[0]*M0[3]-M0[1]*M0[2]<0}:align(A,B,tol);const M=al?al.M:[1,0,0,1,0,0];
-    return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]]},diff(A,B,M,tol));
+    const d=diff(A,B,M,tol);let desc=[];try{desc=describe(A,B,M,d,tol);}catch(e){desc=d.clusters.map(bb=>({bb,text:'отличие'}));}
+    return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]],desc},d);
   }
   return {prep,align,diff,compare,mul};
 }
@@ -203,7 +246,7 @@ const geoCompare=(()=>{
     try{
       const src='const GEO=('+GEOCORE.toString()+')();onmessage=e=>{const {id,a,b,tol,M}=e.data;let r,err=null;try{r=GEO.compare(a,b,tol,M);'+
         'r={M:r.M,mir:r.mir,same:r.same,fail:r.fail,clusters:r.clusters||[],a:r.a?{runs:r.a.runs,bad:r.a.bad,frac:r.a.frac}:null,b:r.b?{runs:r.b.runs,bad:r.b.bad,frac:r.b.frac}:null,'+
-        'LA:r.A.L,LB:r.LB||[],sizeA:r.sizeA,sizeB:r.sizeB,bbA:r.A.bbox};}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});};';
+        'LA:r.A.L,LB:r.LB||[],sizeA:r.sizeA,sizeB:r.sizeB,bbA:r.A.bbox,desc:r.desc||[]};}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});};';
       w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
       w.onmessage=e=>{const p=wait.get(e.data.id);if(!p)return;wait.delete(e.data.id);e.data.err?p.rej(new Error(e.data.err)):p.res(e.data.r);};
       w.onerror=()=>{for(const p of wait.values())p.rej(new Error('Сбой потока сравнения'));wait.clear();w=null;};

@@ -33,14 +33,17 @@ input[type=range]{width:110px}
 #selBar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;border:1px solid var(--acc);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 .tile.sel{outline:2px dashed var(--warn);outline-offset:-3px}
 .cmpb{position:absolute;left:4px;top:4px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff}
-.cmpb.same{background:#2e8b57}.cmpb.diff{background:#d9822b}.cmpb.new{background:#3a7bd5}.cmpb.geo{background:#6f9a3a}.cmpb.chk{background:#5a6270}
+.cmpb.same{background:#2e8b57}.cmpb.diff{background:#d9822b}.cmpb.new{background:#3a7bd5}.cmpb.geo{background:#6f9a3a}.cmpb.name{background:#8a6fd1}.cmpb.ren{background:#b0679a}.cmpb.pend{opacity:.55}.cmpb.chk{background:#5a6270}
 #ovBar{display:flex;gap:8px;align-items:center;padding:4px 8px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;overflow-x:auto;white-space:nowrap}
 #ovBar[hidden]{display:none}
 #ovBar>*{flex:none}#ovBar .sp{flex:1}
 .ovk{display:inline-flex;align-items:center;gap:5px;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .ovk i{display:inline-block;width:14px;height:4px;border-radius:2px}.ovk .ova{background:#ff4d4d}.ovk .ovb{background:#39d353}
 #ovRes{font-weight:600}#ovRes.ok{color:#39d353}#ovRes.bad{color:#ff8c4d}
-#ovNum{padding:0 6px;color:var(--mut)}.ovh{color:var(--mut);font-size:12px}
+#ovNum{padding:0 6px;color:var(--mut)}
+#ovList{top:96px;right:8px;left:auto;padding:4px 0}
+.ovl{display:flex;gap:8px;padding:7px 12px;cursor:pointer;font-size:13px;border-top:1px solid var(--line)}.ovl:first-child{border-top:0}
+.ovl b{color:#d9a400;min-width:20px}.ovl:hover,.ovl.cur{background:var(--hover,#2b2f36)}.ovh{color:var(--mut);font-size:12px}
 body.follower header,body.follower #updBar,body.follower #status,body.follower #work,body.follower #cmpBar{display:none!important}
 #updBar{background:var(--on);padding:6px 10px;display:flex;gap:10px;align-items:center}
 
@@ -154,6 +157,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 .pp-c{cursor:pointer;color:var(--fg);word-break:break-all;border-top:1px solid var(--line2)}
 .pp-c:hover{background:var(--hover)}
 .pp-s{padding:10px 10px 6px;color:var(--mut);font-size:12px;border-top:1px solid var(--line);margin-top:4px}
+.pin.dis{opacity:.45;cursor:not-allowed}
 .pk-for{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
 .pk:hover,.pk.cur{background:var(--hover,#2b2f36)}
@@ -225,7 +229,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.5</small></div>
+  <div class="brand">DXF <small>+PDF · v3.6</small></div>
   <button id="btnFolder" title="Открыть папку целиком (с подпапками)">Папка</button>
   <button id="btnFiles" title="Выбрать отдельные файлы">Файлы</button>
   <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ Ярлыки</button>
@@ -236,18 +240,20 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <select id="typeSel" title="Тип файлов"><option value="">Все</option><option value="dxf">DXF</option><option value="pdf">PDF</option></select>
   <button id="btnLayout" title="Сетка миниатюр или список"></button>
   <button id="btnPreview" title="Окно просмотра справа, как в Проводнике">◫ Просмотр</button>
+  <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">Рядом</button>
   <span class="szbox" title="Размер миниатюр (Ctrl + колесо над списком)"><button id="szMinus">−</button><input id="tileSize" type="range" min="80" max="600" value="180"><button id="szPlus">+</button></span>
   <button id="btnLog">Журнал<span id="logBadge" hidden></span></button>
   <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ Сравнить</button>
   <button id="btnClose" hidden title="Закрыть все файлы">Закрыть</button>
   <button id="btnSet" title="Настройки: тема, фон, подписи">⚙</button>
+  <button id="btnHelp" title="Справка по всем функциям (F1)">?</button>
   <input id="inFolder" type="file" webkitdirectory multiple hidden>
   <input id="inFiles" type="file" multiple hidden accept=".dxf,.pdf,application/pdf,*/*">
 </header>
 <div id="updBar" hidden>Доступна новая версия<button id="updBtn">Обновить</button></div>
 <div id="status"></div>
 <div id="cmpBar" hidden><span id="cmpInfo"></span><span class="sp"></span>
-  <label>Показать <select id="cmpFilter"><option value="">все</option><option value="diff">≠ отличаются</option><option value="new">новые</option><option value="same">= совпадают</option><option value="geo">≈ пересохранены, геометрия та же</option><option value="chg">≠ и ≈ — всё, что менялось</option></select></label>
+  <label>Показать <select id="cmpFilter"><option value="">все</option><option value="chg">всё, что менялось</option><option value="diff">≠ отличаются</option><option value="geo">≈ пересохранены, геометрия та же</option><option value="name">имя изменено</option><option value="ren">⇢ переименованы</option><option value="new">нов — нет там</option><option value="same">= одинаковые</option></select></label>
   <button id="cmpOnlyBtn"></button><button id="cmpEnd" title="Закончить сравнение">✕</button></div>
 <div id="selBar" hidden><span id="selInfo"></span><button id="selGo">Сравнить рядом</button><button id="selClear">✕</button></div>
 <div id="work">
@@ -292,11 +298,14 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <span class="ovk"><i class="ovb"></i><span id="ovNb"></span></span>
     <span id="ovRes"></span>
     <span class="xfbox"><button id="ovPrev" title="Предыдущее отличие ( , )">‹</button><span id="ovNum"></span><button id="ovNext" title="Следующее отличие ( . )">›</button></span>
+    <button id="ovListBtn" title="Все отличия словами — клик по строке приближает это место">Список отличий ▾</button>
+    <button id="ovMode" title="Две панели рядом или обе детали в одном окне (N)">Наложение</button>
     <span class="sp"></span>
     <span class="ovh" title="Сдвинуть вторую деталь: Shift + перетаскивание мышью">вторая (Shift+мышь):</span><span class="xfbox" title="Положение второй детали: Shift+перетаскивание — сдвиг"><button id="ovRotL" title="Вторую деталь на 90° против часовой">⟲</button><button id="ovRotR" title="Вторую деталь на 90° по часовой">⟳</button><button id="ovMir" title="Отразить вторую деталь">⇋</button><button id="ovAuto" title="Подобрать положение заново">Авто</button></span>
     <label title="Расхождение меньше допуска считается совпадением">допуск <select id="ovTol"><option>0.01</option><option>0.05</option><option>0.1</option><option>0.2</option><option>0.5</option><option>1</option></select> мм</label>
-    <button id="ovEnd" title="Вернуться к показу двух окон рядом (Esc)">✕ Наложение</button>
+    <button id="ovEnd" title="Показать файлы как есть, без сравнения контуров (Esc)">✕</button>
   </div>
+  <div id="ovList" class="pop" hidden></div>
   <div id="stageWrap"><div id="stage"></div><div id="stageMsg" hidden></div></div>
   <div class="vinfo"><span id="vDims"></span><span id="vCoord"></span><span class="sp"></span><button id="vWarn" hidden></button></div>
 </div>
@@ -352,6 +361,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
+  <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
+  <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
+  <div class="set-row"><span>Открывать файл в сетке и списке</span><select id="sClick"><option value="2">двойным кликом (один клик — выделить)</option><option value="1">одним кликом</option></select></div>
   <div class="set-row"><span>При запуске</span><select id="sReopen"><option value="1">открывать последнюю папку</option><option value="0">пустое окно</option></select></div>
   <div class="set-row"><span>Лист PDF</span><select id="sPdfDark"><option value="0">как в файле (белый)</option><option value="1">тёмный (инверсия цветов)</option></select></div>
   <div class="pp-s" style="margin:0;border:0">На светлом фоне белые линии DXF рисуются чёрными, на тёмном — чёрные белыми, как в CAD. Миниатюры перерисуются.</div>

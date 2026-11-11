@@ -4,6 +4,7 @@ async def main():
   async with async_playwright() as p:
     ctx=await p.chromium.launch_persistent_context('/tmp/claude-0/t/pf_26',executable_path='/usr/bin/google-chrome',viewport={'width':1300,'height':800})
     pg=ctx.pages[0]; errs=[]; pg.on('pageerror',lambda e: errs.append(str(e))); pg.on('console',lambda m: errs.append(m.text[:150]) if m.type=='error' else None)
+    await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     await pg.goto('file:///home/claude/dxf-viewer.html')
     # texts
     await pg.set_input_files('#inFiles',['ml/multileader.dxf']); await pg.wait_for_timeout(1500)

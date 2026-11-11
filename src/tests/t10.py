@@ -2,7 +2,9 @@ import asyncio, glob, time, sys
 from playwright.async_api import async_playwright
 async def run(p,url,prof):
   ctx=await p.chromium.launch_persistent_context(prof,executable_path='/usr/bin/google-chrome',viewport={'width':1400,'height':850})
-  pg=ctx.pages[0]; await pg.goto(url); await pg.wait_for_timeout(1500)
+  pg=ctx.pages[0]
+  await pg.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
+  await pg.goto(url); await pg.wait_for_timeout(1500)
   if url.startswith('http'): await pg.reload(); await pg.wait_for_timeout(1000)
   await pg.set_input_files('#inFiles',sorted(glob.glob('dxf/тяжёлый_*.pdf'))); await pg.wait_for_timeout(300)
   await pg.click('.tile'); await pg.wait_for_function('panes[0]&&!panes[0].loading&&panes[0].doc',timeout=30000)
