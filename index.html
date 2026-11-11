@@ -2694,6 +2694,7 @@ function cmpKey(it){
   return it.type+':'+d;
 }
 function cmpSet(arr,name,rid){
+  const ct=$('grid').querySelector('.tile.cur'),focus=docked()&&!VW.full?curItem():(ct&&ct._it)||null;  // выделенный файл — сразу открыть его сравнение
   const bItems=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).map(x=>{const it=makeItem(x.file,x.path,rid||null,name);it.state=2;it.cmpB=true;return it;});
   const byKey=new Map();for(const b of bItems){const k=cmpKey(b);if(!byKey.has(k))byKey.set(k,[]);byKey.get(k).push(b);}
   const used=new Set(),map=new Map();
@@ -2710,6 +2711,7 @@ function cmpSet(arr,name,rid){
   CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:''};
   $('cmpFilter').value='';updCmp();applyFilter();
   cmpDeep(CMP);
+  if(focus&&map.has(focus)&&items.includes(focus))cmpOpenFor(focus);
 }
 function cmpMatch(it,cf){const st=(CMP.map.get(it)||{}).st;return cf==='chg'?(st==='diff'||st==='geo'):st===cf;}
 /* точная проверка: содержимое файлов побайтно; у DXF с разным содержимым — сравнение геометрии (совмещение + допуск) */
@@ -2991,6 +2993,7 @@ document.addEventListener('keydown',e=>{
     let i=ts.findIndex(t=>t.classList.contains('cur')),h=true;
     if(i<0&&VW.idx>=0)i=ts.indexOf(view[VW.idx].tile);
     if(k==='ArrowLeft'&&(list||i<=0||i%cols===0)&&toTree()){e.preventDefault();return;}  // из первого столбца — в дерево
+    if(/^[vVмМ]$/.test(k)&&i>=0&&ts[i]._it&&ts[i]._it.type==='dxf'){e.preventDefault();showItem(view.indexOf(ts[i]._it));if(!docked())setFull(true);pickOpen(ts[i]._it);return;}
     if(k==='ArrowRight')i=i<0?0:i+1;else if(k==='ArrowLeft')i=i<0?0:i-1;
     else if(k==='ArrowDown')i=i<0?0:i+cols;else if(k==='ArrowUp')i=i<0?0:i-cols;
     else if(k==='Home')i=0;else if(k==='End')i=ts.length-1;
