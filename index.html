@@ -3484,7 +3484,8 @@ function measPaint(p,c,d){
   c.restore();
 }
 function measToggle(on){
-  MEAS.on=on===undefined?!MEAS.on:on;if(MEAS.on&&LOUPE.on)loupeOff();   // лупа «по кнопке мыши» и размеры вместе не работают — включили одно, другое выключается$('vMeas').classList.toggle('on',MEAS.on);$('measBox').hidden=!MEAS.on;
+  MEAS.on=on===undefined?!MEAS.on:on;if(MEAS.on&&LOUPE.on)loupeOff();   // лупа «по кнопке мыши» и размеры вместе не работают — включили одно, другое выключается
+  $('vMeas').classList.toggle('on',MEAS.on);$('measBox').hidden=!MEAS.on;
   if(!MEAS.on&&SET.mkeep==='mode')MEAS.store.clear();
   for(const p of panes){p.ms=null;p.cv.style.cursor=MEAS.on?'crosshair':'';p.draw();}
   if(MEAS.on)flash('Размеры: две точки (с привязкой) и третий клик — где положить размер. Клик по линии / отверстию — длина / Ø. Esc — отменить начатый, Backspace — убрать последний');
