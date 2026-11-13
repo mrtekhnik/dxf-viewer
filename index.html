@@ -268,7 +268,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.0.5</small></div>
+  <div class="brand">DXF <small>+PDF · v4.0.6</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -2623,8 +2623,8 @@ class Pane{
         const [x,y]=pos(e),dx=x-downX,dy=y-downY;
         if(Math.abs(dx)>70&&Math.abs(dy)<60){Object.assign(this,sv0);this.fitted=true;this.draw();step(dx<0?1:-1);return;}
       }
-      if(LOUPE.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&e.pointerType==='mouse'){const [x,y]=pos(e);LOUPE.p=this;LOUPE.x=x;LOUPE.y=y;LOUPE.down=!LOUPE.down;loupeSet();return;}   // лупа с кнопки: клик — показать, ещё клик — убрать
-      if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
+      if(LOUPE.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&e.pointerType==='mouse'&&e.button===0){const [x,y]=pos(e);LOUPE.p=this;LOUPE.x=x;LOUPE.y=y;LOUPE.down=!LOUPE.down;loupeSet();return;}   // лупа с кнопки: клик — показать, ещё клик — убрать
+      if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&!(e.pointerType==='mouse'&&e.button!==0)&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
       if(ptrs.size===0&&!moved&&performance.now()-downT<300){
         const t=performance.now();
         if(t-tapT<350&&Math.hypot(downX-tapX,downY-tapY)<30){this.fit();tapT=0;}else{tapT=t;tapX=downX;tapY=downY;}
