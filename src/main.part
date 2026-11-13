@@ -127,7 +127,7 @@ function renderDoc(ctx,doc,o){
   if(!isId(o.xf)){const m=xfMat(o.xf);ctx.transform(m[0],m[1],m[2],m[3],m[4],m[5]);}
   ctx.lineCap='round';ctx.lineJoin='round';
   for(const G of doc.groups){
-    if(G.off||(o.hidden&&o.hidden.has(G.layer)))continue;
+    if(G.off||(o.hidden&&o.hidden.has(G.layer))||(G.dim&&SET.dims===false))continue;
     const px=(o.lw?lwPx(G.lw):(o.px||1))*(o.k||1);
     ctx.lineWidth=Math.max(px/o.s,G.w||0);
     ctx.strokeStyle=o.color||mapCol(G.color);
@@ -1500,7 +1500,7 @@ function fillBgSel(){
     sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
     col.oninput=()=>changeSet(key,col.value);
   }
-  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfLv);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sClick').value=SET.click==='1'?'1':'2';$('sCmpGeo').value=SET.cmpGeo===false?'0':'1';$('sBlink').value=SET.blink?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
+  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfLv);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sClick').value=SET.click==='1'?'1':'2';$('sCmpGeo').value=SET.cmpGeo===false?'0':'1';$('sDims').value=SET.dims===false?'0':'1';$('sBlink').value=SET.blink?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
 }
 $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
 $('sPdfBold').onchange=e=>setContrast(+e.target.value,true);
@@ -1510,6 +1510,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sDims').onchange=e=>{SET.dims=e.target.value==='1';saveSet();panes.forEach(p=>p.draw());};
 $('sCmpGeo').onchange=e=>{SET.cmpGeo=e.target.value==='1';saveSet();};
 $('sBlink').onchange=e=>{SET.blink=e.target.value==='1';saveSet();};
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;SET.lw=false;saveSet();panes.forEach(p=>p.draw());updateBar();};
@@ -1529,7 +1530,7 @@ function measEnt(doc){ // элементы и точки привязки дет
   const arcE=(cx,cy,r,a0,a1,ccw)=>{E.push({t:'A',cx,cy,r,a0,a1,ccw});S.push([cx,cy,'центр']);S.push([cx+r*Math.cos(a0),cy+r*Math.sin(a0),'конец'],[cx+r*Math.cos(a1),cy+r*Math.sin(a1),'конец']);
     let sw=ccw?a1-a0:a0-a1;while(sw<=0)sw+=Math.PI*2;const am=a0+(ccw?1:-1)*sw/2;S.push([cx+r*Math.cos(am),cy+r*Math.sin(am),'середина']);};
   const lineE=(x1,y1,x2,y2)=>{E.push({t:'L',x1,y1,x2,y2});S.push([x1,y1,'конец'],[x2,y2,'конец'],[(x1+x2)/2,(y1+y2)/2,'середина']);};
-  for(const G of doc.groups||[]){if(G.off)continue;
+  for(const G of doc.groups||[]){if(G.off||G.dim)continue;
     for(const p of G.prims){
       if(p[0]==='L')lineE(p[1],p[2],p[3],p[4]);
       else if(p[0]==='C'){E.push({t:'C',cx:p[1],cy:p[2],r:p[3]});S.push([p[1],p[2],'центр']);for(let k=0;k<4;k++)S.push([p[1]+p[3]*Math.cos(k*Math.PI/2),p[2]+p[3]*Math.sin(k*Math.PI/2),'квадрант']);}

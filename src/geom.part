@@ -22,7 +22,7 @@ function GEOCORE(){
   }
   function flatten(doc,chord){
     const L=[];
-    for(const G of doc.groups||[]){if(G.off)continue;
+    for(const G of doc.groups||[]){if(G.off||G.dim)continue;
       for(const p of G.prims){
         if(p[0]==='L')L.push([p[1],p[2],p[3],p[4]]);
         else if(p[0]==='C'){const o=[];arcPts(o,p[1],p[2],p[3],0,TAU,true,chord,true);L.push(o);}
@@ -71,7 +71,7 @@ function GEOCORE(){
   /* «опорные точки» детали — центры окружностей и дуг с радиусом: по ним совмещаются детали, даже если одна из них заметно изменена */
   function feats(doc){
     const F=[],seen=new Set(),add=(x,y,r)=>{if(!(r>0)||!isFinite(x+y+r))return;const k=Math.round(x*20)+'|'+Math.round(y*20)+'|'+Math.round(r*20);if(seen.has(k))return;seen.add(k);F.push([x,y,r]);};
-    for(const G of doc.groups||[]){if(G.off)continue;
+    for(const G of doc.groups||[]){if(G.off||G.dim)continue;
       for(const p of G.prims){
         if(p[0]==='C'||p[0]==='A')add(p[1],p[2],p[3]);
         else if(p[0]==='P'){const a=p[2],n=a.length/3,segs=p[1]?n:n-1;
@@ -90,7 +90,7 @@ function GEOCORE(){
     for(const p of P)for(let i=0;i<p.x.length;i++){const dx=p.x[i]-mx,dy=p.y[i]-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;}
     const ang=0.5*Math.atan2(2*sxy,sxx-syy);
     const pts=[];for(const p of P)for(let i=0;i<p.x.length;i++)pts.push(p.x[i],p.y[i]);
-    const C=[];for(const G of doc.groups||[]){if(G.off)continue;for(const p of G.prims)if(p[0]==='C')C.push([p[1],p[2],p[3]]);}
+    const C=[];for(const G of doc.groups||[]){if(G.off||G.dim)continue;for(const p of G.prims)if(p[0]==='C')C.push([p[1],p[2],p[3]]);}
     return {L,bbox:[x0,y0,x1,y1],size,len,cx:mx,cy:my,ang,pts,n:L.length,F:feats(doc),C};
   }
   /* сколько точек B (после M) лежат на A ближе r — оценка совмещения */
@@ -247,7 +247,7 @@ function GEOCORE(){
     const f=v=>{const r=Math.round(v*100)/100;return String(r).replace('.',',');};
     // 1) элементы как ломаные; одинаковые (двойные линии) — убрать и отметить
     const P=[],seen=new Map();let nText=0;
-    for(const G of doc.groups||[]){if(G.off)continue;if(G.texts)nText+=G.texts.length;
+    for(const G of doc.groups||[]){if(G.off||G.dim)continue;if(G.texts)nText+=G.texts.length;
       for(const p of G.prims){
         let o=[];
         if(p[0]==='L')o=[p[1],p[2],p[3],p[4]];
@@ -319,6 +319,7 @@ function GEOCORE(){
         if(openC.length>200)add('open','и ещё незамкнутых контуров: '+(openC.length-200),0,0);}
     }
     // 4) лишнее: надписи, элементы вне детали
+    {let nd=0;for(const G of doc.groups||[])if(G.dim)nd+=G.prims.length;if(R.chk&&R.chk.text&&nd)add('text','в файле есть размеры (на резку не нужны?)',outer?outer.bb[2]:0,outer?outer.bb[3]:0,outer?outer.bb:null);}
     if(R.chk&&R.chk.text&&nText)add('text','в файле есть надписи: '+nText+' (на резку не нужны?)',outer?outer.bb[0]:0,outer?outer.bb[3]:0,outer?outer.bb:null);
     if(R.chk&&R.chk.out&&outer)for(const c of contours)if(c!==outer&&(c.out||(!c.closed&&!(c.bb[0]>=outer.bb[0]-eps&&c.bb[2]<=outer.bb[2]+eps&&c.bb[1]>=outer.bb[1]-eps&&c.bb[3]<=outer.bb[3]+eps))))
       add('out','элемент вне контура детали',(c.bb[0]+c.bb[2])/2,(c.bb[1]+c.bb[3])/2,c.bb);
@@ -361,7 +362,7 @@ const geoCompare=(()=>{
       w.onerror=()=>{for(const p of wait.values())p.rej(new Error('Сбой потока сравнения'));wait.clear();w=null;};
     }catch(e){w=null;}
   }
-  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,prims:G.prims,texts:G.texts?G.texts.map(()=>0):undefined}))});
+  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,dim:!!G.dim,prims:G.prims,texts:G.texts?G.texts.map(()=>0):undefined}))});
   const fn=(docA,docB,tol,M)=>{
     if(!w)start();
     if(!w){const r=GEO.compare(docA,docB,tol,M);return Promise.resolve(Object.assign(r,{LA:r.A.L,bbA:r.A.bbox}));}

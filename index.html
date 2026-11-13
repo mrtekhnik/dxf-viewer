@@ -265,7 +265,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.8</small></div>
+  <div class="brand">DXF <small>+PDF · v3.9</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -437,6 +437,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
+  <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
   <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
   <div class="set-row"><span>Открывать файл в сетке и списке</span><select id="sClick"><option value="2">двойным кликом (один клик — выделить)</option><option value="1">одним кликом</option></select></div>
@@ -576,6 +577,8 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <li><b>Линии</b> (<kbd>W</kbd>) — толщина линий на экране по кругу: тонкие → средние → жирные → «по файлу» (только если толщины записаны в файле).</li>
 <li>Подпись в углу: имя файла, габарит, материал · толщина · количество из имени, подпапка, дата — что показывать, выбирается в ⚙.</li>
 <li>Внизу — габарит и координаты курсора в мм. Значок замечаний — что в файле не удалось прочитать или нарисовать.</li>
+<li><b>Блоки</b> (вставки, в том числе вложенные, с поворотом, масштабом, зеркалом, массивом) рисуются как обычная геометрия и участвуют в площади, резе, проверке и сравнении.</li>
+<li><b>Размеры</b> рисуются как в CAD, но в площадь, рез, проверку и сравнение не входят; скрыть — ⚙ «Размеры в DXF». Если включена проверка надписей, о размерах в файле тоже будет замечание.</li>
 </ul>
 </section>
 
@@ -927,7 +930,8 @@ function DXFCORE(){
     const gn=(g,c,d)=>{const v=gs(g,c);if(v===undefined)return d;const x=parseFloat(v);return isFinite(x)?x:d;};
     const unesc=s=>s.replace(/\\U\+([0-9A-Fa-f]{4})/g,(m,h)=>String.fromCharCode(parseInt(h,16)));
 
-    const layers={},groups=new Map(),skipped={};let errN=0,modelN=0,paperN=0,blocks=0;
+    const layers={},skipped={};let groups=new Map(),errN=0,modelN=0,paperN=0,blocks=0;
+    const BLK=new Map();let insN=0,dimN=0,DIM=false,primBudget=3e6;   // блоки; DIM — сейчас разбирается размер
     const bump=t=>{skipped[t]=(skipped[t]||0)+1;};
 
     function addLayer(g){
@@ -938,13 +942,13 @@ function DXFCORE(){
       const ln=unesc((gs(g,8,'0')||'0').trim())||'0';
       const L=layers[ln.toUpperCase()]||{color:'#ffffff',lw:-3,off:false};
       const tc=gs(g,420),c=gn(g,62,256);let col;
-      if(tc!==undefined)col=tcHex(tc);else if(c===256)col=L.color;else if(c===0)col='#ffffff';else col=ACI[Math.abs(c)]||'#ffffff';
+      if(tc!==undefined)col=tcHex(tc);else if(c===256)col=L.color;else if(c===0)col='BYBLOCK';else col=ACI[Math.abs(c)]||'#ffffff';
       let lw=gn(g,370,-1);if(lw===-1)lw=L.lw;if(!(lw>=0))lw=-3;
       return {layer:ln,col,lw,off:L.off};
     }
     function grp(st,sp,w){
-      w=w>0?w:0;const k=sp+'|'+st.layer+'|'+st.col+'|'+st.lw+'|'+w;let G=groups.get(k);
-      if(!G){G={layer:st.layer,color:st.col,lw:st.lw,w,space:sp,off:st.off,bbox:null,prims:[]};groups.set(k,G);}
+      w=w>0?w:0;const k=sp+'|'+st.layer+'|'+st.col+'|'+st.lw+'|'+w+(DIM?'|d':'');let G=groups.get(k);
+      if(!G){G={layer:st.layer,color:st.col,lw:st.lw,w,space:sp,off:st.off,bbox:null,prims:[]};if(DIM)G.dim=true;groups.set(k,G);}
       return G;
     }
     function ocs(g){ // 0 — обычная, -1 — зеркальная (Z=-1), иначе функция проекции
@@ -1136,37 +1140,107 @@ function DXFCORE(){
       grp(st,sp).prims.push(['P',0,pts]);return true;
     }
 
-    // 2. Обход секций
-    let sec=recs.some(r=>r.t==='SECTION')?'':'ENTITIES';
+    // 2. Обход секций. Определения блоков запоминаются, элементы — разбираются функцией ents (она же — для вставок блоков)
+    function ents(list,sp0,depth){
+      for(let k=0;k<list.length;k++){
+        const r=list[k],t=r.t,sp=sp0==null?(gn(r.g,67,0)===1?1:0):sp0;let ok=false;
+        try{
+          switch(t){
+            case 'LINE':{const st=style(r.g);grp(st,sp).prims.push(['L',gn(r.g,10,0),gn(r.g,20,0),gn(r.g,11,0),gn(r.g,21,0)]);ok=true;break;}
+            case 'CIRCLE':ok=addArc(sp,r.g,true);break;
+            case 'ARC':ok=addArc(sp,r.g,false);break;
+            case 'LWPOLYLINE':ok=addLw(sp,r.g);break;
+            case 'ELLIPSE':ok=addEllipse(sp,r.g);break;
+            case 'SPLINE':ok=addSpline(sp,r.g);break;
+            case 'TEXT':ok=addText(sp,r.g);break;
+            case 'ATTRIB':ok=(gn(r.g,70,0)&1)?true:addText(sp,r.g);break;   // атрибут блока — как надпись (скрытый — пропустить)
+            case 'ATTDEF':ok=true;break;                                      // шаблон атрибута внутри блока — не рисуется
+            case 'MTEXT':ok=addMText(sp,r.g);break;
+            case 'MULTILEADER':case 'MLEADER':ok=addMLeader(sp,r.g);break;
+            case 'LEADER':ok=addLeader(sp,r.g);break;
+            case 'POLYLINE':{const vs=[];while(k+1<list.length&&list[k+1].t==='VERTEX')vs.push(list[++k]);
+              if(k+1<list.length&&list[k+1].t==='SEQEND')k++;ok=addPolyline(sp,r.g,vs);break;}
+            case 'INSERT':ok=addInsert(sp,r.g,depth,false);while(k+1<list.length&&(list[k+1].t==='ATTRIB'||list[k+1].t==='SEQEND')){const q=list[++k];if(q.t==='ATTRIB'&&!(gn(q.g,70,0)&1))addText(sp,q.g);}break;
+            case 'DIMENSION':ok=addInsert(sp,r.g,depth,true);if(ok)dimN++;break;
+            case 'VERTEX':case 'SEQEND':break;
+            case 'POINT':case 'VIEWPORT':ok=true;break;
+            case 'SOLID':case 'TRACE':{const st=style(r.g),q=[[10,20],[11,21],[13,23],[12,22]].map(([a,b])=>[gn(r.g,a,NaN),gn(r.g,b,NaN)]).filter(p=>isFinite(p[0])&&isFinite(p[1]));   // залитый треугольник/четырёхугольник (стрелки размеров) — контуром
+              if(q.length>=3){const o=ocs(r.g),pts=[];for(const [x,y] of q)pts.push(o===-1?-x:x,y,0);grp(st,sp).prims.push(['P',1,pts]);ok=true;}break;}
+            default:bump(t);
+          }
+        }catch(e){errN++;}
+        if(ok&&!depth){if(sp)paperN++;else modelN++;}
+      }
+    }
+    /* вставка блока (INSERT) или размера (DIMENSION — его графика лежит в анонимном блоке *D…):
+       элементы блока разбираются в отдельный набор групп, затем переносятся с поворотом, масштабом, зеркалом и массивом.
+       Слой «0» и цвет «по блоку» берутся у вставки. */
+    function addInsert(sp,g,depth,dim){
+      const name=(gs(g,2,'')||'').trim(),B=BLK.get(name.toUpperCase());
+      if(!B){bump(dim?'DIMENSION (без графики)':'INSERT (блок «'+name+'» не найден)');return false;}
+      if(depth>12){bump('INSERT (вложенность больше 12)');return false;}
+      if(B.busy)return false;
+      const st=style(g);
+      const sx=dim?1:gn(g,41,1),sy=dim?1:gn(g,42,1),rot=dim?0:gn(g,50,0)*D2R,ix=dim?0:gn(g,10,0),iy=dim?0:gn(g,20,0);
+      const nc=dim?1:Math.max(1,gn(g,70,1)|0),nr=dim?1:Math.max(1,gn(g,71,1)|0),dc=gn(g,44,0),dr=gn(g,45,0);
+      if(nc*nr>10000){bump('INSERT (массив больше 10000)');return false;}
+      // элементы блока — в отдельный набор
+      const keep=groups,keepD=DIM;groups=new Map();if(dim)DIM=true;B.busy=true;
+      try{ents(B.recs,sp,depth+1);}finally{B.busy=false;}
+      const sub=[...groups.values()];groups=keep;DIM=keepD||dim;
+      const c=Math.cos(rot),s_=Math.sin(rot),o=dim?0:ocs(g);
+      for(let ri=0;ri<nr;ri++)for(let ci=0;ci<nc;ci++){
+        const ox=ci*dc,oy=ri*dr;   // шаг массива — в повёрнутых осях вставки
+        // M: точка блока → мир: (p - base)·S → поворот → + вставка + шаг массива
+        let M=[c*sx,s_*sx,-s_*sy,c*sy,ix+c*ox-s_*oy,iy+s_*ox+c*oy];
+        M=[M[0],M[1],M[2],M[3],M[4]-(M[0]*B.bx+M[2]*B.by),M[5]-(M[1]*B.bx+M[3]*B.by)];
+        if(o===-1)M=[-M[0],M[1],-M[2],M[3],-M[4],M[5]];
+        for(const G of sub){
+          const lay=G.layer==='0'?st.layer:G.layer,col=G.color==='BYBLOCK'?st.col:G.color;
+          const T=grp({layer:lay,col,lw:G.lw,off:G.layer==='0'?st.off:G.off},sp,G.w*Math.abs(sx));
+          if(G.dim)T.dim=true;
+          for(const p of G.prims){if(--primBudget<0)break;const q=xfPrim(p,M);if(q)T.prims.push(q);}
+          if(G.texts){T.texts=T.texts||[];const sc=Math.sqrt(Math.abs(M[0]*M[3]-M[1]*M[2])),ang=Math.atan2(M[1],M[0]);
+            for(const x of G.texts)T.texts.push(Object.assign({},x,{x:M[0]*x.x+M[2]*x.y+M[4],y:M[1]*x.x+M[3]*x.y+M[5],h:x.h*sc,r:x.r+ang}));}
+        }
+      }
+      DIM=keepD;
+      if(!dim)insN++;
+      return true;
+    }
+    /* перенос элемента матрицей M (поворот, масштаб, зеркало); при разном масштабе по X и Y дуги превращаются в ломаные */
+    function xfPrim(p,M){
+      const X=(x,y)=>[M[0]*x+M[2]*y+M[4],M[1]*x+M[3]*y+M[5]],det=M[0]*M[3]-M[1]*M[2],
+        k1=Math.hypot(M[0],M[1]),k2=Math.hypot(M[2],M[3]),uni=Math.abs(k1-k2)<1e-9*Math.max(k1,k2)&&Math.abs(M[0]*M[2]+M[1]*M[3])<1e-9*k1*k2;
+      if(p[0]==='L'){const a=X(p[1],p[2]),b=X(p[3],p[4]);return ['L',a[0],a[1],b[0],b[1]];}
+      if((p[0]==='C'||p[0]==='A')&&uni){const c=X(p[1],p[2]),r=p[3]*k1;if(p[0]==='C')return ['C',c[0],c[1],r];
+        const s0=X(p[1]+p[3]*Math.cos(p[4]),p[2]+p[3]*Math.sin(p[4])),s1=X(p[1]+p[3]*Math.cos(p[5]),p[2]+p[3]*Math.sin(p[5]));
+        let a0=Math.atan2(s0[1]-c[1],s0[0]-c[0]),a1=Math.atan2(s1[1]-c[1],s1[0]-c[0]);if(det<0){const t=a0;a0=a1;a1=t;}
+        a0=((a0%TAU)+TAU)%TAU;while(a1<=a0)a1+=TAU;while(a1-a0>TAU)a1-=TAU;return ['A',c[0],c[1],r,a0,a1];}
+      if(p[0]==='C'||p[0]==='A'){const pts=arcPts(p[1],p[2],p[3],p[0]==='C'?0:p[4],p[0]==='C'?TAU:p[5]),out=[];
+        for(let i=0;i<pts.length;i+=2){const q=X(pts[i],pts[i+1]);out.push(q[0],q[1],0);}return ['P',p[0]==='C'?1:0,out];}
+      if(p[0]==='P'){let a=p[2];
+        if(!uni&&a.some((v,i)=>i%3===2&&v)){a=tessPoly(a,p[1]);const o=[];for(let i=0;i<a.length;i+=2){const q=X(a[i],a[i+1]);o.push(q[0],q[1],0);}return ['P',0,o];}
+        const o=new Array(a.length);for(let i=0;i<a.length;i+=3){const q=X(a[i],a[i+1]);o[i]=q[0];o[i+1]=q[1];o[i+2]=det<0?-a[i+2]:a[i+2];}return ['P',p[1],o];}
+      return null;
+    }
+    let sec=recs.some(r=>r.t==='SECTION')?'':'ENTITIES',curB=null;const top=[];
     for(let k=0;k<recs.length;k++){
       const r=recs[k],t=r.t;
       if(t==='SECTION'){sec=(gs(r.g,2,'')||'').trim().toUpperCase();continue;}
       if(t==='ENDSEC'){sec='';continue;}
       if(t==='EOF')break;
       if(sec==='TABLES'){if(t==='LAYER')try{addLayer(r.g);}catch(e){errN++;}continue;}
-      if(sec==='BLOCKS'){if(t==='BLOCK')blocks++;continue;}
+      if(sec==='BLOCKS'){
+        if(t==='BLOCK'){blocks++;curB={recs:[],bx:gn(r.g,10,0),by:gn(r.g,20,0)};BLK.set((gs(r.g,2,'')||'').trim().toUpperCase(),curB);}
+        else if(t==='ENDBLK')curB=null;else if(curB)curB.recs.push(r);
+        continue;}
       if(sec!=='ENTITIES')continue;
-      const sp=gn(r.g,67,0)===1?1:0;let ok=false;
-      try{
-        switch(t){
-          case 'LINE':{const st=style(r.g);grp(st,sp).prims.push(['L',gn(r.g,10,0),gn(r.g,20,0),gn(r.g,11,0),gn(r.g,21,0)]);ok=true;break;}
-          case 'CIRCLE':ok=addArc(sp,r.g,true);break;
-          case 'ARC':ok=addArc(sp,r.g,false);break;
-          case 'LWPOLYLINE':ok=addLw(sp,r.g);break;
-          case 'ELLIPSE':ok=addEllipse(sp,r.g);break;
-          case 'SPLINE':ok=addSpline(sp,r.g);break;
-          case 'TEXT':ok=addText(sp,r.g);break;
-          case 'MTEXT':ok=addMText(sp,r.g);break;
-          case 'MULTILEADER':case 'MLEADER':ok=addMLeader(sp,r.g);break;
-          case 'LEADER':ok=addLeader(sp,r.g);break;
-          case 'POLYLINE':{const vs=[];while(k+1<recs.length&&recs[k+1].t==='VERTEX')vs.push(recs[++k]);
-            if(k+1<recs.length&&recs[k+1].t==='SEQEND')k++;ok=addPolyline(sp,r.g,vs);break;}
-          case 'VERTEX':case 'SEQEND':break;
-          default:bump(t);
-        }
-      }catch(e){errN++;}
-      if(ok){if(sp)paperN++;else modelN++;}
+      top.push(r);
     }
+    ents(top,null,0);
+    for(const G of groups.values())if(G.color==='BYBLOCK')G.color='#ffffff';
+    if(primBudget<0)W('warn','Слишком много элементов во вставках блоков — показана часть');
 
     // 3. Пространство модели / листа
     let list=[...groups.values()];
@@ -1196,9 +1270,12 @@ function DXFCORE(){
 
     // 5. Журнал
     W('info',`Версия ${VER[doc.ver]||doc.ver||'не указана'} · кодировка ${doc.enc}${dec===null&&doc.enc!=='ASCII'?'':''} · отрисовано элементов: ${doc.stats.n}`);
-    const hint={INSERT:' (блоки — следующий этап)',DIMENSION:' (размеры — следующий этап)',HATCH:' (штриховка не рисуется)'};
+    const hint={HATCH:' (штриховка не рисуется)'};
+    if(insN)W('info',`Вставок блоков: ${insN} — нарисованы как обычная геометрия`);
+    if(dimN)W('info',`Размеров: ${dimN} — показаны тонкими линиями; в площадь, рез, проверку и сравнение не входят (скрыть — «Размеры» в ⚙)`);
+    doc.dims=dimN;
     for(const [t,n] of Object.entries(skipped))W('warn',`${t} ×${n} — не отрисован${hint[t]||''}`);
-    if(blocks&&!skipped.INSERT)W('info',`Определений блоков: ${blocks} (не вставлены — не используются)`);
+    if(blocks&&!insN&&!dimN)W('info',`Определений блоков: ${blocks} (не вставлены — не используются)`);
     if(txtFixed)W('info',`Надписи выносок: кодировка в файле испорчена, текст восстановлен из графики выноски (${txtFixed})`);
     if(txtBroken)W('warn',`Надписи с испорченной кодировкой: ${txtBroken} — буквы потеряны при экспорте, показаны «?»`);
     if(errN)W('error',`Ошибки в элементах: ${errN} пропущено`);
@@ -1232,7 +1309,7 @@ function GEOCORE(){
   }
   function flatten(doc,chord){
     const L=[];
-    for(const G of doc.groups||[]){if(G.off)continue;
+    for(const G of doc.groups||[]){if(G.off||G.dim)continue;
       for(const p of G.prims){
         if(p[0]==='L')L.push([p[1],p[2],p[3],p[4]]);
         else if(p[0]==='C'){const o=[];arcPts(o,p[1],p[2],p[3],0,TAU,true,chord,true);L.push(o);}
@@ -1281,7 +1358,7 @@ function GEOCORE(){
   /* «опорные точки» детали — центры окружностей и дуг с радиусом: по ним совмещаются детали, даже если одна из них заметно изменена */
   function feats(doc){
     const F=[],seen=new Set(),add=(x,y,r)=>{if(!(r>0)||!isFinite(x+y+r))return;const k=Math.round(x*20)+'|'+Math.round(y*20)+'|'+Math.round(r*20);if(seen.has(k))return;seen.add(k);F.push([x,y,r]);};
-    for(const G of doc.groups||[]){if(G.off)continue;
+    for(const G of doc.groups||[]){if(G.off||G.dim)continue;
       for(const p of G.prims){
         if(p[0]==='C'||p[0]==='A')add(p[1],p[2],p[3]);
         else if(p[0]==='P'){const a=p[2],n=a.length/3,segs=p[1]?n:n-1;
@@ -1300,7 +1377,7 @@ function GEOCORE(){
     for(const p of P)for(let i=0;i<p.x.length;i++){const dx=p.x[i]-mx,dy=p.y[i]-my;sxx+=dx*dx;syy+=dy*dy;sxy+=dx*dy;}
     const ang=0.5*Math.atan2(2*sxy,sxx-syy);
     const pts=[];for(const p of P)for(let i=0;i<p.x.length;i++)pts.push(p.x[i],p.y[i]);
-    const C=[];for(const G of doc.groups||[]){if(G.off)continue;for(const p of G.prims)if(p[0]==='C')C.push([p[1],p[2],p[3]]);}
+    const C=[];for(const G of doc.groups||[]){if(G.off||G.dim)continue;for(const p of G.prims)if(p[0]==='C')C.push([p[1],p[2],p[3]]);}
     return {L,bbox:[x0,y0,x1,y1],size,len,cx:mx,cy:my,ang,pts,n:L.length,F:feats(doc),C};
   }
   /* сколько точек B (после M) лежат на A ближе r — оценка совмещения */
@@ -1457,7 +1534,7 @@ function GEOCORE(){
     const f=v=>{const r=Math.round(v*100)/100;return String(r).replace('.',',');};
     // 1) элементы как ломаные; одинаковые (двойные линии) — убрать и отметить
     const P=[],seen=new Map();let nText=0;
-    for(const G of doc.groups||[]){if(G.off)continue;if(G.texts)nText+=G.texts.length;
+    for(const G of doc.groups||[]){if(G.off||G.dim)continue;if(G.texts)nText+=G.texts.length;
       for(const p of G.prims){
         let o=[];
         if(p[0]==='L')o=[p[1],p[2],p[3],p[4]];
@@ -1529,6 +1606,7 @@ function GEOCORE(){
         if(openC.length>200)add('open','и ещё незамкнутых контуров: '+(openC.length-200),0,0);}
     }
     // 4) лишнее: надписи, элементы вне детали
+    {let nd=0;for(const G of doc.groups||[])if(G.dim)nd+=G.prims.length;if(R.chk&&R.chk.text&&nd)add('text','в файле есть размеры (на резку не нужны?)',outer?outer.bb[2]:0,outer?outer.bb[3]:0,outer?outer.bb:null);}
     if(R.chk&&R.chk.text&&nText)add('text','в файле есть надписи: '+nText+' (на резку не нужны?)',outer?outer.bb[0]:0,outer?outer.bb[3]:0,outer?outer.bb:null);
     if(R.chk&&R.chk.out&&outer)for(const c of contours)if(c!==outer&&(c.out||(!c.closed&&!(c.bb[0]>=outer.bb[0]-eps&&c.bb[2]<=outer.bb[2]+eps&&c.bb[1]>=outer.bb[1]-eps&&c.bb[3]<=outer.bb[3]+eps))))
       add('out','элемент вне контура детали',(c.bb[0]+c.bb[2])/2,(c.bb[1]+c.bb[3])/2,c.bb);
@@ -1571,7 +1649,7 @@ const geoCompare=(()=>{
       w.onerror=()=>{for(const p of wait.values())p.rej(new Error('Сбой потока сравнения'));wait.clear();w=null;};
     }catch(e){w=null;}
   }
-  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,prims:G.prims,texts:G.texts?G.texts.map(()=>0):undefined}))});
+  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,dim:!!G.dim,prims:G.prims,texts:G.texts?G.texts.map(()=>0):undefined}))});
   const fn=(docA,docB,tol,M)=>{
     if(!w)start();
     if(!w){const r=GEO.compare(docA,docB,tol,M);return Promise.resolve(Object.assign(r,{LA:r.A.L,bbA:r.A.bbox}));}
@@ -1714,7 +1792,7 @@ function renderDoc(ctx,doc,o){
   if(!isId(o.xf)){const m=xfMat(o.xf);ctx.transform(m[0],m[1],m[2],m[3],m[4],m[5]);}
   ctx.lineCap='round';ctx.lineJoin='round';
   for(const G of doc.groups){
-    if(G.off||(o.hidden&&o.hidden.has(G.layer)))continue;
+    if(G.off||(o.hidden&&o.hidden.has(G.layer))||(G.dim&&SET.dims===false))continue;
     const px=(o.lw?lwPx(G.lw):(o.px||1))*(o.k||1);
     ctx.lineWidth=Math.max(px/o.s,G.w||0);
     ctx.strokeStyle=o.color||mapCol(G.color);
@@ -3087,7 +3165,7 @@ function fillBgSel(){
     sel.onchange=()=>{if(sel.value==='custom'){col.hidden=false;col.value=cur();col.click();}else{col.hidden=true;changeSet(key,sel.value);col.value=cur();}};
     col.oninput=()=>changeSet(key,col.value);
   }
-  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfLv);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sClick').value=SET.click==='1'?'1':'2';$('sCmpGeo').value=SET.cmpGeo===false?'0':'1';$('sBlink').value=SET.blink?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
+  $('sPdfDark').value=SET.pdfDark?'1':'0';$('sPdfBold').value=String(SET.pdfLv);$('sPdfCont').value=SET.pdfCont?'1':'0';$('sReopen').value=SET.reopen?'1':'0';$('sClick').value=SET.click==='1'?'1':'2';$('sCmpGeo').value=SET.cmpGeo===false?'0':'1';$('sDims').value=SET.dims===false?'0':'1';$('sBlink').value=SET.blink?'1':'0';$('sTexts').value=SET.texts?'1':'0';$('sLineK').value=String(SET.lineK);$('sScope').value=SET.pairScope;
 }
 $('sPdfDark').onchange=e=>changeSet('pdfDark',e.target.value==='1');
 $('sPdfBold').onchange=e=>setContrast(+e.target.value,true);
@@ -3097,6 +3175,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sDims').onchange=e=>{SET.dims=e.target.value==='1';saveSet();panes.forEach(p=>p.draw());};
 $('sCmpGeo').onchange=e=>{SET.cmpGeo=e.target.value==='1';saveSet();};
 $('sBlink').onchange=e=>{SET.blink=e.target.value==='1';saveSet();};
 $('sLineK').onchange=e=>{SET.lineK=+e.target.value;SET.lw=false;saveSet();panes.forEach(p=>p.draw());updateBar();};
@@ -3116,7 +3195,7 @@ function measEnt(doc){ // элементы и точки привязки дет
   const arcE=(cx,cy,r,a0,a1,ccw)=>{E.push({t:'A',cx,cy,r,a0,a1,ccw});S.push([cx,cy,'центр']);S.push([cx+r*Math.cos(a0),cy+r*Math.sin(a0),'конец'],[cx+r*Math.cos(a1),cy+r*Math.sin(a1),'конец']);
     let sw=ccw?a1-a0:a0-a1;while(sw<=0)sw+=Math.PI*2;const am=a0+(ccw?1:-1)*sw/2;S.push([cx+r*Math.cos(am),cy+r*Math.sin(am),'середина']);};
   const lineE=(x1,y1,x2,y2)=>{E.push({t:'L',x1,y1,x2,y2});S.push([x1,y1,'конец'],[x2,y2,'конец'],[(x1+x2)/2,(y1+y2)/2,'середина']);};
-  for(const G of doc.groups||[]){if(G.off)continue;
+  for(const G of doc.groups||[]){if(G.off||G.dim)continue;
     for(const p of G.prims){
       if(p[0]==='L')lineE(p[1],p[2],p[3],p[4]);
       else if(p[0]==='C'){E.push({t:'C',cx:p[1],cy:p[2],r:p[3]});S.push([p[1],p[2],'центр']);for(let k=0;k<4;k++)S.push([p[1]+p[3]*Math.cos(k*Math.PI/2),p[2]+p[3]*Math.sin(k*Math.PI/2),'квадрант']);}

@@ -262,7 +262,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.8</small></div>
+  <div class="brand">DXF <small>+PDF · v3.9</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -434,6 +434,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
+  <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
   <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
   <div class="set-row"><span>Открывать файл в сетке и списке</span><select id="sClick"><option value="2">двойным кликом (один клик — выделить)</option><option value="1">одним кликом</option></select></div>
