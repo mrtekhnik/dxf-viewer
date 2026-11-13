@@ -265,7 +265,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.9.1</small></div>
+  <div class="brand">DXF <small>+PDF · v3.9.2</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -342,7 +342,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
     <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
     <button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓ Проверка</button>
     <button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏 Размеры</button>
-    <span id="measBox" class="xfbox" hidden><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span>
+    <span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
@@ -438,6 +438,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
+  <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option></select></div>
   <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
   <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
@@ -585,15 +586,23 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 
 <section data-t="Размеры">
 <h2>Размеры (измерения) в DXF</h2>
-<p>Кнопка <b>📏 Размеры</b> в просмотре или клавиша <kbd>D</kbd>. Курсор становится крестиком, у всех отверстий сразу подписывается диаметр.</p>
+<p>Кнопка <b>📏 Размеры</b> в просмотре или клавиша <kbd>D</kbd>. Курсор становится крестиком. Рядом с кнопкой — режим, Ø, точность, ↶ и «Очистить».</p>
+<h3>Два режима</h3>
 <ul>
-<li><b>Размер как в CAD</b>: клик по первой точке, клик по второй, <b>третий клик — где положить размерную линию</b>. Отвели курсор выше или ниже точек — <b>горизонтальный</b> размер, левее или правее — <b>вертикальный</b>, между точками — по прямой. Пока ведёте курсор, видна подсказка со всеми величинами: по X, по Y, по прямой.</li>
-<li>Точки ставятся <b>только с привязкой</b> — к концам и серединам линий, центрам и «квадрантам» окружностей и дуг (зелёный значок у курсора: □ конец, △ середина, ○ центр, ◇ квадрант). Клик в пустое место точку не ставит.</li>
-<li><b>Длина, радиус, диаметр</b> — клик по линии, дуге или окружности вдали от точек привязки: L отрезка, Ø и R окружности, R, угол и длина дуги.</li>
-<li>Размеры остаются на экране, пока включён режим (у каждого файла свои). <kbd>Esc</kbd> отменяет только начатый размер, <kbd>Backspace</kbd> или <kbd>Ctrl+Z</kbd> (кнопка ↶) — убрать последний, <b>Очистить</b> — убрать все. Выключили режим — размеры убираются.</li>
-<li><b>Точность</b> — список рядом с кнопкой: 1 / 0,1 / 0,01 / 0,001 мм (запоминается).</li>
+<li><b>Размер</b> (как в CAD): клик по первой точке, по второй, <b>третий клик — где положить размерную линию</b>. Отвели курсор выше или ниже точек — <b>горизонтальный</b>, левее или правее — <b>вертикальный</b>, между точками — по прямой. Пока ведёте курсор, видна подсказка: по X, по Y, по прямой.</li>
+<li><b>Расстояние</b> (как «Расстояние» в AutoCAD): две точки — сразу пунктиром <b>по прямой, по X, по Y и угол</b>.</li>
 </ul>
-<p class="note">Размеры считаются по файлу, поворот детали на экране учитывается: горизонтальный — по горизонтали экрана. В PDF размеров пока нет.</p>
+<ul>
+<li>Точки ставятся <b>только с привязкой</b> — к концам и серединам линий, центрам и «квадрантам» окружностей и дуг (зелёный значок у курсора: □ конец, △ середина, ○ центр, ◇ квадрант). Клик в пустое место точку не ставит.</li>
+<li>Клик по линии, дуге или окружности вдали от точек привязки — L отрезка, Ø и R окружности, R и длина дуги.</li>
+<li><b>Ø</b> — подписывать диаметры всех отверстий (включается и выключается, запоминается).</li>
+<li><b>Точность</b> — 1 / 0,1 / 0,01 / 0,001 мм.</li>
+<li><b>Двойной клик</b> — показать деталь целиком (размеры при этом не ставятся).</li>
+<li>Размеры у каждого файла свои: перелистнули и вернулись — они на месте. <kbd>Backspace</kbd>, <kbd>Ctrl+Z</kbd> или ↶ — убрать последний, «Очистить» — все.</li>
+<li><kbd>Esc</kbd> — сначала отменяет начатый размер, следующий <kbd>Esc</kbd> — выход из просмотра, как обычно.</li>
+<li>Сколько держать размеры — в ⚙ «Измерения: держать размеры»: <b>пока включён режим</b> (выключили — убрались) или <b>пока открыт просмотр</b> (выключили режим — скрыты, включили — снова видны). Вышли из просмотра — размеры убираются в обоих случаях.</li>
+</ul>
+<p class="note">Считается по файлу, поворот детали на экране учитывается: горизонтальный — по горизонтали экрана. В PDF размеров пока нет.</p>
 </section>
 
 <section data-t="Материал и толщина">
@@ -2329,7 +2338,7 @@ class Pane{
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();return;}
     if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);return;}
-    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});if(this.chk)chkPaint(this,c,d);if(MEAS.on&&this.ms)measPaint(this,c,d);return;}
+    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});if(this.chk)chkPaint(this,c,d);if(MEAS.on&&this.it)measPaint(this,c,d);return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
     c.fillText(t,this.W/2,this.H/2);
@@ -2698,7 +2707,7 @@ function updateBar(){
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
-  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;if(MEAS.on&&(!anyDxf||OV))measToggle(false);$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
+  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
@@ -2733,6 +2742,7 @@ function placeViewer(){
 }
 function setFull(on,fromPop){
   if(FOLLOW||on===VW.full)return;
+  if(!on&&!docked()){MEAS.store.clear();for(const p of panes)p.ms=null;}   // вышли из просмотра — размеры забываются
   VW.full=on;
   if(on){try{history.pushState({dxfv:1},'');}catch(e){}}
   else if(!fromPop&&history.state&&history.state.dxfv){ignorePop=true;history.back();}
@@ -3251,12 +3261,17 @@ function measInfo(it){ // все величины для подсказки
   const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]);return 'по X '+fmm(dx)+' · по Y '+fmm(dy)+' · по прямой '+fmm(Math.hypot(dx,dy));}
 function measHover(p,x,y){if(!p.doc||p.isPdf||p.ov)return;const M=msOf(p);M.hover=measPick(p,x,y);M.mouse=s2m(p,x,y);M.mw=p.s2w(x,y);p.draw();}
 function measClick(p,x,y){
-  const M=msOf(p),h=measPick(p,x,y),mw=p.s2w(x,y);
+  const M=msOf(p),now=performance.now();
+  // двойной клик — «показать всё»; что успел сделать первый клик — откатить
+  if(MEAS.last&&MEAS.last.p===p&&now-MEAS.last.t<350&&Math.hypot(x-MEAS.last.x,y-MEAS.last.y)<8){M.pts=MEAS.last.pts;M.items.length=MEAS.last.n;MEAS.last=null;p.fit();return;}
+  MEAS.last={p,t:now,x,y,pts:M.pts.slice(),n:M.items.length};
+  const h=measPick(p,x,y),mw=p.s2w(x,y);
   if(M.pts.length===2){const a=M.pts[0],b=M.pts[1],it={t:'lin',a,b,dir:linDim(p,a,b,mw),o:s2m(p,x,y)};M.items.push(it);M.pts=[];
     flash((it.dir==='h'?'Горизонтальный ':it.dir==='v'?'Вертикальный ':'По прямой ')+fmm(dimGeom(p,it).val)+' мм  ·  '+measInfo(it));p.draw();return;}
   if(!M.pts.length&&h.ent&&!h.snap){M.items.push({t:'ent',e:h.ent});const t=entText(h.ent);flash(t.main+'  ·  '+t.sub);p.draw();return;}
   if(!h.snap){flash('Наведите на конец, середину или центр — точка ставится только с привязкой (зелёный значок)');return;}
   M.pts.push([h.snap[0],h.snap[1]]);
+  if(M.pts.length===2&&SET.mmode==='dist'){const it={t:'dist',a:M.pts[0],b:M.pts[1]};M.items.push(it);M.pts=[];flash('Расстояние '+fmm(Math.hypot(it.b[0]-it.a[0],it.b[1]-it.a[1]))+' мм  ·  '+measInfo(it));p.draw();return;}
   flash(M.pts.length===1?'Первая точка. Укажите вторую':'Теперь отведите курсор и щёлкните, где положить размер: выше/ниже — горизонтальный, левее/правее — вертикальный');
   p.draw();
 }
@@ -3269,20 +3284,29 @@ function entText(e){
 function measText(it){if(it.t==='ent')return entText(it.e);const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]),d=Math.hypot(dx,dy);
   return {main:fmm(d)+' мм',sub:measInfo(it)};}
 function measPaint(p,c,d){
-  const M=p.ms;c.save();c.setTransform(d,0,0,d,0,0);
+  const M=msOf(p);c.save();c.setTransform(d,0,0,d,0,0);
   const col='#ffd23f',bg='rgba(16,18,22,.92)';
-  const tag=(x,y,t,ang,small)=>{ // надпись на подложке, повёрнута вдоль размерной линии
-    c.save();c.translate(x,y);let a=ang||0;if(a>Math.PI/2)a-=Math.PI;if(a<-Math.PI/2)a+=Math.PI;c.rotate(a);
-    c.font=(small?'':'bold ')+(small?11:14)+'px system-ui,sans-serif';const w=c.measureText(t).width+10,h=small?16:20;
-    c.fillStyle=bg;c.fillRect(-w/2,-h/2,w,h);c.strokeStyle=small?'#555b64':col;c.lineWidth=1;c.strokeRect(-w/2+0.5,-h/2+0.5,w-1,h-1);
-    c.fillStyle=small?'#d6dae0':col;c.textAlign='center';c.textBaseline='middle';c.fillText(t,0,1);c.restore();};
+  const halo=lum(dxfBg())>150?'rgba(255,255,255,.95)':'rgba(16,18,22,.95)';
+  const tag=(x,y,t,ang,small,clr)=>{ // надпись всегда горизонтально, без рамки; тёмный «ореол» вокруг букв — чтобы не сливалась с контуром
+    c.save();c.font=(small?'':'bold ')+(small?11:14)+'px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';
+    c.lineJoin='round';c.strokeStyle=halo;c.lineWidth=small?3:4;c.strokeText(t,x,y);c.fillStyle=clr||(small?'#d6dae0':col);c.fillText(t,x,y);c.restore();};
   const arrow=(x,y,ax,ay)=>{const L=Math.hypot(ax,ay)||1,ux=ax/L,uy=ay/L,s=9;c.beginPath();c.moveTo(x,y);c.lineTo(x-ux*s-uy*3,y-uy*s+ux*3);c.lineTo(x-ux*s+uy*3,y-uy*s-ux*3);c.closePath();c.fill();};
   const drawDim=(it,pre)=>{const G=dimGeom(p,it);c.strokeStyle=col;c.fillStyle=col;c.lineWidth=1.2;c.setLineDash(pre?[5,4]:[]);
     c.globalAlpha=.7;c.beginPath();c.moveTo(...G.A);c.lineTo(...G.a2);c.moveTo(...G.B);c.lineTo(...G.b2);c.stroke();c.globalAlpha=1;   // выносные
     c.beginPath();c.moveTo(...G.a2);c.lineTo(...G.b2);c.stroke();c.setLineDash([]);
     const vx=G.b2[0]-G.a2[0],vy=G.b2[1]-G.a2[1];if(Math.hypot(vx,vy)>24){arrow(...G.a2,-vx,-vy);arrow(...G.b2,vx,vy);}
-    const ang=Math.atan2(vy,vx);tag((G.a2[0]+G.b2[0])/2,(G.a2[1]+G.b2[1])/2,fmm(G.val),ang);
-    if(pre)tag((G.a2[0]+G.b2[0])/2,(G.a2[1]+G.b2[1])/2+22,measInfo(it),0,true);};
+    const mx=(G.a2[0]+G.b2[0])/2,my=(G.a2[1]+G.b2[1])/2,hor=Math.abs(vx)>=Math.abs(vy);
+    tag(mx+(hor?0:6+c.measureText(fmm(G.val)).width*0.6),my-(hor?10:0),fmm(G.val));
+    if(pre)tag(mx,my+16,measInfo(it),0,true);};
+  // «Расстояние» как в AutoCAD: по прямой, по X, по Y и угол — пунктиром
+  const drawDist=(it,pre)=>{const A=m2w(p,...it.a),B=m2w(p,...it.b),sa=w2s(p,...A),sb=w2s(p,...B),sc=w2s(p,B[0],A[1]);
+    const dx=Math.abs(B[0]-A[0]),dy=Math.abs(B[1]-A[1]),L=Math.hypot(dx,dy),gc='#c9ced6';
+    c.setLineDash([2,3]);c.lineWidth=1.2;c.strokeStyle=gc;c.beginPath();c.moveTo(...sa);c.lineTo(...sb);c.moveTo(...sa);c.lineTo(...sc);c.lineTo(...sb);c.stroke();
+    let ang=Math.atan2(B[1]-A[1],B[0]-A[0]);if(ang<0)ang+=Math.PI*2;const r=Math.min(60,Math.hypot(sb[0]-sa[0],sb[1]-sa[1])*0.35);
+    if(L>1e-9&&dx>1e-9&&dy>1e-9){c.beginPath();c.arc(sa[0],sa[1],r,0,-ang,true);c.stroke();const am=-ang/2;tag(sa[0]+(r+18)*Math.cos(am),sa[1]+(r+12)*Math.sin(am),fmm(ang*180/Math.PI)+'°',0,true,gc);}
+    c.setLineDash([]);c.fillStyle=col;for(const q of [sa,sb]){c.beginPath();c.arc(q[0],q[1],3.5,0,Math.PI*2);c.fill();}
+    tag((sa[0]+sb[0])/2-14,(sa[1]+sb[1])/2-12,fmm(L));
+    if(dx>1e-9&&dy>1e-9){tag((sa[0]+sc[0])/2,sc[1]+(sc[1]>sb[1]?14:-12),fmm(dx),0,false,'#8fd3ff');tag(sc[0]+(sc[0]>sa[0]?8:-8)+(sc[0]>sa[0]?1:-1)*c.measureText(fmm(dy)).width*0.6,(sc[1]+sb[1])/2,fmm(dy),0,false,'#8fd3ff');}};
   const hl=e=>{c.strokeStyle=col;c.lineWidth=3;c.beginPath();
     if(e.t==='L'){c.moveTo(...m2s(p,e.x1,e.y1));c.lineTo(...m2s(p,e.x2,e.y2));}
     else{const n=64;let a0=0,sw=Math.PI*2;if(e.t==='A'){a0=e.a0;sw=e.ccw?e.a1-e.a0:e.a0-e.a1;while(sw<=0)sw+=Math.PI*2;}
@@ -3290,12 +3314,12 @@ function measPaint(p,c,d){
     c.stroke();};
   // диаметры всех отверстий — сразу при включении режима
   c.font='12px system-ui,sans-serif';
-  for(const e of measEnt(p.doc).E){if(e.t!=='C')continue;const r=e.r*p.s;if(r<4)continue;const [x,y]=m2s(p,e.cx,e.cy),t='Ø'+fmm(e.r*2);
+  if(SET.mholes!==false)for(const e of measEnt(p.doc).E){if(e.t!=='C')continue;const r=e.r*p.s;if(r<4)continue;const [x,y]=m2s(p,e.cx,e.cy),t='Ø'+fmm(e.r*2);
     const w=c.measureText(t).width+8,lx=x+r*0.72+2,ly=y-r*0.72-10;if(lx>p.W||ly<-10||lx+w<0||ly>p.H)continue;
     c.fillStyle='rgba(16,18,22,.8)';c.fillRect(lx,ly,w,16);c.fillStyle='#8fd3ff';c.textAlign='left';c.textBaseline='middle';c.fillText(t,lx+4,ly+8.5);}
   for(const it of M.items){
     if(it.t==='lin')drawDim(it,false);
-    else if(it.t==='dist'){drawDim({t:'lin',a:it.a,b:it.b,dir:'al',o:it.a},false);}
+    else if(it.t==='dist')drawDist(it,false);
     else{hl(it.e);const e=it.e,t=entText(e);if(e.t==='L'){const a=m2s(p,e.x1,e.y1),b=m2s(p,e.x2,e.y2);tag((a[0]+b[0])/2,(a[1]+b[1])/2-14,t.main,Math.atan2(b[1]-a[1],b[0]-a[0]));}
       else{const q=m2s(p,e.cx,e.cy),r=e.r*p.s;tag(q[0]+r*0.75+30,q[1]-r*0.75-12,t.main,0);}}
   }
@@ -3303,6 +3327,7 @@ function measPaint(p,c,d){
   const H=M.hover;
   if(M.pts.length){c.fillStyle=col;for(const q of M.pts){const s=m2s(p,...q);c.beginPath();c.arc(s[0],s[1],4,0,Math.PI*2);c.fill();}
     if(M.pts.length===1&&M.mouse){const b=H&&H.snap?[H.snap[0],H.snap[1]]:M.mouse,s0=m2s(p,...M.pts[0]),s1=m2s(p,...b);c.setLineDash([4,4]);c.strokeStyle=col;c.lineWidth=1;c.beginPath();c.moveTo(...s0);c.lineTo(...s1);c.stroke();c.setLineDash([]);}
+    if(M.pts.length===1&&M.mouse&&SET.mmode==='dist'&&H&&H.snap)drawDist({a:M.pts[0],b:[H.snap[0],H.snap[1]]},true);
     if(M.pts.length===2&&M.mw){const it={t:'lin',a:M.pts[0],b:M.pts[1],dir:linDim(p,M.pts[0],M.pts[1],M.mw),o:M.mouse};drawDim(it,true);}}
   if(H&&H.snap&&M.pts.length<2){const [x,y]=m2s(p,H.snap[0],H.snap[1]);c.strokeStyle='#39d353';c.lineWidth=2;c.beginPath();
     if(H.snap[2]==='центр'){c.arc(x,y,6,0,Math.PI*2);}else if(H.snap[2]==='середина'){c.moveTo(x,y-7);c.lineTo(x+7,y+5);c.lineTo(x-7,y+5);c.closePath();}else if(H.snap[2]==='квадрант'){c.moveTo(x,y-7);c.lineTo(x+7,y);c.lineTo(x,y+7);c.lineTo(x-7,y);c.closePath();}else c.rect(x-5,y-5,10,10);
@@ -3312,11 +3337,14 @@ function measPaint(p,c,d){
 }
 function measToggle(on){
   MEAS.on=on===undefined?!MEAS.on:on;$('vMeas').classList.toggle('on',MEAS.on);$('measBox').hidden=!MEAS.on;
-  if(!MEAS.on)MEAS.store.clear();
+  if(!MEAS.on&&SET.mkeep!=='view')MEAS.store.clear();
   for(const p of panes){p.ms=null;p.cv.style.cursor=MEAS.on?'crosshair':'';p.draw();}
   if(MEAS.on)flash('Размеры: две точки (с привязкой) и третий клик — где положить размер. Клик по линии / отверстию — длина / Ø. Esc — отменить начатый, Backspace — убрать последний');
 }
 function measUndo(all){for(const p of panes){const M=p.ms;if(!M)continue;if(M.pts.length&&!all){M.pts=[];}else if(all)M.items.length=0;else M.items.pop();p.draw();}}
+$('measMode').value=SET.mmode==='dist'?'dist':'dim';$('measMode').onchange=e=>{SET.mmode=e.target.value;saveSet();for(const p of panes)if(p.ms){p.ms.pts=[];p.draw();}};
+$('measHoles').classList.toggle('on',SET.mholes!==false);$('measHoles').onclick=()=>{SET.mholes=SET.mholes===false;saveSet();$('measHoles').classList.toggle('on',SET.mholes!==false);panes.forEach(p=>p.draw());};
+$('sMkeep').value=SET.mkeep==='view'?'view':'mode';$('sMkeep').onchange=e=>{SET.mkeep=e.target.value;saveSet();};
 $('measPrec').value=String(mDec());$('measPrec').onchange=e=>{SET.mprec=+e.target.value;saveSet();panes.forEach(p=>p.draw());};
 $('measUndo').onclick=()=>measUndo(false);$('measClear').onclick=()=>measUndo(true);
 $('vMeas').onclick=()=>measToggle();
@@ -4120,7 +4148,7 @@ document.addEventListener('keydown',e=>{
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний
     if(k==='Escape'&&panes.some(p=>p.ms&&p.ms.pts.length)){for(const p of panes)if(p.ms){p.ms.pts=[];p.draw();}return;}
     if(k==='Backspace'||(e.ctrlKey&&/^[zZяЯ]$/.test(k))){e.preventDefault();measUndo(false);return;}
-    if(k==='Escape'){flash('Размеры остаются, пока включён режим. Выйти — D или «📏 Размеры»');return;}}
+  }
   if(k==='Escape'&&SEL.size&&!VW.full){clearSel();return;}
   if(FOLLOW){ // второй монитор: листание передаётся в основное окно
     if(/^(ArrowRight|ArrowLeft|ArrowUp|ArrowDown| |Tab)$/.test(k)||((k==='PageDown'||k==='PageUp')&&!(panes[VW.active]&&panes[VW.active].isPdf&&panes[VW.active].doc.pages>1))){
