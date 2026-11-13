@@ -268,7 +268,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.0.3</small></div>
+  <div class="brand">DXF <small>+PDF · v4.0.4</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -684,7 +684,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <h3>Лупа</h3>
 <ul>
 <li><b>Удерживайте Z</b> — под курсором круг с увеличением, отпустили — пропал.</li>
-<li><b>Кнопка 🔍</b> включает лупу «по кнопке мыши»: курсор становится лупой, <b>нажмите и держите левую кнопку</b> на месте, которое нужно рассмотреть, — появится увеличение; отпустили — пропало. Повторный клик по 🔍 или <kbd>Esc</kbd> — выключить.</li>
+<li><b>Кнопка 🔍</b> включает лупу «по кнопке мыши»: курсор становится лупой, <b>нажмите и держите левую кнопку</b> на месте, которое нужно рассмотреть, — появится увеличение; отпустили — пропало. Повторный клик по 🔍 или <kbd>Esc</kbd> — выключить. Лупа с кнопки и режим «Размеры» вместе не работают: включили одно — другое выключается. Во время измерений можно смотреть лупой по клавише Z.</li>
 <li><b>Увеличение лупы</b> (×2…×16): пока лупа включена кнопкой 🔍 — <b>колесо мыши</b> (кнопку держать не нужно, увеличение запоминается) или клавиши <kbd>+</kbd> <kbd>−</kbd>; с клавишей Z — колесо, пока держите Z. Общий масштаб окна при включённой лупе колесом не меняется — выключите лупу. Лупа не заходит на панели и список — только в окне просмотра.</li>
 <li>Работает в DXF и PDF; в PDF место под лупой через миг дорисовывается в полном качестве. Размер — ⚙ «Размер лупы».</li>
 </ul>
@@ -3484,7 +3484,7 @@ function measPaint(p,c,d){
   c.restore();
 }
 function measToggle(on){
-  MEAS.on=on===undefined?!MEAS.on:on;$('vMeas').classList.toggle('on',MEAS.on);$('measBox').hidden=!MEAS.on;
+  MEAS.on=on===undefined?!MEAS.on:on;if(MEAS.on&&LOUPE.on)loupeOff();   // лупа «по кнопке мыши» и размеры вместе не работают — включили одно, другое выключается$('vMeas').classList.toggle('on',MEAS.on);$('measBox').hidden=!MEAS.on;
   if(!MEAS.on&&SET.mkeep==='mode')MEAS.store.clear();
   for(const p of panes){p.ms=null;p.cv.style.cursor=MEAS.on?'crosshair':'';p.draw();}
   if(MEAS.on)flash('Размеры: две точки (с привязкой) и третий клик — где положить размер. Клик по линии / отверстию — длина / Ø. Esc — отменить начатый, Backspace — убрать последний');
@@ -3776,7 +3776,7 @@ async function loupePdf(p,wx,wy,s,tok){
   L.strokeStyle='rgba(217,130,43,.8)';L.lineWidth=d;L.beginPath();L.moveTo(R*d-8*d,R*d);L.lineTo(R*d+8*d,R*d);L.moveTo(R*d,R*d-8*d);L.lineTo(R*d,R*d+8*d);L.stroke();
   L.fillStyle='rgba(16,18,22,.8)';L.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);L.fillStyle='#ffd23f';L.font=(12*d)+'px system-ui,sans-serif';L.textAlign='center';L.textBaseline='middle';L.fillText('×'+Math.round(s/p.s),R*d,2*R*d-17*d);
 }
-$('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;LOUPE.down=false;loupeSet();if(LOUPE.on)flash('Лупа: нажмите и держите левую кнопку мыши на месте, которое нужно увеличить; колесо — сильнее/слабее. Без кнопки — удерживайте Z. Esc — выключить');};
+$('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;LOUPE.down=false;if(LOUPE.on&&MEAS.on)measToggle(false);loupeSet();if(LOUPE.on)flash('Лупа: нажмите и держите левую кнопку мыши на месте, которое нужно увеличить; колесо — сильнее/слабее. Без кнопки — удерживайте Z. Esc — выключить');};
 document.addEventListener('keydown',e=>{if((e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я')&&!e.ctrlKey&&!e.metaKey&&!e.repeat&&viewerShown()&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')){LOUPE.key=true;loupeSet();}});
 document.addEventListener('keyup',e=>{if(e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я'){LOUPE.key=false;loupeSet();}});
 window.addEventListener('blur',()=>{LOUPE.key=false;LOUPE.boost=false;loupeSet();});
