@@ -170,6 +170,11 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 .pp-c:hover{background:var(--hover)}
 .pp-s{padding:10px 10px 6px;color:var(--mut);font-size:12px;border-top:1px solid var(--line);margin-top:4px}
 .pin.dis{opacity:.45;cursor:not-allowed}
+#mtBar{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--line);font-size:12px}
+#mtBar .mt-l{color:var(--mut);margin-right:2px}
+#mtBar .mt-c{padding:2px 9px;font-size:12px;border-radius:12px;white-space:pre}
+#mtBar .mt-c.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#mtBar .mt-s{margin-left:auto;color:var(--mut);display:flex;gap:5px;align-items:center}
 .pk-for{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
 .pk:hover,.pk.cur{background:var(--hover,#2b2f36)}
@@ -241,7 +246,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.6</small></div>
+  <div class="brand">DXF <small>+PDF · v3.7</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -282,6 +287,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </header>
 <div id="updBar" hidden>Доступна новая версия<button id="updBtn">Обновить</button></div>
 <div id="status"></div>
+<div id="mtBar" hidden></div>
 <div id="cmpBar" hidden><span id="cmpInfo"></span><span class="sp"></span>
   <label>Показать <select id="cmpFilter"><option value="">все</option><option value="chg">всё, что менялось</option><option value="diff">≠ отличаются</option><option value="geo">≈ пересохранены, геометрия та же</option><option value="name">имя изменено</option><option value="ren">⇢ переименованы</option><option value="new">нов — нет там</option><option value="same">= одинаковые</option></select></label>
   <button id="cmpOnlyBtn"></button><button id="cmpEnd" title="Закончить сравнение">✕</button></div>
@@ -314,6 +320,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
+    <button id="vMeas" hidden title="Измерения: расстояние между точками (привязка к концам, серединам, центрам), клик по линии — длина, по дуге или окружности — R / Ø (D)">📏 Измерить</button>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>

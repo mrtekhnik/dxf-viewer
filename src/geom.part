@@ -236,7 +236,7 @@ function GEOCORE(){
     const d=diff(A,B,M,tol);let desc=[];try{desc=describe(A,B,M,d,tol);}catch(e){desc=d.clusters.map(bb=>({bb,text:'отличие'}));}
     return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]],desc},d);
   }
-  return {prep,align,diff,compare,mul};
+  return {prep,align,diff,compare,mul,bulgeArc};
 }
 const GEO=GEOCORE();
 /* сравнение в отдельном потоке, чтобы окно не замирало на больших файлах */

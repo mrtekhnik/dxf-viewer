@@ -256,7 +256,7 @@ function setFiles(arr,src={}){
     .sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}))
     .map(x=>makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:'')));
   $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;$('btnCmp').hidden=!items.length||FOLLOW;
-  if(CMP&&!src.keepCmp){CMP=null;}if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;
+  if(CMP&&!src.keepCmp){CMP=null;}MTF="";if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;
   if(!arr.length)$('empty').innerHTML=EMPTY_HTML;
   if(!items.length&&arr.length)$('empty').innerHTML='DXF и PDF не найдены среди выбранных ('+arr.length+' файл.).<br>Выберите другую папку.';
   if(src.folder)histAddFolder(src.rid||null,src.rootName||'',items.length);
@@ -322,12 +322,39 @@ function goUp(){const pd=parentDir(curDir);if(pd===null)return false;goDir(pd,cu
 $('btnBrowse').onclick=()=>{SET.browse=SET.browse==='folders'?'all':'folders';saveSet();$('btnBrowse').classList.toggle('on',SET.browse==='folders');applyFilter();
   flash(SET.browse==='folders'?'Показ по папкам: вложенные папки плитками, файлы — только этой папки (Backspace — наверх)':'Показ всех файлов выбранной папки со вложенными');};
 $('btnBrowse').classList.toggle('on',SET.browse==='folders');
+/* ---------- материал и толщина (из имени DXF): фильтр-строка над сеткой и сортировка ---------- */
+let MTF='';   // выбранная группа «материал|толщина» ('' — все)
+function mtInfo(it){if(it.type!=='dxf')return null;if(it._mt!==undefined)return it._mt;const p=nameParts(it);
+  return it._mt=(p.mat||p.thk)?{mat:p.mat||'?',thk:p.thk||'',qty:+p.qty||0}:null;}
+const mtKey=it=>{const m=mtInfo(it);return m?(m.mat.toLowerCase()+'|'+m.thk):'';};
+const mtNum=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?1e9:n;};
+function mtCmp(a,b){const x=mtInfo(a),y=mtInfo(b);
+  if(!x||!y)return (x?0:1)-(y?0:1)||a.name.localeCompare(b.name,'ru',{numeric:true});
+  return x.mat.localeCompare(y.mat,'ru')||mtNum(x.thk)-mtNum(y.thk)||a.name.localeCompare(b.name,'ru',{numeric:true});}
+const mtLabel=m=>m.mat+(m.thk?' · '+String(m.thk).replace('.',',')+' мм':'');
+function mtBar(list){
+  const G=new Map();for(const it of list){const m=mtInfo(it);if(!m)continue;const k=mtKey(it);const g=G.get(k)||{m,n:0,q:0};g.n++;g.q+=m.qty||0;G.set(k,g);}
+  const B=$('mtBar');B.textContent='';
+  if(G.size<1){B.hidden=true;if(MTF){MTF='';}return;}
+  B.hidden=false;if(MTF&&!G.has(MTF))MTF='';
+  const lab=document.createElement('span');lab.className='mt-l';lab.textContent='Материал · толщина:';B.appendChild(lab);
+  const chip=(k,t,tip)=>{const c=document.createElement('button');c.className='mt-c'+(MTF===k?' on':'');c.textContent=t;c.title=tip;c.onclick=()=>{MTF=MTF===k&&k?'':k;VW.idx=-1;applyFilter();};B.appendChild(c);};
+  chip('','все','Показать все файлы');
+  for(const [k,g] of [...G].sort((a,b)=>a[1].m.mat.localeCompare(b[1].m.mat,'ru')||mtNum(a[1].m.thk)-mtNum(b[1].m.thk)))
+    chip(k,mtLabel(g.m)+'  ('+g.n+')',g.n+' DXF'+(g.q?', деталей по количеству в имени: '+g.q:'')+' — клик: показать только их (PDF скрываются)');
+  const so=document.createElement('label');so.className='mt-s';so.innerHTML='<input type="checkbox"> сортировать по материалу и толщине';
+  so.querySelector('input').checked=!!SET.sortMt;so.querySelector('input').onchange=e=>{SET.sortMt=e.target.checked;saveSet();applyFilter();};B.appendChild(so);
+}
 function applyFilter(){
   const cur=view[VW.idx];
   const q=$('filter').value.trim().toLowerCase(),ty=$('typeSel').value;
   const cf=CMP&&CMP.filter;
   const fm=folderMode()&&!q,eff=effDir();
-  view=items.filter(it=>(!cf||cmpMatch(it,cf))&&(fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/')))&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
+  const inDir=it=>fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/'));
+  view=items.filter(it=>(!cf||cmpMatch(it,cf))&&inDir(it)&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
+  mtBar(view);                                       // строка «материал · толщина» — по файлам, видимым до этого фильтра
+  if(MTF)view=view.filter(it=>mtKey(it)===MTF);
+  if(SET.sortMt)view=view.slice().sort((a,b)=>mtCmp(a,b));
   VW.idx=cur?view.indexOf(cur):-1;
   const g=$('grid');io.disconnect();g.textContent='';
   const fr=document.createDocumentFragment();
@@ -635,7 +662,7 @@ class Pane{
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();return;}
     if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);return;}
-    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});return;}
+    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});if(MEAS.on&&this.ms)measPaint(this,c,d);return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
     c.fillText(t,this.W/2,this.H/2);
@@ -763,7 +790,7 @@ class Pane{
   async show(it){
     if(this.it===it&&this.doc){this.onUpdate();return;}
     this.save();
-    const tok=++this.tok;this.it=it;this.doc=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
+    const tok=++this.tok;this.it=it;this.doc=null;this.ms=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
     this.orig=false;this.keepXf=null;
     const sx=it.type==='dxf'&&XFS.get(xfKey(it));this.xf={tx:0,ty:0,rot:sx?sx.rot:0,mirror:sx?!!sx.mirror:false};
     this.renderCap();this.el.title=it.path;this.draw();
@@ -845,6 +872,7 @@ class Pane{
     cv.addEventListener('pointermove',e=>{
       const [x,y]=pos(e);
       if(this.doc&&!this.isPdf&&this.doc.bbox&&e.pointerType==='mouse'){const [wx,wy]=mApply(mInv(xfMat(this.xf)),...this.s2w(x,y));$('vCoord').textContent=`X ${fmt(wx+this.doc.origin[0])}   Y ${fmt(wy+this.doc.origin[1])}`;}
+      if(MEAS.on&&!ptrs.size&&e.pointerType==='mouse')measHover(this,x,y);
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
       if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
@@ -864,6 +892,7 @@ class Pane{
         const [x,y]=pos(e),dx=x-downX,dy=y-downY;
         if(Math.abs(dx)>70&&Math.abs(dy)<60){Object.assign(this,sv0);this.fitted=true;this.draw();step(dx<0?1:-1);return;}
       }
+      if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
       if(ptrs.size===0&&!moved&&performance.now()-downT<300){
         const t=performance.now();
         if(t-tapT<350&&Math.hypot(downX-tapX,downY-tapY)<30){this.fit();tapT=0;}else{tapT=t;tapX=downX;tapY=downY;}
@@ -1002,7 +1031,7 @@ function updateBar(){
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
-  $('vLw').hidden=!anyDxf;$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
+  $('vLw').hidden=!anyDxf;$('vMeas').hidden=!anyDxf||!!OV;if(MEAS.on&&(!anyDxf||OV))measToggle(false);$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
@@ -1488,6 +1517,93 @@ $('sLineK').onchange=e=>{SET.lineK=+e.target.value;SET.lw=false;saveSet();panes.
 const LINEMODES=[['тонкие',false,1],['средние',false,1.6],['жирные',false,2.4],['по файлу',true,1]];
 function lineMode(){return SET.lw&&anyLw()?LINEMODES[3]:LINEMODES.find(m=>!m[1]&&m[2]===SET.lineK)||LINEMODES[0];}
 function anyLw(){return panes.some(p=>p.doc&&!p.isPdf&&p.doc.hasLw);}
+/* =====================================================================
+   ИЗМЕРЕНИЯ в DXF (D или «📏 Измерить»).
+   Две точки — расстояние, ΔX, ΔY, угол; точки привязываются к концам, серединам и центрам (значок у курсора).
+   Клик по линии без привязки — длина; по окружности — Ø и длина; по дуге — R, угол и длина дуги.
+   Esc — убрать измерения, ещё раз Esc — выйти. Всё в координатах файла, с учётом поворота детали на экране.
+   ===================================================================== */
+const MEAS={on:false};
+function measEnt(doc){ // элементы и точки привязки детали (один раз на документ)
+  if(doc._meas)return doc._meas;const E=[],S=[];
+  const arcE=(cx,cy,r,a0,a1,ccw)=>{E.push({t:'A',cx,cy,r,a0,a1,ccw});S.push([cx,cy,'центр']);S.push([cx+r*Math.cos(a0),cy+r*Math.sin(a0),'конец'],[cx+r*Math.cos(a1),cy+r*Math.sin(a1),'конец']);
+    let sw=ccw?a1-a0:a0-a1;while(sw<=0)sw+=Math.PI*2;const am=a0+(ccw?1:-1)*sw/2;S.push([cx+r*Math.cos(am),cy+r*Math.sin(am),'середина']);};
+  const lineE=(x1,y1,x2,y2)=>{E.push({t:'L',x1,y1,x2,y2});S.push([x1,y1,'конец'],[x2,y2,'конец'],[(x1+x2)/2,(y1+y2)/2,'середина']);};
+  for(const G of doc.groups||[]){if(G.off)continue;
+    for(const p of G.prims){
+      if(p[0]==='L')lineE(p[1],p[2],p[3],p[4]);
+      else if(p[0]==='C'){E.push({t:'C',cx:p[1],cy:p[2],r:p[3]});S.push([p[1],p[2],'центр']);for(let k=0;k<4;k++)S.push([p[1]+p[3]*Math.cos(k*Math.PI/2),p[2]+p[3]*Math.sin(k*Math.PI/2),'квадрант']);}
+      else if(p[0]==='A')arcE(p[1],p[2],p[3],p[4],p[5],true);
+      else if(p[0]==='P'){const a=p[2],n=a.length/3,segs=p[1]?n:n-1;
+        for(let i=0;i<segs;i++){const j=(i+1)%n,x1=a[i*3],y1=a[i*3+1],x2=a[j*3],y2=a[j*3+1],b=a[i*3+2];
+          const A=b?GEO.bulgeArc(x1,y1,x2,y2,b):null;if(A)arcE(A.cx,A.cy,A.r,A.a0,A.a1,A.ccw);else lineE(x1,y1,x2,y2);}}
+    }}
+  return doc._meas={E,S};
+}
+const m2s=(p,x,y)=>{const [wx,wy]=mApply(xfMat(p.xf),x,y);return [p.W/2+(wx-p.cx)*p.s,p.H/2-(wy-p.cy)*p.s];};
+const s2m=(p,x,y)=>mApply(mInv(xfMat(p.xf)),...p.s2w(x,y));
+function onArc(e,x,y){let a=Math.atan2(y-e.cy,x-e.cx),sw=e.ccw?e.a1-e.a0:e.a0-e.a1;while(sw<=0)sw+=Math.PI*2;let t=e.ccw?a-e.a0:e.a0-a;while(t<0)t+=Math.PI*2;return t<=sw+1e-9;}
+function entDist(e,x,y){
+  if(e.t==='L'){const dx=e.x2-e.x1,dy=e.y2-e.y1,l=dx*dx+dy*dy;let t=l?((x-e.x1)*dx+(y-e.y1)*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(x-e.x1-t*dx,y-e.y1-t*dy);}
+  const d=Math.abs(Math.hypot(x-e.cx,y-e.cy)-e.r);if(e.t==='C')return d;return onArc(e,x,y)?d:Infinity;
+}
+function measPick(p,x,y){ // что под курсором: точка привязки или элемент
+  const M=measEnt(p.doc),[mx,my]=s2m(p,x,y),tol=10/p.s;let best=null,bd=tol;
+  for(const q of M.S){const d=Math.hypot(q[0]-mx,q[1]-my);if(d<bd||(best&&d<=bd+1e-9&&q[2]==='центр')){bd=d;best=q;}}
+  if(best)return {snap:best};
+  let be=null,ed=7/p.s;for(const e of M.E){const d=entDist(e,mx,my);if(d<ed){ed=d;be=e;}}
+  return be?{ent:be,pt:[mx,my]}:{pt:[mx,my]};
+}
+function measHover(p,x,y){if(!p.doc||p.isPdf||p.ov)return;p.ms=p.ms||{pts:[],items:[]};p.ms.hover=measPick(p,x,y);p.ms.mouse=s2m(p,x,y);p.draw();}
+function measClick(p,x,y){
+  p.ms=p.ms||{pts:[],items:[]};const h=measPick(p,x,y),M=p.ms;
+  if(!M.pts.length&&h.ent&&!h.snap){M.items.push({t:'ent',e:h.ent});measShow(M.items[M.items.length-1]);p.draw();return;}
+  const pt=h.snap?[h.snap[0],h.snap[1]]:h.pt;
+  if(!M.pts.length){M.pts=[pt];flash('Первая точка — укажите вторую (Esc — отмена)');}
+  else{const it={t:'dist',a:M.pts[0],b:pt};M.items.push(it);M.pts=[];measShow(it);}
+  p.draw();
+}
+const f2=v=>fmt(Math.round(v*100)/100);
+function measText(it){
+  if(it.t==='dist'){const dx=it.b[0]-it.a[0],dy=it.b[1]-it.a[1],d=Math.hypot(dx,dy);let ang=Math.atan2(dy,dx)*180/Math.PI;
+    return {main:f2(d)+' мм',sub:'ΔX '+f2(Math.abs(dx))+' · ΔY '+f2(Math.abs(dy))+' · ∠ '+f2(((ang%180)+180)%180)+'°'};}
+  const e=it.e;
+  if(e.t==='L')return {main:'L '+f2(Math.hypot(e.x2-e.x1,e.y2-e.y1))+' мм',sub:'отрезок'};
+  if(e.t==='C')return {main:'Ø'+f2(e.r*2),sub:'R '+f2(e.r)+' · длина окружности '+f2(2*Math.PI*e.r)};
+  let sw=e.ccw?e.a1-e.a0:e.a0-e.a1;while(sw<=0)sw+=Math.PI*2;
+  return {main:'R '+f2(e.r),sub:'Ø'+f2(e.r*2)+' · дуга '+f2(sw*180/Math.PI)+'° · длина '+f2(e.r*sw)};
+}
+function measShow(it){const t=measText(it);flash(t.main+'  ·  '+t.sub);}
+function measPaint(p,c,d){
+  const M=p.ms;c.save();c.setTransform(d,0,0,d,0,0);c.lineWidth=1.5;c.font='bold 13px system-ui,sans-serif';c.textBaseline='bottom';
+  const col='#ffd23f',lab=(x,y,t)=>{c.font='bold 13px system-ui,sans-serif';const w1=c.measureText(t.main).width;c.font='11px system-ui,sans-serif';const w2=c.measureText(t.sub).width;
+    const w=Math.max(w1,w2)+12;c.fillStyle='rgba(20,22,26,.88)';c.fillRect(x+8,y-38,w,34);c.fillStyle=col;c.font='bold 13px system-ui,sans-serif';c.fillText(t.main,x+14,y-21);c.fillStyle='#cfd3d8';c.font='11px system-ui,sans-serif';c.fillText(t.sub,x+14,y-7);};
+  const dot=(x,y)=>{c.fillStyle=col;c.beginPath();c.arc(x,y,3.5,0,Math.PI*2);c.fill();};
+  const hl=e=>{c.strokeStyle=col;c.lineWidth=3;c.beginPath();
+    if(e.t==='L'){c.moveTo(...m2s(p,e.x1,e.y1));c.lineTo(...m2s(p,e.x2,e.y2));}
+    else{const n=64;let a0=0,sw=Math.PI*2;if(e.t==='A'){a0=e.a0;sw=e.ccw?e.a1-e.a0:e.a0-e.a1;while(sw<=0)sw+=Math.PI*2;}
+      for(let i=0;i<=n;i++){const a=a0+(e.t==='A'&&!e.ccw?-1:1)*sw*i/n,q=m2s(p,e.cx+e.r*Math.cos(a),e.cy+e.r*Math.sin(a));i?c.lineTo(...q):c.moveTo(...q);}}
+    c.stroke();c.lineWidth=1.5;};
+  for(const it of M.items){
+    if(it.t==='dist'){const a=m2s(p,...it.a),b=m2s(p,...it.b);c.strokeStyle=col;c.setLineDash([]);c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();
+      c.setLineDash([4,4]);c.strokeStyle='rgba(255,210,63,.55)';c.beginPath();c.moveTo(...a);c.lineTo(b[0],a[1]);c.lineTo(...b);c.stroke();c.setLineDash([]);dot(...a);dot(...b);lab((a[0]+b[0])/2,(a[1]+b[1])/2,measText(it));}
+    else{hl(it.e);const e=it.e,q=e.t==='L'?m2s(p,(e.x1+e.x2)/2,(e.y1+e.y2)/2):m2s(p,e.cx,e.cy);if(e.t!=='L'){dot(...q);lab(q[0]+e.r*p.s*0.75,q[1]-e.r*p.s*0.75,measText(it));}else lab(q[0],q[1],measText(it));}
+  }
+  if(M.pts.length){const a=m2s(p,...M.pts[0]);dot(...a);if(M.mouse){const hv=M.hover&&M.hover.snap?[M.hover.snap[0],M.hover.snap[1]]:M.mouse,b=m2s(p,...hv);
+    c.setLineDash([5,4]);c.strokeStyle=col;c.beginPath();c.moveTo(...a);c.lineTo(...b);c.stroke();c.setLineDash([]);lab(b[0],b[1],measText({t:'dist',a:M.pts[0],b:hv}));}}
+  const H=M.hover;
+  if(H&&H.snap){const [x,y]=m2s(p,H.snap[0],H.snap[1]);c.strokeStyle='#39d353';c.lineWidth=2;c.beginPath();
+    if(H.snap[2]==='центр'){c.arc(x,y,6,0,Math.PI*2);}else if(H.snap[2]==='середина'){c.moveTo(x,y-7);c.lineTo(x+7,y+5);c.lineTo(x-7,y+5);c.closePath();}else if(H.snap[2]==='квадрант'){c.moveTo(x,y-7);c.lineTo(x+7,y);c.lineTo(x,y+7);c.lineTo(x-7,y);c.closePath();}else c.rect(x-5,y-5,10,10);
+    c.stroke();c.fillStyle='#39d353';c.font='11px system-ui,sans-serif';c.textBaseline='top';c.fillText(H.snap[2],x+9,y+6);}
+  else if(H&&H.ent&&!M.pts.length){hl(H.ent);c.strokeStyle='rgba(0,0,0,0)';}
+  c.restore();
+}
+function measToggle(on){
+  MEAS.on=on===undefined?!MEAS.on:on;$('vMeas').classList.toggle('on',MEAS.on);
+  for(const p of panes){if(!MEAS.on)p.ms=null;p.cv.style.cursor=MEAS.on?'crosshair':'';p.draw();}
+  if(MEAS.on)flash('Измерения: две точки — расстояние; клик по линии, дуге или окружности — длина, R, Ø. Esc — сбросить');
+}
+$('vMeas').onclick=()=>measToggle();
 function cycleLineK(){const n=LINEMODES.length-(anyLw()?0:1);let i=(LINEMODES.indexOf(lineMode())+1)%n;const m=LINEMODES[i];
   SET.lw=m[1];SET.lineK=m[2];saveSet();panes.forEach(p=>p.draw());$('sLineK').value=String(SET.lineK);updateBar();flash('Линии DXF: '+m[0]);}
 $('sScope').onchange=e=>{SET.pairScope=e.target.value;saveSet();if(VW.idx>=0&&viewerShown())showItem(VW.idx);};
@@ -2069,6 +2185,7 @@ document.addEventListener('keydown',e=>{
   if(e.target.id==='filter'&&(k==='ArrowDown'||k==='Enter')){e.target.blur();e.preventDefault();if(view.length&&VW.idx<0){if(docked())showItem(0);else{VW.idx=0;markCurrent(view[0]);}}return;}
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
   if(k==='Escape'&&!$('pickPanel').hidden){pickClose();return;}
+  if(k==='Escape'&&MEAS.on&&viewerShown()){const has=panes.some(p=>p.ms&&(p.ms.items.length||p.ms.pts.length));if(has)for(const p of panes){if(p.ms){p.ms.items=[];p.ms.pts=[];p.draw();}}else measToggle(false);return;}
   if(k==='Escape'&&SEL.size&&!VW.full){clearSel();return;}
   if(FOLLOW){ // второй монитор: листание передаётся в основное окно
     if(/^(ArrowRight|ArrowLeft|ArrowUp|ArrowDown| |Tab)$/.test(k)||((k==='PageDown'||k==='PageUp')&&!(panes[VW.active]&&panes[VW.active].isPdf&&panes[VW.active].doc.pages>1))){
@@ -2119,6 +2236,7 @@ document.addEventListener('keydown',e=>{
   else if(/^[lLдД]$/.test(k)&&VW.cmp)$('vSync').click();
   else if(/^[rRкК]$/.test(k))$('vSide').click();
   else if(/^[wWцЦ]$/.test(k))cycleLineK();
+  else if(/^[dDвВ]$/.test(k)&&!$('vMeas').hidden)measToggle();
   else if(k==='['||k==='х'||k==='Х')setContrast(SET.pdfLv-1);
   else if(k===']'||k==='ъ'||k==='Ъ')setContrast(SET.pdfLv+1);
   else if(/^[qQйЙ]$/.test(k))$('vRotL').click();
