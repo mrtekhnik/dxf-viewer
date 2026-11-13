@@ -1124,7 +1124,7 @@ function updateBar(){
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
-  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
+  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
@@ -1138,6 +1138,7 @@ function updateBar(){
   const sug=has&&ap&&ap.isPdf&&ap.sugRot!=null&&ap.sugRot!==(ap.prot||0);$('vPdfRot').hidden=!sug;
   if(sug)$('vPdfRot').title='Текст на листе лежит боком — повернуть лист на '+(((ap.sugRot-(ap.prot||0))%360+360)%360)+'° по часовой (запомнится для этого файла)';
   $('vFitW').hidden=!has;
+  for(const g of document.querySelectorAll('.vbar .vgrp'))g.hidden=[...g.children].every(c=>c.hidden);   // пустые группы не занимают места
   $('vDims').textContent=has&&ap?ap.dims():'';
   $('vWarn').hidden=!(has&&cur.issues);if(has)$('vWarn').textContent=`⚠ замечаний: ${cur.issues}`;
   if(FOLLOW)followerBar();

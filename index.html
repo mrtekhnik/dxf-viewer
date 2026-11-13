@@ -131,6 +131,10 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 #viewer.full{position:fixed;inset:0;z-index:10}
 .vbar{display:flex;gap:6px;align-items:center;padding:6px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
 .vbar>*{flex:none}
+.vgrp{display:flex;gap:3px;align-items:center;flex:none}.vbar{gap:10px}
+#vClose{position:sticky;right:0;margin-left:auto;z-index:2;box-shadow:-8px 0 8px var(--panel)}
+#vClose:hover{background:#c42b1c;color:#fff;border-color:#c42b1c}
+@media (max-width:1250px){.vbar .lbl{display:none}}
 #vPgNum{white-space:nowrap}
 #vName{flex:1 1 auto;min-width:60px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 4px}
 #vPages{display:flex;gap:4px;align-items:center;color:var(--mut);font-size:13px}
@@ -269,7 +273,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.1.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.1.1</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -334,13 +338,12 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 
 <div id="viewer" hidden>
   <div class="vbar">
-    <button id="vClose" title="Назад к миниатюрам (Esc)">✕</button>
-    <button id="vPrev" title="Предыдущий (←)">‹</button>
-    <button id="vNext" title="Следующий (→)">›</button>
+    <button id="vPrev" title="Предыдущий (←)">‹</button><button id="vNext" title="Следующий (→)">›</button>
     <span id="vName"></span>
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
-    <span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span>
-    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vMirV" title="Зеркально сверху вниз (Shift+M)">⇅</button><span class="mwrap"><button id="vXfSave" title="Записать поворот / зеркало в файл DXF; произвольный угол">💾</button>
+    <span class="vgrp"><span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span><button id="vPin" title="Добавить файл в ярлыки">★</button></span>
+    <span class="vgrp"><button id="vFit" title="Показать всё — вписать в окно (F, двойной клик)">⤢</button><button id="vFitW" hidden title="Вписать по ширине окна (Shift+F)">⟷</button><button id="vLoupe" title="Лупа: включите, затем клик — показать лупу (колесо — её увеличение), ещё клик — убрать. Или удерживайте Z">🔍</button><button id="vLw" title="Толщина линий DXF (W — по кругу)">≡<span class="lbl"> Линии</span></button><span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span><button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button></span>
+    <span class="vgrp"><span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vMirV" title="Зеркально сверху вниз (Shift+M)">⇅</button><span class="mwrap"><button id="vXfSave" title="Записать поворот / зеркало в файл DXF; произвольный угол">💾</button>
       <div id="xfMenu" class="menu" hidden style="min-width:290px">
         <div id="xfDesc" class="xfm-t"></div>
         <div class="xfm-r">Повернуть ещё на <input id="xfAng" type="number" step="any" value="15" style="width:64px">° <button id="xfAngL" title="Против часовой">⟲</button><button id="xfAngR" title="По часовой">⟳</button></div>
@@ -348,32 +351,18 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
         <label><input type="checkbox" id="xfBak"> старый файл сохранить рядом как .bak</label>
         <button id="xfGo">💾 Записать в файл</button>
         <div id="xfNote" class="xfm-n"></div>
-      </div></span></span>
-    <button id="vPin" title="Добавить файл в ярлыки">★</button>
-    <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
-    <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
-    <button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓ Проверка</button>
-    <button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏 Размеры</button>
-    <span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option><option value="ang">Угол</option><option value="gap">Зазор (между контурами)</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span>
-    <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
-    <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
-    <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
-    <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
-    <button id="vFitW" hidden title="Вписать по ширине окна (Shift+F)">↔ По ширине</button>
-    <button id="vLoupe" title="Лупа: включите, затем клик — показать лупу (колесо — её увеличение), ещё клик — убрать. Или удерживайте Z">🔍</button>
-    <button id="vPdfRot" hidden class="warn">⤾ Повернуть лист</button>
-    <span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼 PNG</button>
+      </div></span></span><button id="vPdfRot" hidden class="warn">⤾<span class="lbl"> Лист</span></button></span>
+    <span class="vgrp"><button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏<span class="lbl"> Размеры</span></button><span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option><option value="ang">Угол</option><option value="gap">Зазор</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span><button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓<span class="lbl"> Проверка</span></button></span>
+    <span class="vgrp"><button id="vSide" title="Чертёж и все его развёртки одновременно (R)">⧉<span class="lbl"> Рядом</span></button><button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆<span class="lbl"> Сравнить</span></button><button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button><button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒</button></span>
+    <span class="vgrp"><span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼</button>
       <div id="pngMenu" class="menu" hidden style="right:0;left:auto;min-width:240px">
         <label><input type="radio" name="pngWhat" value="all" checked> всё, что на экране</label>
         <label><input type="radio" name="pngWhat" id="pngOnlyPdf" value="pdf"> только чертежи PDF</label>
         <label><input type="radio" name="pngWhat" id="pngOnlyDxf" value="dxf"> только развёртки DXF</label>
         <label><input type="checkbox" id="pngClip"> ещё и копировать в буфер обмена</label>
         <button id="pngGo">Сохранить PNG</button>
-      </div></span>
-    <button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒 синхронно</button>
-    <button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button>
-    <button id="vMon" hidden title="Пара текущего файла — на втором мониторе">🖵 2-й монитор</button>
-    <button id="vFull" hidden title="На весь экран (Enter)">⛶</button>
+      </div></span><button id="vMon" hidden title="Пара текущего файла — на втором мониторе">🖵</button><button id="vFull" hidden title="На весь экран (Enter)">⛶</button></span>
+    <button id="vClose" title="Закрыть просмотр — назад к миниатюрам (Esc)">✕</button>
   </div>
   <div id="ovBar" hidden>
     <span class="ovk"><i class="ova"></i><span id="ovNa"></span></span>
@@ -624,7 +613,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <li><b>Размер</b> (как в CAD): клик по первой точке, по второй, <b>третий клик — где положить размерную линию</b>. Отвели курсор выше или ниже точек — <b>горизонтальный</b>, левее или правее — <b>вертикальный</b>, между точками — по прямой. Пока ведёте курсор, видна подсказка: по X, по Y, по прямой.</li>
 <li><b>Расстояние</b> (как «Расстояние» в AutoCAD): две точки — сразу пунктиром <b>по прямой, по X, по Y и угол</b>.</li>
 <li><b>Угол</b>: клик по одной прямой линии, затем по другой — угол между ними дугой (в сообщении внизу — и смежный). Параллельные линии угла не дают.</li>
-<li><b>Зазор (между контурами)</b>: клик по одному элементу — отверстию, дуге или линии, затем по другому — <b>кратчайшее расстояние между ними</b>: от края отверстия до края отверстия, от отверстия до кромки, ширина перемычки. Точки привязки не нужны — щёлкайте прямо по линии.</li>
+<li><b>Зазор</b> (между контурами): клик по одному элементу — отверстию, дуге или линии, затем по другому — <b>кратчайшее расстояние между ними</b>: от края отверстия до края отверстия, от отверстия до кромки, ширина перемычки. Точки привязки не нужны — щёлкайте прямо по линии.</li>
 </ul>
 <ul>
 <li>Точки ставятся <b>только с привязкой</b> — к концам и серединам линий, центрам и «квадрантам» окружностей и дуг (зелёный значок у курсора: □ конец, △ середина, ○ центр, ◇ квадрант). Клик в пустое место точку не ставит.</li>
@@ -3155,7 +3144,7 @@ function updateBar(){
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
-  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
+  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
@@ -3169,6 +3158,7 @@ function updateBar(){
   const sug=has&&ap&&ap.isPdf&&ap.sugRot!=null&&ap.sugRot!==(ap.prot||0);$('vPdfRot').hidden=!sug;
   if(sug)$('vPdfRot').title='Текст на листе лежит боком — повернуть лист на '+(((ap.sugRot-(ap.prot||0))%360+360)%360)+'° по часовой (запомнится для этого файла)';
   $('vFitW').hidden=!has;
+  for(const g of document.querySelectorAll('.vbar .vgrp'))g.hidden=[...g.children].every(c=>c.hidden);   // пустые группы не занимают места
   $('vDims').textContent=has&&ap?ap.dims():'';
   $('vWarn').hidden=!(has&&cur.issues);if(has)$('vWarn').textContent=`⚠ замечаний: ${cur.issues}`;
   if(FOLLOW)followerBar();
