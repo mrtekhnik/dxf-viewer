@@ -25,7 +25,8 @@ header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg b
 .menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:170px}
 .menu[hidden]{display:none}.menu button{text-align:left}
 @media (max-width:1700px){header .lbl.a{display:none}header .szbox input{width:80px}}
-@media (max-width:1420px){header .brand{display:none}header .brand+.grp{padding-left:0}}
+/* название программы в шапке видно всегда */
+@media (max-width:1480px){header .lbl.b{display:none}header .szbox input{width:60px}header .grp{padding:0 7px}}
 @media (max-width:1250px){header .lbl{display:none}}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
 .brand small{color:var(--mut);font-weight:400}
@@ -267,8 +268,8 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   </span>
   <!-- действия с выделенным файлом -->
   <span class="grp">
-    <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">⧉ <span class="lbl">Рядом</span></button>
-    <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ <span class="lbl">Сравнить</span></button>
+    <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">⧉ <span class="lbl b">Рядом</span></button>
+    <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ <span class="lbl b">Сравнить</span></button>
   </span>
   <!-- служебное -->
   <span class="grp end">
