@@ -262,7 +262,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.9.2</small></div>
+  <div class="brand">DXF <small>+PDF · v3.9.3</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -339,7 +339,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
     <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
     <button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓ Проверка</button>
     <button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏 Размеры</button>
-    <span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span>
+    <span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option><option value="ang">Угол</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
@@ -435,7 +435,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Надписи в DXF (тексты, выноски)</span><select id="sTexts"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
-  <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option></select></div>
+  <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
   <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
   <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
