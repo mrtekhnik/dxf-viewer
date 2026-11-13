@@ -265,7 +265,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.0.4</small></div>
+  <div class="brand">DXF <small>+PDF · v4.0.5</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -348,7 +348,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
     <button id="vFitW" hidden title="Вписать по ширине окна (Shift+F)">↔ По ширине</button>
-    <button id="vLoupe" title="Лупа: включите и держите левую кнопку мыши на нужном месте (или просто удерживайте Z); колесо — увеличение">🔍</button>
+    <button id="vLoupe" title="Лупа: включите, затем клик — показать лупу (колесо — её увеличение), ещё клик — убрать. Или удерживайте Z">🔍</button>
     <button id="vPdfRot" hidden class="warn">⤾ Повернуть лист</button>
     <span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼 PNG</button>
       <div id="pngMenu" class="menu" hidden style="right:0;left:auto;min-width:240px">

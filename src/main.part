@@ -873,7 +873,6 @@ class Pane{
     const cv=this.cv,ptrs=new Map();let tapT=0,tapX=0,tapY=0,downT=0,downX=0,downY=0,moved=false,multi=false,fitDown=false,sv0=null;
     const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
     cv.addEventListener('pointerdown',e=>{
-      if(LOUPE.on&&e.button===0&&e.pointerType==='mouse'){const [x,y]=pos(e);LOUPE.p=this;LOUPE.x=x;LOUPE.y=y;LOUPE.down=true;loupeSet();return;}   // лупа с кнопки: видна, пока держите левую кнопку
       setActive(this);try{cv.setPointerCapture(e.pointerId);}catch(x){}const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});
       if(ptrs.size===1){downT=performance.now();downX=x;downY=y;moved=false;multi=false;fitDown=this.fitted;sv0={s:this.s,cx:this.cx,cy:this.cy};}else{moved=true;multi=true;}
     });
@@ -901,6 +900,7 @@ class Pane{
         const [x,y]=pos(e),dx=x-downX,dy=y-downY;
         if(Math.abs(dx)>70&&Math.abs(dy)<60){Object.assign(this,sv0);this.fitted=true;this.draw();step(dx<0?1:-1);return;}
       }
+      if(LOUPE.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&e.pointerType==='mouse'){const [x,y]=pos(e);LOUPE.p=this;LOUPE.x=x;LOUPE.y=y;LOUPE.down=!LOUPE.down;loupeSet();return;}   // лупа с кнопки: клик — показать, ещё клик — убрать
       if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
       if(ptrs.size===0&&!moved&&performance.now()-downT<300){
         const t=performance.now();
@@ -910,7 +910,7 @@ class Pane{
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
     cv.addEventListener('pointerleave',()=>{if(LOUPE.p===this)$('loupe').hidden=true;});
     cv.addEventListener('wheel',e=>{e.preventDefault();
-      if(loupeOn()||LOUPE.on){loupeK(e.deltaY<0?1.25:0.8);return;}   // лупа включена: колесо меняет её увеличение (заранее — до нажатия кнопки)
+      if(loupeOn()){loupeK(e.deltaY<0?1.25:0.8);return;}   // лупа на экране: колесо меняет её увеличение; нет лупы — обычный масштаб
       const [x,y]=pos(e);const k=e.deltaMode===1?33:e.deltaMode===2?400:1,dy=e.deltaY*k;
       if(this.isPdf&&this.cont&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){ // непрерывный PDF: колесо — прокрутка, Ctrl/Shift+колесо — масштаб
         this.fitted=false;this.cy-=dy/this.s;this.cx+=e.deltaX*k/this.s;this.clampCont();this.draw();this.changed();return;}
@@ -2055,11 +2055,11 @@ async function loupePdf(p,wx,wy,s,tok){
   L.strokeStyle='rgba(217,130,43,.8)';L.lineWidth=d;L.beginPath();L.moveTo(R*d-8*d,R*d);L.lineTo(R*d+8*d,R*d);L.moveTo(R*d,R*d-8*d);L.lineTo(R*d,R*d+8*d);L.stroke();
   L.fillStyle='rgba(16,18,22,.8)';L.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);L.fillStyle='#ffd23f';L.font=(12*d)+'px system-ui,sans-serif';L.textAlign='center';L.textBaseline='middle';L.fillText('×'+Math.round(s/p.s),R*d,2*R*d-17*d);
 }
-$('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;LOUPE.down=false;if(LOUPE.on&&MEAS.on)measToggle(false);loupeSet();if(LOUPE.on)flash('Лупа: нажмите и держите левую кнопку мыши на месте, которое нужно увеличить; колесо — сильнее/слабее. Без кнопки — удерживайте Z. Esc — выключить');};
+$('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;LOUPE.down=false;if(LOUPE.on&&MEAS.on)measToggle(false);loupeSet();if(LOUPE.on)flash('Лупа: клик — показать лупу, водите курсором, колесо — сильнее/слабее; ещё клик — убрать. Перетаскивание и колесо без лупы — как обычно. Esc — выключить');};
 document.addEventListener('keydown',e=>{if((e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я')&&!e.ctrlKey&&!e.metaKey&&!e.repeat&&viewerShown()&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')){LOUPE.key=true;loupeSet();}});
 document.addEventListener('keyup',e=>{if(e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я'){LOUPE.key=false;loupeSet();}});
 window.addEventListener('blur',()=>{LOUPE.key=false;LOUPE.boost=false;loupeSet();});
-document.addEventListener('pointerup',()=>{if(LOUPE.down){LOUPE.down=false;loupeSet();}});
+
 /* ---------- сохранить вид картинкой (PNG): всё, только PDF или только DXF; по желанию — в буфер обмена ---------- */
 function pngOpen(){const M=$('pngMenu');M.hidden=!M.hidden;$('pngClip').checked=!!SET.pngClip;
   const kinds=new Set(VW.set.map((x,i)=>panes[i]&&panes[i].isPdf?'pdf':'dxf'));$('pngOnlyPdf').disabled=!kinds.has('pdf');$('pngOnlyDxf').disabled=!kinds.has('dxf');}
@@ -2665,7 +2665,7 @@ document.addEventListener('keydown',e=>{
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
   if(k==='Escape'&&!$('pickPanel').hidden){pickClose();return;}
   if(k==='Escape'&&(LOUPE.on||LOUPE.key)){loupeOff();return;}
-  if(LOUPE.on&&viewerShown()&&(k==='+'||k==='='||k==='-'||k==='_')){loupeK(k==='-'||k==='_'?0.8:1.25);return;}   // лупа включена: + / − — её увеличение
+  if(loupeOn()&&viewerShown()&&(k==='+'||k==='='||k==='-'||k==='_')){loupeK(k==='-'||k==='_'?0.8:1.25);return;}   // лупа на экране: + / − — её увеличение
   if(k==='Escape'&&!$('rulesPanel').hidden){$('rulesPanel').hidden=true;return;}
   if(!$('tblPanel').hidden){if(k==='Escape'){$('tblPanel').hidden=true;TBL.tok++;}return;}
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний
