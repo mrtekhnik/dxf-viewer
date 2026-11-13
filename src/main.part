@@ -800,7 +800,7 @@ class Pane{
     const tok=++this.tok;this.it=it;this.doc=null;this.ms=null;this.chk=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
     this.orig=false;this.keepXf=null;
     const sx=it.type==='dxf'&&XFS.get(xfKey(it));this.xf={tx:0,ty:0,rot:sx?sx.rot:0,mirror:sx?!!sx.mirror:false};
-    this.renderCap();this.el.title=it.path;this.draw();
+    this.renderCap();this.draw();
     const doc=await getDoc(it);
     if(tok!==this.tok)return;
     this.doc=doc;const sv=SAVED.get(it.key);
@@ -1081,6 +1081,7 @@ function placeViewer(){
 }
 function setFull(on,fromPop){
   if(FOLLOW||on===VW.full)return;
+  if(!on&&!docked())loupeOff();
   if(!on&&!docked()&&SET.mkeep!=='proj'){MEAS.store.clear();for(const p of panes)p.ms=null;}   // вышли из просмотра — размеры забываются (кроме «пока открыт проект»)
   VW.full=on;
   if(on){try{history.pushState({dxfv:1},'');}catch(e){}}
@@ -1526,6 +1527,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sLoupe').value=['s','m','l'].includes(SET.loupe)?SET.loupe:'m';$('sLoupe').onchange=e=>{SET.loupe=e.target.value;saveSet();};
 $('sPngClip').value=SET.pngClip?'1':'0';$('sPngClip').onchange=e=>{SET.pngClip=e.target.value==='1';saveSet();};
 $('sDims').onchange=e=>{SET.dims=e.target.value==='1';saveSet();panes.forEach(p=>p.draw());};
 $('sCmpGeo').onchange=e=>{SET.cmpGeo=e.target.value==='1';saveSet();};
@@ -1982,12 +1984,14 @@ function fitWidth(p){
 $('vFitW').onclick=()=>{for(let k=0;k<VW.set.length;k++)fitWidth(panes[k]);};
 /* ---------- лупа: удерживать Z или кнопка 🔍; в режиме лупы — колесо меняет увеличение, левая кнопка с удержанием — ещё ×2 ---------- */
 const LOUPE={on:false,key:false,k:3,boost:false,p:null,x:0,y:0,tm:0,tok:0};
+const LR=()=>({s:110,m:170,l:240}[SET.loupe]||170);   // радиус лупы, px
 const loupeOn=()=>LOUPE.on||LOUPE.key;
-function loupeSet(){const on=loupeOn();$('vLoupe').classList.toggle('on',LOUPE.on);$('loupe').hidden=!on||!LOUPE.p;
+function loupeOff(){LOUPE.on=false;LOUPE.key=false;LOUPE.boost=false;loupeSet();}
+function loupeSet(){const on=loupeOn()&&viewerShown();$('vLoupe').classList.toggle('on',LOUPE.on);$('loupe').hidden=!on||!LOUPE.p;
   for(const p of panes)p.cv.style.cursor=on?'none':(MEAS.on?'crosshair':'');if(on&&LOUPE.p)loupeDraw();}
 function loupeMove(p,x,y){LOUPE.p=p;LOUPE.x=x;LOUPE.y=y;if(!loupeOn())return;$('loupe').hidden=false;loupeDraw();}
 function loupeDraw(){
-  const p=LOUPE.p;if(!p||!p.doc)return;const L=$('loupe'),R=110,d=devicePixelRatio||1,k=LOUPE.k*(LOUPE.boost?2:1);
+  const p=LOUPE.p;if(!p||!p.doc||!viewerShown()){$('loupe').hidden=true;return;}const L=$('loupe'),R=LR(),d=devicePixelRatio||1,k=LOUPE.k*(LOUPE.boost?2:1);
   const r=p.cv.getBoundingClientRect();L.style.left=(r.left+LOUPE.x-R)+'px';L.style.top=(r.top+LOUPE.y-R)+'px';
   if(L.width!==2*R*d){L.width=L.height=2*R*d;L.style.width=L.style.height=2*R+'px';}
   const c=L.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,L.width,L.height);c.save();c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.clip();
@@ -2003,7 +2007,7 @@ function loupeDraw(){
 }
 async function loupePdf(p,wx,wy,s,tok){
   const e=p.pg.find(e=>{const y=p.ph-wy;return y>=e.oy-1&&y<=e.oy+e.h+1;});if(!e||!e.page)return;
-  const R=110,d=devicePixelRatio||1,S=s*d,x0=wx-e.ox-R/s,y0=(p.ph-wy)-e.oy-R/s;
+  const R=LR(),d=devicePixelRatio||1,S=s*d,x0=wx-e.ox-R/s,y0=(p.ph-wy)-e.oy-R/s;
   const c=document.createElement('canvas');c.width=c.height=2*R*d;
   try{await e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:S,rotation:e.rot,offsetX:-x0*S,offsetY:-y0*S})}).promise;}catch(x){return;}
   if(tok!==LOUPE.tok||!loupeOn())return;
@@ -2623,6 +2627,7 @@ document.addEventListener('keydown',e=>{
   if(e.target.id==='filter'&&(k==='ArrowDown'||k==='Enter')){e.target.blur();e.preventDefault();if(view.length&&VW.idx<0){if(docked())showItem(0);else{VW.idx=0;markCurrent(view[0]);}}return;}
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
   if(k==='Escape'&&!$('pickPanel').hidden){pickClose();return;}
+  if(k==='Escape'&&(LOUPE.on||LOUPE.key)){loupeOff();return;}
   if(k==='Escape'&&!$('rulesPanel').hidden){$('rulesPanel').hidden=true;return;}
   if(!$('tblPanel').hidden){if(k==='Escape'){$('tblPanel').hidden=true;TBL.tok++;}return;}
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний

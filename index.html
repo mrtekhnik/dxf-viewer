@@ -268,7 +268,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.0.1</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -454,6 +454,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Размер лупы</span><select id="sLoupe"><option value="s">маленькая</option><option value="m">средняя</option><option value="l">большая</option></select></div>
   <div class="set-row"><span>Картинка PNG</span><select id="sPngClip"><option value="0">только сохранять файлом</option><option value="1">сохранять и копировать в буфер обмена</option></select></div>
   <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
@@ -684,6 +685,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <li>Удерживайте <kbd>Z</kbd> — под курсором круг с увеличением; отпустили — лупа пропала. Кнопка <b>🔍</b> включает лупу постоянно (курсор становится лупой), повторный клик — выключает.</li>
 <li>В режиме лупы: <b>колесо</b> — сильнее или слабее (×2…×16), <b>левая кнопка с удержанием</b> — ещё ×2, пока держите. Общий масштаб окна при этом не меняется.</li>
 <li>Работает в DXF и PDF. В PDF место под лупой сразу дорисовывается в полном качестве.</li>
+<li><kbd>Esc</kbd> — выключить лупу (из просмотра она выключается сама). Размер лупы — ⚙ «Размер лупы»: маленькая, средняя, большая.</li>
 </ul>
 <h3>По ширине</h3>
 <ul><li><b>↔ По ширине</b> или <kbd>Shift+F</kbd> — лист или деталь во всю ширину окна; у PDF — от верха листа, дальше колесом вниз.</li></ul>
@@ -2519,7 +2521,7 @@ class Pane{
     const tok=++this.tok;this.it=it;this.doc=null;this.ms=null;this.chk=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
     this.orig=false;this.keepXf=null;
     const sx=it.type==='dxf'&&XFS.get(xfKey(it));this.xf={tx:0,ty:0,rot:sx?sx.rot:0,mirror:sx?!!sx.mirror:false};
-    this.renderCap();this.el.title=it.path;this.draw();
+    this.renderCap();this.draw();
     const doc=await getDoc(it);
     if(tok!==this.tok)return;
     this.doc=doc;const sv=SAVED.get(it.key);
@@ -2800,6 +2802,7 @@ function placeViewer(){
 }
 function setFull(on,fromPop){
   if(FOLLOW||on===VW.full)return;
+  if(!on&&!docked())loupeOff();
   if(!on&&!docked()&&SET.mkeep!=='proj'){MEAS.store.clear();for(const p of panes)p.ms=null;}   // вышли из просмотра — размеры забываются (кроме «пока открыт проект»)
   VW.full=on;
   if(on){try{history.pushState({dxfv:1},'');}catch(e){}}
@@ -3245,6 +3248,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sLoupe').value=['s','m','l'].includes(SET.loupe)?SET.loupe:'m';$('sLoupe').onchange=e=>{SET.loupe=e.target.value;saveSet();};
 $('sPngClip').value=SET.pngClip?'1':'0';$('sPngClip').onchange=e=>{SET.pngClip=e.target.value==='1';saveSet();};
 $('sDims').onchange=e=>{SET.dims=e.target.value==='1';saveSet();panes.forEach(p=>p.draw());};
 $('sCmpGeo').onchange=e=>{SET.cmpGeo=e.target.value==='1';saveSet();};
@@ -3701,12 +3705,14 @@ function fitWidth(p){
 $('vFitW').onclick=()=>{for(let k=0;k<VW.set.length;k++)fitWidth(panes[k]);};
 /* ---------- лупа: удерживать Z или кнопка 🔍; в режиме лупы — колесо меняет увеличение, левая кнопка с удержанием — ещё ×2 ---------- */
 const LOUPE={on:false,key:false,k:3,boost:false,p:null,x:0,y:0,tm:0,tok:0};
+const LR=()=>({s:110,m:170,l:240}[SET.loupe]||170);   // радиус лупы, px
 const loupeOn=()=>LOUPE.on||LOUPE.key;
-function loupeSet(){const on=loupeOn();$('vLoupe').classList.toggle('on',LOUPE.on);$('loupe').hidden=!on||!LOUPE.p;
+function loupeOff(){LOUPE.on=false;LOUPE.key=false;LOUPE.boost=false;loupeSet();}
+function loupeSet(){const on=loupeOn()&&viewerShown();$('vLoupe').classList.toggle('on',LOUPE.on);$('loupe').hidden=!on||!LOUPE.p;
   for(const p of panes)p.cv.style.cursor=on?'none':(MEAS.on?'crosshair':'');if(on&&LOUPE.p)loupeDraw();}
 function loupeMove(p,x,y){LOUPE.p=p;LOUPE.x=x;LOUPE.y=y;if(!loupeOn())return;$('loupe').hidden=false;loupeDraw();}
 function loupeDraw(){
-  const p=LOUPE.p;if(!p||!p.doc)return;const L=$('loupe'),R=110,d=devicePixelRatio||1,k=LOUPE.k*(LOUPE.boost?2:1);
+  const p=LOUPE.p;if(!p||!p.doc||!viewerShown()){$('loupe').hidden=true;return;}const L=$('loupe'),R=LR(),d=devicePixelRatio||1,k=LOUPE.k*(LOUPE.boost?2:1);
   const r=p.cv.getBoundingClientRect();L.style.left=(r.left+LOUPE.x-R)+'px';L.style.top=(r.top+LOUPE.y-R)+'px';
   if(L.width!==2*R*d){L.width=L.height=2*R*d;L.style.width=L.style.height=2*R+'px';}
   const c=L.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,L.width,L.height);c.save();c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.clip();
@@ -3722,7 +3728,7 @@ function loupeDraw(){
 }
 async function loupePdf(p,wx,wy,s,tok){
   const e=p.pg.find(e=>{const y=p.ph-wy;return y>=e.oy-1&&y<=e.oy+e.h+1;});if(!e||!e.page)return;
-  const R=110,d=devicePixelRatio||1,S=s*d,x0=wx-e.ox-R/s,y0=(p.ph-wy)-e.oy-R/s;
+  const R=LR(),d=devicePixelRatio||1,S=s*d,x0=wx-e.ox-R/s,y0=(p.ph-wy)-e.oy-R/s;
   const c=document.createElement('canvas');c.width=c.height=2*R*d;
   try{await e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:S,rotation:e.rot,offsetX:-x0*S,offsetY:-y0*S})}).promise;}catch(x){return;}
   if(tok!==LOUPE.tok||!loupeOn())return;
@@ -4342,6 +4348,7 @@ document.addEventListener('keydown',e=>{
   if(e.target.id==='filter'&&(k==='ArrowDown'||k==='Enter')){e.target.blur();e.preventDefault();if(view.length&&VW.idx<0){if(docked())showItem(0);else{VW.idx=0;markCurrent(view[0]);}}return;}
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
   if(k==='Escape'&&!$('pickPanel').hidden){pickClose();return;}
+  if(k==='Escape'&&(LOUPE.on||LOUPE.key)){loupeOff();return;}
   if(k==='Escape'&&!$('rulesPanel').hidden){$('rulesPanel').hidden=true;return;}
   if(!$('tblPanel').hidden){if(k==='Escape'){$('tblPanel').hidden=true;TBL.tok++;}return;}
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний
