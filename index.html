@@ -178,6 +178,22 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 #mtBar .mt-c{padding:2px 9px;font-size:12px;border-radius:12px;white-space:pre}
 #mtBar .mt-c.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 #mtBar .mt-s{margin-left:auto;color:var(--mut);display:flex;gap:5px;align-items:center}
+#tblPanel{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.45);display:flex;padding:20px}
+#tblPanel[hidden]{display:none}
+#tblBox{background:var(--panel);border:1px solid var(--line);border-radius:12px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+#tblBox .pp-h{gap:8px;flex-wrap:wrap}#tblScroll{overflow:auto;flex:1}
+.mut{color:var(--mut);font-size:12px}
+#rulesBody input[type=number],#rulesBody textarea{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit}
+table.tbl{border-collapse:collapse;width:100%;font-size:13px}
+table.tbl th{position:sticky;top:0;background:var(--panel);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+table.tbl td{padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.tbl tr:hover td{background:var(--hover,#2b2f36)}table.tbl .n{text-align:right}
+table.tbl td.bad{color:#ff8c4d;font-weight:600}table.tbl td.ok{color:#39d353}
+table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.tbl.sum tr.tot td{font-weight:700}
+#tblColMenu label{display:flex;gap:6px;align-items:center;padding:3px 6px;white-space:nowrap}
+#tblColMenu{right:0;left:auto}
+.chkb{position:absolute;left:4px;bottom:4px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff}
+.chkb.bad{background:#d9822b}.chkb.ok{background:#2e8b57}
 .pk-for{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
 .pk:hover,.pk.cur{background:var(--hover,#2b2f36)}
@@ -249,7 +265,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.7</small></div>
+  <div class="brand">DXF <small>+PDF · v3.8</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -277,6 +293,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <!-- действия с выделенным файлом -->
   <span class="grp">
     <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">⧉ <span class="lbl b">Рядом</span></button>
+    <button id="btnTable" title="Таблица по всем DXF папки: материал, толщина, количество, площадь, масса, рез, врезки, проверка; выгрузка в Excel">▤ <span class="lbl b">Таблица</span></button>
     <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ <span class="lbl b">Сравнить</span></button>
   </span>
   <!-- служебное -->
@@ -323,6 +340,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
+    <button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓ Проверка</button>
     <button id="vMeas" hidden title="Измерения: расстояние между точками (привязка к концам, серединам, центрам), клик по линии — длина, по дуге или окружности — R / Ø (D)">📏 Измерить</button>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
@@ -378,6 +396,24 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), проверяется содержимое: = одинаковые, ≈ пересохранён (геометрия DXF та же), ≠ отличается. Если в сетке выделен файл — сразу откроется его сравнение; не нашлась пара по имени — список похожих по габариту.</div>
   <input id="inCmp" type="file" webkitdirectory multiple hidden>
 </div>
+<div id="tblPanel" hidden>
+ <div id="tblBox">
+  <div class="pp-h"><b id="tblTitle">Таблица DXF</b><span id="tblProg" class="mut"></span><span class="sp"></span>
+   <span class="mwrap"><button id="tblColBtn" title="Какие колонки показывать">Колонки ▾</button><div id="tblColMenu" class="menu" hidden></div></span>
+   <label title="Нормы проверки — для какого станка">Станок <select id="tblMachine"><option value="laser">Лазер</option><option value="plasma">Плазма</option><option value="punch">Координатно-пробивной</option></select></label>
+   <button id="tblRules" title="Правила проверки перед резкой и плотность материалов">Правила…</button>
+   <button id="tblXlsx" title="Сохранить таблицу и итоги в Excel">⬇ Excel</button>
+   <button id="tblClose" title="Закрыть (Esc)">✕</button></div>
+  <div id="tblScroll"><table id="tblBody" class="tbl"></table>
+   <div class="set-sec" style="margin:14px 10px 4px">Итоги по материалу и толщине (с учётом количества)</div><table id="tblSum" class="tbl sum"></table>
+   <p class="mut" style="margin:8px 10px 20px;font-size:12px">Материал, толщина и количество — из имени файла. Площадь — внешний контур минус отверстия. Длина реза — все контуры, врезки — по числу контуров. Клик по строке — открыть деталь, по заголовку — сортировать.</p></div>
+ </div>
+</div>
+<div id="rulesPanel" class="pop" hidden style="z-index:45">
+  <div class="pp-h"><b>Правила проверки перед резкой</b><span class="sp"></span><button id="rulesClose">✕</button></div>
+  <div id="rulesBody" style="padding:4px 12px 8px"></div>
+</div>
+<div id="chkList" class="pop" hidden style="top:96px"></div>
 <div id="pickPanel" class="pop" hidden>
   <div class="pp-h"><b>Сравнить с…</b><span class="sp"></span><button id="pickFile" title="Любой DXF — с сервера, из архива, с диска">Файл с диска…</button><button id="pickClose">✕</button></div>
   <div class="pp-row"><span id="pickFor" class="pk-for"></span></div>
@@ -502,7 +538,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <section data-t="Сетка и список">
 <h2>Сетка, список, окно просмотра</h2>
 <ul>
-<li>Панель сгруппирована слева направо: <b>открыть</b> (📂 ★ 🕘 ✕) · <b>найти</b> (фильтр, тип) · <b>вид</b> (сетка/список, дерево, по папкам, просмотр, размер) · <b>действия с выделенным файлом</b> (Рядом, Сравнить) · <b>служебное</b> (Журнал, ⚙, ?). На узком экране подписи кнопок сворачиваются в значки — название видно во всплывающей подсказке.</li>
+<li>Панель сгруппирована слева направо: <b>открыть</b> (📂 ★ 🕘 ✕) · <b>найти</b> (фильтр, тип) · <b>вид</b> (сетка/список, дерево, по папкам, просмотр, размер) · <b>действия</b> (Рядом, Таблица, Сравнить) · <b>служебное</b> (Журнал, ⚙, ?). На узком экране подписи кнопок сворачиваются в значки — название видно во всплывающей подсказке.</li>
 <li><b>▦ Сетка / ☰ Список</b> — миниатюры или строки с датой, размером и папкой. Ползунок — размер миниатюр (или Ctrl + колесо над списком).</li>
 <li><b>◫ Просмотр</b> — окно просмотра справа от списка, как в Проводнике: выбранный файл сразу виден крупно.</li>
 <li><b>Фильтр по имени</b> — оставляет файлы, в имени или пути которых есть набранный текст (например, обозначение). <b>Все / DXF / PDF</b> — тип файлов.</li>
@@ -563,6 +599,40 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <li><b>Сортировать по материалу и толщине</b> — галочка справа: файлы идут группами по материалу, внутри — по возрастанию толщины.</li>
 </ul>
 <p class="note">Материал, толщина и количество берутся из имени файла: «…-St-16-K2» → St, 16 мм, 2 шт.; в старых именах — «…_Ст3_S10-1шт».</p>
+</section>
+
+<section data-t="Таблица DXF">
+<h2>Таблица по всем DXF папки</h2>
+<p>Кнопка <b>▤ Таблица</b> на панели. В таблицу попадают DXF, которые сейчас видны в списке: выбранная в дереве папка с учётом фильтра по имени и строки «Материал · толщина».</p>
+<ul>
+<li>Колонки: <b>обозначение, материал, толщина, количество</b> (из имени файла), <b>габарит, площадь, масса, длина реза, число врезок, замечания проверки</b>. <b>Колонки ▾</b> — какие показывать (запоминается).</li>
+<li>Площадь — внешний контур минус отверстия. Масса — площадь × толщина × плотность (по названию материала, плотности — в «Правила…»). Длина реза — все контуры, врезки — число контуров.</li>
+<li>Клик по заголовку — сортировка, клик по строке — открыть деталь.</li>
+<li>Внизу — <b>итоги по каждому сочетанию материала и толщины</b> с учётом количества: деталей, площадь, масса, рез, врезки, сколько файлов с замечаниями.</li>
+<li><b>⬇ Excel</b> — сохранить в .xlsx: лист «Детали» (с путём к файлу и списком замечаний) и лист «Итоги».</li>
+<li>Считается по очереди, вверху виден ход («считаю 12 / 40»). Посчитанное запоминается до закрытия программы.</li>
+</ul>
+</section>
+
+<section data-t="Проверка перед резкой">
+<h2>Проверка перед резкой</h2>
+<p>В просмотре DXF — кнопка <b>✓ Проверка</b> или клавиша <kbd>C</kbd>. Места с замечаниями обводятся на детали и нумеруются, справа — список; клик по строке приближает это место. Пока проверка включена, она выполняется для каждого открываемого файла.</p>
+<table>
+<tr><td>незамкнутый контур</td><td>контур не замкнут (длина), с ответвлением — значит, линии наложены</td></tr>
+<tr><td>разрыв контура</td><td>концы контура не сходятся, расстояние меньше «разрыв считать до»</td></tr>
+<tr><td>двойная линия</td><td>элемент лежит точно поверх другого — станок прорежет дважды</td></tr>
+<tr><td>мелкий элемент</td><td>короче заданного или нулевой длины</td></tr>
+<tr><td>малое отверстие / вырез</td><td>меньше «коэффициент × толщина» и меньше заданного минимума</td></tr>
+<tr><td>узкая перемычка</td><td>расстояние между контурами (отверстие–отверстие, отверстие–край) меньше нормы</td></tr>
+<tr><td>элемент вне детали</td><td>лежит за внешним контуром</td></tr>
+<tr><td>надписи</td><td>в файле есть текст (по умолчанию не проверяется)</td></tr>
+</table>
+<ul>
+<li><b>Правила…</b> (в списке замечаний или в таблице): станок — <b>лазер, плазма, координатно-пробивной</b>, у каждого свои числа: отверстие и перемычка «не меньше × толщина» и «не меньше, мм», допуск стыковки, максимальный разрыв, мелкий элемент; галочки — что проверять; плотности материалов. «Вернуть стандартные значения» — сброс.</li>
+<li>Толщина берётся из имени файла. Если её там нет, правила «× толщина» не применяются — только минимум в мм.</li>
+<li>После таблицы или проверки на миниатюре появляется значок: <b>✓</b> — замечаний нет, <b>⚠ N</b> — есть (клик — открыть с проверкой).</li>
+</ul>
+<p class="note">Стандартные числа — ориентировочные. Поставьте свои нормы для ваших станков в «Правила…».</p>
 </section>
 
 <section data-t="Просмотр PDF">
@@ -684,6 +754,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 <tr><td><kbd>Q</kbd> <kbd>E</kbd> <kbd>M</kbd> <kbd>0</kbd> <kbd>O</kbd></td><td>повернуть влево / вправо, зеркало, сбросить, исходное положение</td></tr>
 <tr><td><kbd>W</kbd></td><td>линии DXF</td></tr>
 <tr><td><kbd>D</kbd></td><td>измерения</td></tr>
+<tr><td><kbd>C</kbd></td><td>проверка перед резкой</td></tr>
 <tr><td><kbd>[</kbd> <kbd>]</kbd></td><td>линии PDF светлее / темнее</td></tr>
 <tr><td><kbd>R</kbd></td><td>рядом: чертёж и все развёртки</td></tr>
 <tr><td><kbd>L</kbd></td><td>синхронный масштаб двух окон</td></tr>
@@ -1375,7 +1446,116 @@ function GEOCORE(){
     const d=diff(A,B,M,tol);let desc=[];try{desc=describe(A,B,M,d,tol);}catch(e){desc=d.clusters.map(bb=>({bb,text:'отличие'}));}
     return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]],desc},d);
   }
-  return {prep,align,diff,compare,mul,bulgeArc};
+  /* =====================================================================
+     АНАЛИЗ ДЕТАЛИ для таблицы и проверки перед резкой: контуры, площадь, длина реза, врезки, замечания.
+     R — правила: {s (толщина), join, minLen, gapMax, holeK, holeAbs, webK, webAbs, chk:{open,gap,dup,small,hole,web,text,out}}
+     Каждое замечание: {k (вид), text, x, y, bb}
+     ===================================================================== */
+  function analyze(doc,R){
+    R=R||{};const eps=R.join||0.01,chord=Math.min(0.01,eps);
+    const issues=[],add=(k,text,x,y,bb)=>issues.push({k,text,x,y,bb:bb||[x-1,y-1,x+1,y+1]});
+    const f=v=>{const r=Math.round(v*100)/100;return String(r).replace('.',',');};
+    // 1) элементы как ломаные; одинаковые (двойные линии) — убрать и отметить
+    const P=[],seen=new Map();let nText=0;
+    for(const G of doc.groups||[]){if(G.off)continue;if(G.texts)nText+=G.texts.length;
+      for(const p of G.prims){
+        let o=[];
+        if(p[0]==='L')o=[p[1],p[2],p[3],p[4]];
+        else if(p[0]==='C')arcPts(o,p[1],p[2],p[3],0,TAU,true,chord,true);
+        else if(p[0]==='A')arcPts(o,p[1],p[2],p[3],p[4],p[5],true,chord,true);
+        else if(p[0]==='P'){const a=p[2],n=a.length/3,segs=p[1]?n:n-1;if(n<2)continue;o=[a[0],a[1]];
+          for(let i=0;i<segs;i++){const j=(i+1)%n,x1=a[i*3],y1=a[i*3+1],x2=a[j*3],y2=a[j*3+1],b=a[i*3+2],A=b?bulgeArc(x1,y1,x2,y2,b):null;
+            if(A)arcPts(o,A.cx,A.cy,A.r,A.a0,A.a1,A.ccw,chord,false);else o.push(x2,y2);}}
+        if(o.length<4)continue;
+        let len=0;for(let i=2;i<o.length;i+=2)len+=Math.hypot(o[i]-o[i-2],o[i+1]-o[i-1]);
+        const q=v=>Math.round(v/0.01),e1=q(o[0])+','+q(o[1]),e2=q(o[o.length-2])+','+q(o[o.length-1]),
+          mid=Math.floor(o.length/4)*2,key=[e1,e2].sort().join('|')+'|'+Math.round(len*100)+'|'+q(o[mid])+','+q(o[mid+1]);
+        if(seen.has(key)){if(R.chk&&R.chk.dup)add('dup','двойная линия (лежит точно поверх другой)',o[mid],o[mid+1]);continue;}
+        seen.set(key,1);
+        if(R.chk&&R.chk.small&&len<(R.minLen||0.1))add('small',len<0.005?'элемент нулевой длины':'очень мелкий элемент: '+f(len)+' мм',o[0],o[1]);
+        P.push({o,len,circle:p[0]==='C'?p[3]:0});
+      }}
+    // 2) сборка контуров: концы ближе eps — один узел
+    const nodes=[],grid=new Map(),cell=eps*2;
+    const node=(x,y)=>{const gx=Math.floor(x/cell),gy=Math.floor(y/cell);
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=grid.get((gx+i)+','+(gy+j));if(L)for(const n of L){const N=nodes[n];if(Math.hypot(N.x-x,N.y-y)<=eps)return n;}}
+      const id=nodes.length;nodes.push({x,y,e:[]});const k=gx+','+gy;(grid.get(k)||grid.set(k,[]).get(k)).push(id);return id;};
+    const E=P.map((p,i)=>{const o=p.o,a=node(o[0],o[1]),b=node(o[o.length-2],o[o.length-1]);nodes[a].e.push(i);nodes[b].e.push(i);return {a,b,p};});
+    // компоненты
+    const comp=new Int32Array(E.length).fill(-1),C=[];
+    for(let i=0;i<E.length;i++){if(comp[i]>=0)continue;const id=C.length,st=[i],es=[];comp[i]=id;
+      while(st.length){const k=st.pop();es.push(k);for(const n of [E[k].a,E[k].b])for(const j of nodes[n].e)if(comp[j]<0){comp[j]=id;st.push(j);}}
+      C.push(es);}
+    const contours=[];
+    for(const es of C){
+      const ns=new Map();for(const k of es)for(const n of [E[k].a,E[k].b])ns.set(n,(ns.get(n)||0)+(E[k].a===E[k].b?2:1)/(E[k].a===E[k].b?2:1));
+      let deg=new Map();for(const k of es){deg.set(E[k].a,(deg.get(E[k].a)||0)+1);deg.set(E[k].b,(deg.get(E[k].b)||0)+1);}
+      const ends=[...deg].filter(([n,d])=>d===1).map(([n])=>n),branch=[...deg].filter(([n,d])=>d>2).map(([n])=>n);
+      let len=0,x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      for(const k of es){const o=E[k].p.o;len+=E[k].p.len;for(let i=0;i<o.length;i+=2){const x=o[i],y=o[i+1];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}}
+      const c={es,len,bb:[x0,y0,x1,y1],closed:!ends.length&&!branch.length,ends,branch,area:0,poly:null,circle:es.length===1?E[es[0]].p.circle:0};
+      if(c.closed){ // обход по кругу — многоугольник для площади и «внутри / снаружи»
+        const pts=[];let k=es[0],at=E[k].a;const used=new Set();
+        for(let guard=0;guard<es.length;guard++){used.add(k);const o=E[k].p.o,fw=E[k].a===at;
+          if(fw)for(let i=0;i<o.length-2;i+=2)pts.push(o[i],o[i+1]);else for(let i=o.length-2;i>0;i-=2)pts.push(o[i],o[i+1]);
+          at=fw?E[k].b:E[k].a;const nx=nodes[at].e.find(j=>!used.has(j)&&comp[j]===comp[k]);if(nx===undefined)break;k=nx;}
+        let A=0;for(let i=0;i<pts.length;i+=2){const j=(i+2)%pts.length;A+=pts[i]*pts[j+1]-pts[j]*pts[i+1];}
+        c.area=Math.abs(A)/2;c.poly=pts;
+      }
+      contours.push(c);
+    }
+    const closed=contours.filter(c=>c.closed&&c.area>0);
+    const inside=(poly,x,y)=>{let r=false;for(let i=0,j=poly.length-2;i<poly.length;j=i,i+=2){const xi=poly[i],yi=poly[i+1],xj=poly[j],yj=poly[j+1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))r=!r;}return r;};
+    const outer=closed.reduce((m,c)=>!m||c.area>m.area?c:m,null);
+    let area=0,holes=[];
+    if(outer){area=outer.area;
+      for(const c of closed){if(c===outer)continue;const x=c.poly[0],y=c.poly[1];
+        if(inside(outer.poly,x,y)){c.hole=true;holes.push(c);}else{c.out=true;}}
+      for(const h of holes){h.top=!holes.some(o=>o!==h&&o.area>h.area&&inside(o.poly,h.poly[0],h.poly[1]));if(h.top)area-=h.area;}
+    }
+    // 3) незамкнутые контуры и разрывы
+    const openC=contours.filter(c=>!c.closed);
+    if(R.chk&&(R.chk.open||R.chk.gap)){
+      const endPts=[];for(const c of openC)for(const n of c.ends)endPts.push({c,n,x:nodes[n].x,y:nodes[n].y});
+      const gm=R.gapMax||2,EG=new Map(),gk=(x,y)=>Math.floor(x/gm)+','+Math.floor(y/gm);
+      for(const e of endPts){const k=gk(e.x,e.y);(EG.get(k)||EG.set(k,[]).get(k)).push(e);}
+      const done=new Set(),doneN=new Set();let ng=0;
+      for(const e of endPts){if(done.has(e))continue;let best=null,bd=gm;const gx=Math.floor(e.x/gm),gy=Math.floor(e.y/gm);
+        for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=EG.get((gx+i)+','+(gy+j));if(L)for(const q of L){if(q===e||done.has(q))continue;const d=Math.hypot(q.x-e.x,q.y-e.y);if(d<bd){bd=d;best=q;}}}
+        if(best&&R.chk.gap){done.add(e);done.add(best);doneN.add(e.n);doneN.add(best.n);if(++ng<=200)add('gap','разрыв контура '+f(bd)+' мм',(e.x+best.x)/2,(e.y+best.y)/2,[Math.min(e.x,best.x),Math.min(e.y,best.y),Math.max(e.x,best.x),Math.max(e.y,best.y)]);}}
+      if(R.chk.open){let no=0;for(const c of openC){if(no>=200)break;const free=c.ends.filter(n=>!doneN.has(n));no++;
+        if(c.branch.length)add('open','контур с ответвлением (наложенные линии)',nodes[c.branch[0]].x,nodes[c.branch[0]].y,c.bb);
+        else if(free.length)add('open','незамкнутый контур ('+(c.es.length===1&&E[c.es[0]].p.o.length===4?'отрезок ':'')+f(c.len)+' мм)',nodes[free[0]].x,nodes[free[0]].y,c.bb);}
+        if(openC.length>200)add('open','и ещё незамкнутых контуров: '+(openC.length-200),0,0);}
+    }
+    // 4) лишнее: надписи, элементы вне детали
+    if(R.chk&&R.chk.text&&nText)add('text','в файле есть надписи: '+nText+' (на резку не нужны?)',outer?outer.bb[0]:0,outer?outer.bb[3]:0,outer?outer.bb:null);
+    if(R.chk&&R.chk.out&&outer)for(const c of contours)if(c!==outer&&(c.out||(!c.closed&&!(c.bb[0]>=outer.bb[0]-eps&&c.bb[2]<=outer.bb[2]+eps&&c.bb[1]>=outer.bb[1]-eps&&c.bb[3]<=outer.bb[3]+eps))))
+      add('out','элемент вне контура детали',(c.bb[0]+c.bb[2])/2,(c.bb[1]+c.bb[3])/2,c.bb);
+    // 5) отверстия и перемычки — от толщины
+    const s=+R.s||0,dMin=Math.max(R.holeAbs||0,(R.holeK||0)*s),wMin=Math.max(R.webAbs||0,(R.webK||0)*s);
+    if(R.chk&&R.chk.hole&&dMin>0)for(const h of holes){if(!h.top)continue;const d=h.circle?h.circle*2:Math.min(h.bb[2]-h.bb[0],h.bb[3]-h.bb[1]);
+      if(d<dMin-1e-6)add('hole',(h.circle?'отверстие Ø'+f(d):'вырез шириной '+f(d)+' мм')+' меньше '+f(dMin)+(s?' (толщина '+f(s)+')':''),(h.bb[0]+h.bb[2])/2,(h.bb[1]+h.bb[3])/2,h.bb);}
+    if(R.chk&&R.chk.web&&wMin>0&&outer){
+      const cs=[outer,...holes.filter(h=>h.top)],segs=[];
+      cs.forEach((c,ci)=>{for(let i=0;i<c.poly.length;i+=2){const j=(i+2)%c.poly.length;segs.push([c.poly[i],c.poly[i+1],c.poly[j],c.poly[j+1],ci]);}});
+      const cl=Math.max(wMin*2,1),G=new Map();
+      segs.forEach((g,si)=>{const i0=Math.floor(Math.min(g[0],g[2])/cl),i1=Math.floor(Math.max(g[0],g[2])/cl),j0=Math.floor(Math.min(g[1],g[3])/cl),j1=Math.floor(Math.max(g[1],g[3])/cl);
+        for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const k=i+','+j;(G.get(k)||G.set(k,[]).get(k)).push(si);}});
+      const pair=new Map();
+      cs.forEach((c,ci)=>{const P=c.poly,st=Math.max(wMin/3,0.2);
+        for(let i=0;i<P.length;i+=2){const j=(i+2)%P.length,L=Math.hypot(P[j]-P[i],P[j+1]-P[i+1]),n=Math.max(1,Math.ceil(L/st));
+          for(let t=0;t<n;t++){const x=P[i]+(P[j]-P[i])*t/n,y=P[i+1]+(P[j+1]-P[i+1])*t/n,gx=Math.floor(x/cl),gy=Math.floor(y/cl);
+            for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L2=G.get((gx+a)+','+(gy+b));if(!L2)continue;
+              for(const si of L2){const g=segs[si];if(g[4]<=ci)continue;const dx=g[2]-g[0],dy=g[3]-g[1],l=dx*dx+dy*dy;let u=l?((x-g[0])*dx+(y-g[1])*dy)/l:0;u=u<0?0:u>1?1:u;
+                const d=Math.hypot(x-g[0]-u*dx,y-g[1]-u*dy);if(d<wMin-1e-6){const k=ci+'|'+g[4],o=pair.get(k);if(!o||d<o.d)pair.set(k,{d,x,y,px:g[0]+u*dx,py:g[1]+u*dy});}}}}}});
+      for(const [k,o] of pair)add('web','перемычка '+f(o.d)+' мм меньше '+f(wMin)+(s?' (толщина '+f(s)+')':''),(o.x+o.px)/2,(o.y+o.py)/2,[Math.min(o.x,o.px),Math.min(o.y,o.py),Math.max(o.x,o.px),Math.max(o.y,o.py)]);
+    }
+    let cut=0;for(const c of contours)cut+=c.len;
+    return {area,outerArea:outer?outer.area:0,holes:holes.filter(h=>h.top).length,cut,pierces:contours.length,open:openC.length,
+      bb:outer?outer.bb:null,size:outer?[outer.bb[2]-outer.bb[0],outer.bb[3]-outer.bb[1]]:null,issues};
+  }
+  return {prep,align,diff,compare,mul,bulgeArc,analyze};
 }
 const GEO=GEOCORE();
 /* сравнение в отдельном потоке, чтобы окно не замирало на больших файлах */
@@ -1383,7 +1563,7 @@ const geoCompare=(()=>{
   let w=null,seq=0;const wait=new Map();
   function start(){
     try{
-      const src='const GEO=('+GEOCORE.toString()+')();onmessage=e=>{const {id,a,b,tol,M}=e.data;let r,err=null;try{r=GEO.compare(a,b,tol,M);'+
+      const src='const GEO=('+GEOCORE.toString()+')();onmessage=e=>{const {id,a,b,tol,M,ana}=e.data;let r,err=null;if(ana){try{r=GEO.analyze(a,ana);}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});return;}try{r=GEO.compare(a,b,tol,M);'+
         'r={M:r.M,mir:r.mir,same:r.same,fail:r.fail,clusters:r.clusters||[],a:r.a?{runs:r.a.runs,bad:r.a.bad,frac:r.a.frac}:null,b:r.b?{runs:r.b.runs,bad:r.b.bad,frac:r.b.frac}:null,'+
         'LA:r.A.L,LB:r.LB||[],sizeA:r.sizeA,sizeB:r.sizeB,bbA:r.A.bbox,desc:r.desc||[]};}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});};';
       w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
@@ -1391,12 +1571,18 @@ const geoCompare=(()=>{
       w.onerror=()=>{for(const p of wait.values())p.rej(new Error('Сбой потока сравнения'));wait.clear();w=null;};
     }catch(e){w=null;}
   }
-  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,prims:G.prims}))});
-  return (docA,docB,tol,M)=>{
+  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,prims:G.prims,texts:G.texts?G.texts.map(()=>0):undefined}))});
+  const fn=(docA,docB,tol,M)=>{
     if(!w)start();
     if(!w){const r=GEO.compare(docA,docB,tol,M);return Promise.resolve(Object.assign(r,{LA:r.A.L,bbA:r.A.bbox}));}
     const id=++seq;return new Promise((res,rej)=>{wait.set(id,{res,rej});w.postMessage({id,a:slim(docA),b:slim(docB),tol,M:M||null});});
   };
+  fn.analyze=(doc,R)=>{ // анализ детали (площадь, рез, проверка) — тоже в потоке
+    if(!w)start();
+    if(!w)return Promise.resolve(GEO.analyze(doc,R));
+    const id=++seq;return new Promise((res,rej)=>{wait.set(id,{res,rej});w.postMessage({id,a:slim(doc),ana:R});});
+  };
+  return fn;
 })();
 
 /* =====================================================================
@@ -2063,7 +2249,7 @@ class Pane{
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();return;}
     if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);return;}
-    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});if(MEAS.on&&this.ms)measPaint(this,c,d);return;}
+    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});if(this.chk)chkPaint(this,c,d);if(MEAS.on&&this.ms)measPaint(this,c,d);return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
     c.fillText(t,this.W/2,this.H/2);
@@ -2191,7 +2377,7 @@ class Pane{
   async show(it){
     if(this.it===it&&this.doc){this.onUpdate();return;}
     this.save();
-    const tok=++this.tok;this.it=it;this.doc=null;this.ms=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
+    const tok=++this.tok;this.it=it;this.doc=null;this.ms=null;this.chk=null;this.loading=true;this.pdfReset();this.pending=null;this.pageNo=1;
     this.orig=false;this.keepXf=null;
     const sx=it.type==='dxf'&&XFS.get(xfKey(it));this.xf={tx:0,ty:0,rot:sx?sx.rot:0,mirror:sx?!!sx.mirror:false};
     this.renderCap();this.el.title=it.path;this.draw();
@@ -2199,7 +2385,7 @@ class Pane{
     if(tok!==this.tok)return;
     this.doc=doc;const sv=SAVED.get(it.key);
     if(doc.kind==='pdf'&&doc.pdf)await this.pdfShow(sv?Math.min(sv.page||1,doc.pages):1,sv);
-    else{this.loading=false;this.applyView(sv||'fit');this.onUpdate();}
+    else{this.loading=false;this.applyView(sv||'fit');this.onUpdate();if(it.type==='dxf'&&$('vChk').classList.contains('on'))chkRun(this);}
     if(it.state<2&&it.gen===gen){const k=tq.indexOf(it);if(k>=0)tq.splice(k,1);it.state=1;makeThumb(it).catch(()=>{});}
   }
   applyXf(nx){ // сменить положение, сохранив место, на которое смотрим
@@ -2432,7 +2618,7 @@ function updateBar(){
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
-  $('vLw').hidden=!anyDxf;$('vMeas').hidden=!anyDxf||!!OV;if(MEAS.on&&(!anyDxf||OV))measToggle(false);$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
+  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;if(MEAS.on&&(!anyDxf||OV))measToggle(false);$('vLw').textContent='Линии: '+lineMode()[0];$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
@@ -3005,6 +3191,219 @@ function measToggle(on){
   if(MEAS.on)flash('Измерения: две точки — расстояние; клик по линии, дуге или окружности — длина, R, Ø. Esc — сбросить');
 }
 $('vMeas').onclick=()=>measToggle();
+/* =====================================================================
+   ТАБЛИЦА DXF ПАПКИ и ПРОВЕРКА ПЕРЕД РЕЗКОЙ.
+   Площадь, длина реза, врезки и замечания считает GEO.analyze (в отдельном потоке).
+   Правила редактируются: станок (лазер / плазма / координатно-пробивной) и числа в каждом правиле.
+   Масса = площадь × толщина × плотность (плотность — по ключевым словам в названии материала).
+   ===================================================================== */
+const RULE_DEF={
+  laser :{name:'Лазер',holeK:1,holeAbs:1,webK:1,webAbs:1,minLen:0.1,gapMax:2,join:0.01},
+  plasma:{name:'Плазма',holeK:1.5,holeAbs:4,webK:1.5,webAbs:3,minLen:0.1,gapMax:2,join:0.01},
+  punch :{name:'Координатно-пробивной',holeK:1,holeAbs:3,webK:1,webAbs:2,minLen:0.1,gapMax:2,join:0.01}};
+const CHK_DEF={open:true,gap:true,dup:true,small:true,hole:true,web:true,text:false,out:true};
+const CHK_N={open:'незамкнутые контуры',gap:'разрывы контура (до «макс. разрыв»)',dup:'двойные линии',small:'очень мелкие элементы',hole:'малые отверстия и вырезы',web:'узкие перемычки',text:'надписи в файле',out:'элементы вне детали'};
+const DENS_DEF='нерж, aisi, 12х18, 08х18, inox = 7.9\nамг, ад1, ад31, al, д16, алюм = 2.7\nлатунь, л63 = 8.5\nмедь, м1, cu = 8.9\nостальное (сталь) = 7.85';
+function rules(){const r=SET.rules||(SET.rules={});r.m=r.m||'laser';r.P=r.P||{};for(const k in RULE_DEF)r.P[k]=Object.assign({},RULE_DEF[k],r.P[k]||{});
+  r.chk=Object.assign({},CHK_DEF,r.chk||{});if(typeof r.dens!=='string')r.dens=DENS_DEF;return r;}
+function density(mat){const m=(mat||'').toLowerCase();let def=7.85;
+  for(const line of rules().dens.split('\n')){const i=line.lastIndexOf('=');if(i<0)continue;const v=parseFloat(line.slice(i+1).replace(',','.'));if(!(v>0))continue;
+    const keys=line.slice(0,i).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+    if(keys.some(k=>k.startsWith('остальн')))def=v;else if(m&&keys.some(k=>m.includes(k)))return v;}
+  return def;}
+function rulesFor(it){const r=rules(),P=r.P[r.m],mt=mtInfo(it);return Object.assign({},P,{s:mt&&mtNum(mt.thk)<1e8?mtNum(mt.thk):0,chk:r.chk});}
+const ANA=new Map();   // key файла → {sig, r}
+const rulesSig=()=>JSON.stringify([rules().m,rules().P[rules().m],rules().chk]);
+async function anaGet(it){
+  const sig=rulesSig()+'|'+(mtInfo(it)||{}).thk,c=ANA.get(it.key);if(c&&c.sig===sig)return c.r;
+  const doc=await getDoc(it);const r=await geoCompare.analyze(doc,rulesFor(it));r.origin=doc.origin;ANA.set(it.key,{sig,r});chkBadge(it,r);return r;
+}
+function chkBadge(it,r){
+  if(!it.chkb){it.chkb=document.createElement('span');it.chkb.className='chkb';it.tile.querySelector('.th').appendChild(it.chkb);
+    it.chkb.addEventListener('click',e=>{e.stopPropagation();const i=view.indexOf(it);if(i<0)return;showItem(i);if(!docked())setFull(true);setTimeout(()=>chkToggle(true),50);});}
+  const n=r.issues.length;it.chkb.hidden=false;it.chkb.className='chkb '+(n?'bad':'ok');it.chkb.textContent=n?'⚠ '+n:'✓';
+  it.chkb.title=n?'Проверка перед резкой ('+rules().P[rules().m].name+'): '+r.issues.slice(0,8).map(x=>x.text).join('; ')+(n>8?'…':'')+' — клик: показать на детали':'Проверка перед резкой: замечаний нет';
+}
+/* ---------- колонки таблицы ---------- */
+const f1=(v,n)=>v==null||!isFinite(v)?'':(Math.round(v*10**n)/10**n).toLocaleString('ru-RU',{minimumFractionDigits:n,maximumFractionDigits:n});
+const TCOLS=[
+  {k:'name',t:'Файл',v:(it)=>it.name,always:true},
+  {k:'desig',t:'Обозначение',v:it=>nameParts(it).desig||''},
+  {k:'mat',t:'Материал',v:it=>(mtInfo(it)||{}).mat||''},
+  {k:'thk',t:'Толщина, мм',v:it=>{const m=mtInfo(it);return m&&m.thk?mtNum(m.thk):''},num:2,trim:1},
+  {k:'qty',t:'Кол-во',v:it=>(mtInfo(it)||{}).qty||'',num:0},
+  {k:'size',t:'Габарит, мм',v:(it,r)=>r&&r.size?Math.round(Math.max(...r.size))+' × '+Math.round(Math.min(...r.size)):''},
+  {k:'area',t:'Площадь, м²',v:(it,r)=>r?r.area/1e6:'',num:4},
+  {k:'mass',t:'Масса, кг',v:(it,r)=>{const m=mtInfo(it);return r&&m&&m.thk?r.area*mtNum(m.thk)*density(m.mat)/1e6:'';},num:2},
+  {k:'cut',t:'Длина реза, м',v:(it,r)=>r?r.cut/1000:'',num:2},
+  {k:'pierce',t:'Врезок',v:(it,r)=>r?r.pierces:'',num:0},
+  {k:'iss',t:'Замечания',v:(it,r)=>r?r.issues.length:'',num:0},
+];
+if(!Array.isArray(SET.tcols))SET.tcols=TCOLS.map(c=>c.k);
+const TBL={rows:[],sort:null,dir:1,tok:0};
+function tblItems(){return view.filter(it=>it.type==='dxf');}
+async function tblOpen(){
+  const P=$('tblPanel');P.hidden=false;const L=tblItems();
+  $('tblTitle').textContent='Таблица DXF'+(curDir?' — '+curDir.split('/').pop():'')+' · файлов: '+L.length+(MTF?' · фильтр: '+MTF.replace('|',' · '):'');
+  $('tblMachine').value=rules().m;
+  TBL.rows=L.map(it=>({it,r:(ANA.get(it.key)||{}).r||null}));tblRender();
+  const tok=++TBL.tok;let n=0;
+  for(const row of TBL.rows){
+    if(tok!==TBL.tok||P.hidden)return;
+    try{row.r=await anaGet(row.it);}catch(e){row.err=e.message;}
+    n++;$('tblProg').textContent=n<TBL.rows.length?'считаю '+n+' / '+TBL.rows.length+'…':'';
+    if(n%6===0||n===TBL.rows.length)tblRender();
+  }
+}
+function tblRender(){
+  const cols=TCOLS.filter(c=>c.always||SET.tcols.includes(c.k)),T=$('tblBody');T.textContent='';
+  const head=document.createElement('tr');
+  for(const c of cols){const th=document.createElement('th');th.textContent=c.t+(TBL.sort===c.k?(TBL.dir>0?' ▲':' ▼'):'');if(c.num!=null)th.className='n';
+    th.onclick=()=>{TBL.dir=TBL.sort===c.k?-TBL.dir:1;TBL.sort=c.k;tblRender();};head.appendChild(th);}
+  T.appendChild(head);
+  let rows=TBL.rows.slice();
+  if(TBL.sort){const c=TCOLS.find(x=>x.k===TBL.sort);rows.sort((a,b)=>{const x=c.v(a.it,a.r),y=c.v(b.it,b.r);
+    return TBL.dir*((typeof x==='number'&&typeof y==='number')?x-y:String(x).localeCompare(String(y),'ru',{numeric:true}));});}
+  for(const row of rows){const tr=document.createElement('tr');
+    for(const c of cols){const td=document.createElement('td');let v=c.v(row.it,row.r);
+      if(c.num!=null){td.className='n';if(typeof v==='number')v=c.trim?v.toLocaleString('ru-RU',{maximumFractionDigits:c.num}):f1(v,c.num);}
+      if(c.k==='iss'&&row.r){td.className='n '+(row.r.issues.length?'bad':'ok');td.textContent=row.r.issues.length?'⚠ '+row.r.issues.length:'✓';td.title=row.r.issues.map(x=>x.text).join('\n')||'замечаний нет';}
+      else td.textContent=row.err&&c.k==='name'?v+' — ошибка: '+row.err:(v===''&&!row.r&&c.k!=='name'&&c.k!=='desig'&&c.k!=='mat'&&c.k!=='thk'&&c.k!=='qty'?'…':v);
+      tr.appendChild(td);}
+    tr.onclick=()=>{const i=view.indexOf(row.it);if(i<0)return;$('tblPanel').hidden=true;showItem(i);if(!docked())setFull(true);};
+    T.appendChild(tr);}
+  // итоги по материалу и толщине (с учётом количества)
+  const G=new Map();
+  for(const row of TBL.rows){const m=mtInfo(row.it),k=m?mtLabel(m):'без материала в имени',q=(m&&m.qty)||1,r=row.r;
+    const g=G.get(k)||{n:0,q:0,area:0,mass:0,cut:0,pierce:0,iss:0,mt:m};g.n++;g.q+=q;
+    if(r){g.area+=r.area*q/1e6;g.cut+=r.cut*q/1000;g.pierce+=r.pierces*q;g.iss+=r.issues.length?1:0;if(m&&m.thk)g.mass+=r.area*mtNum(m.thk)*density(m.mat)/1e6*q;}
+    G.set(k,g);}
+  const S=$('tblSum');S.textContent='';
+  const sh=document.createElement('tr');const want=k=>SET.tcols.includes(k);
+  const sc=[['Материал · толщина',g=>g.k],['Файлов',g=>g.n],['Деталей, шт',g=>g.q],...(want('area')?[['Площадь, м²',g=>f1(g.area,3)]]:[]),...(want('mass')?[['Масса, кг',g=>f1(g.mass,1)]]:[]),
+    ...(want('cut')?[['Длина реза, м',g=>f1(g.cut,1)]]:[]),...(want('pierce')?[['Врезок',g=>g.pierce]]:[]),...(want('iss')?[['С замечаниями',g=>g.iss]]:[])];
+  for(const [t] of sc){const th=document.createElement('th');th.textContent=t;sh.appendChild(th);}S.appendChild(sh);
+  const all={k:'Всего',n:0,q:0,area:0,mass:0,cut:0,pierce:0,iss:0};
+  const gl=[...G].sort((a,b)=>a[0].localeCompare(b[0],'ru',{numeric:true}));
+  for(const [k,g] of gl){g.k=k;for(const f of ['n','q','area','mass','cut','pierce','iss'])all[f]+=g[f];}
+  for(const g of [...gl.map(x=>x[1]),all]){const tr=document.createElement('tr');if(g===all)tr.className='tot';
+    for(const [,fn] of sc){const td=document.createElement('td');td.textContent=fn(g);tr.appendChild(td);}S.appendChild(tr);}
+  TBL.sum={sc,rows:[...gl.map(x=>x[1]),all]};
+}
+function tblCols(){const M=$('tblColMenu');M.textContent='';
+  for(const c of TCOLS){if(c.always)continue;const l=document.createElement('label');l.innerHTML='<input type="checkbox"> ';l.append(c.t);
+    const cb=l.querySelector('input');cb.checked=SET.tcols.includes(c.k);cb.onchange=()=>{SET.tcols=TCOLS.filter(x=>x.k===c.k?cb.checked:SET.tcols.includes(x.k)).map(x=>x.k);saveSet();tblRender();};M.appendChild(l);}
+  M.hidden=!M.hidden;}
+/* ---------- Excel (.xlsx) без библиотек: несжатый ZIP + XML ---------- */
+const CRC=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}
+  return b=>{let c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=t[(c^b[i])&255]^(c>>>8);return (c^0xFFFFFFFF)>>>0;};})();
+function zipStore(files){ // [{name, data:Uint8Array}] → Blob
+  const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+  const u16=v=>[v&255,v>>8&255],u32=v=>[v&255,v>>8&255,v>>16&255,v>>>24&255];
+  for(const f of files){const nm=enc.encode(f.name),crc=CRC(f.data),sz=f.data.length;
+    const h=new Uint8Array([...u32(0x04034b50),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0)]);
+    parts.push(h,nm,f.data);
+    cen.push(new Uint8Array([...u32(0x02014b50),...u16(20),...u16(20),...u16(0x0800),...u16(0),...u16(0),...u16(0),...u32(crc),...u32(sz),...u32(sz),...u16(nm.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(off)]),nm);
+    off+=h.length+nm.length+sz;}
+  let cs=0;for(const c of cen)cs+=c.length;
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cs),...u32(off),...u16(0)]);
+  return new Blob([...parts,...cen,end],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+}
+function xlsx(sheets){ // [{name, rows:[[str|num]], widths:[...]}]; первая строка — жирная
+  const esc=v=>String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g,'');
+  const col=i=>{let s='';i++;while(i){const m=(i-1)%26;s=String.fromCharCode(65+m)+s;i=Math.floor((i-1)/26);}return s;};
+  const enc=new TextEncoder(),F=[];
+  const sheetXml=sh=>'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'+
+    (sh.widths?'<cols>'+sh.widths.map((w,i)=>'<col min="'+(i+1)+'" max="'+(i+1)+'" width="'+w+'" customWidth="1"/>').join('')+'</cols>':'')+'<sheetData>'+
+    sh.rows.map((r,ri)=>'<row r="'+(ri+1)+'">'+r.map((v,ci)=>{const ref=col(ci)+(ri+1),st=ri===0?' s="1"':'';
+      if(typeof v==='number'&&isFinite(v))return '<c r="'+ref+'"'+st+'><v>'+v+'</v></c>';if(v===''||v==null)return '';return '<c r="'+ref+'" t="inlineStr"'+st+'><is><t xml:space="preserve">'+esc(v)+'</t></is></c>';}).join('')+'</row>').join('')+
+    '</sheetData>'+(sh.rows.length>1?'<autoFilter ref="A1:'+col(sh.rows[0].length-1)+sh.rows.length+'"/>':'')+'</worksheet>';
+  F.push({name:'[Content_Types].xml',x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'+sheets.map((s,i)=>'<Override PartName="/xl/worksheets/sheet'+(i+1)+'.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('')+'</Types>'});
+  F.push({name:'_rels/.rels',x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'});
+  F.push({name:'xl/workbook.xml',x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>'+sheets.map((s,i)=>'<sheet name="'+esc(s.name).slice(0,31)+'" sheetId="'+(i+1)+'" r:id="rId'+(i+1)+'"/>').join('')+'</sheets>'+
+    sheets.map((s,i)=>s.rows.length>1?'':'').join('')+'</workbook>'});
+  F.push({name:'xl/_rels/workbook.xml.rels',x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'+sheets.map((s,i)=>'<Relationship Id="rId'+(i+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet'+(i+1)+'.xml"/>').join('')+'<Relationship Id="rId'+(sheets.length+1)+'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'});
+  F.push({name:'xl/styles.xml',x:'<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'});
+  sheets.forEach((s,i)=>F.push({name:'xl/worksheets/sheet'+(i+1)+'.xml',x:sheetXml(s)}));
+  return zipStore(F.map(f=>({name:f.name,data:enc.encode(f.x)})));
+}
+function tblExport(){
+  const cols=TCOLS.filter(c=>c.always||SET.tcols.includes(c.k));
+  const rows=[cols.map(c=>c.t).concat(SET.tcols.includes('iss')?['Список замечаний']:[]).concat(['Путь'])];
+  for(const row of TBL.rows){const r=row.r;rows.push(cols.map(c=>{let v=c.v(row.it,r);if(typeof v==='number'&&c.num!=null)v=Math.round(v*10**c.num)/10**c.num;return v;})
+    .concat(SET.tcols.includes('iss')?[r?r.issues.map(x=>x.text).join('; '):'']:[]).concat([row.it.path]));}
+  const sum=[TBL.sum.sc.map(x=>x[0])];for(const g of TBL.sum.rows)sum.push(TBL.sum.sc.map(([,fn])=>{const v=fn(g);const n=typeof v==='string'?parseFloat(v.replace(/\s/g,'').replace(',','.')):v;return typeof v==='string'&&!isNaN(n)&&/^[\d\s,.-]+$/.test(v)?n:v;}));
+  const name=(curDir?curDir.split('/').pop():(items[0]?items[0].path.split('/')[0]:'DXF'))+' — таблица DXF.xlsx';
+  const b=xlsx([{name:'Детали',rows,widths:cols.map(c=>c.k==='name'?44:c.k==='desig'?30:14).concat(SET.tcols.includes('iss')?[60]:[]).concat([60])},{name:'Итоги',rows:sum,widths:[28,10,12,14,12,14,10,14]}]);
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name.replace(/[\\/:*?"<>|]/g,'_');document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  flash('Таблица сохранена: '+a.download);
+}
+/* ---------- правила проверки ---------- */
+function rulesOpen(){
+  const r=rules(),B=$('rulesBody');B.textContent='';$('rulesPanel').hidden=false;
+  const row=(t,el,tip)=>{const d=document.createElement('div');d.className='set-row';d.innerHTML='<span></span>';d.firstChild.textContent=t;if(tip)d.title=tip;d.appendChild(el);B.appendChild(d);};
+  const sel=document.createElement('select');for(const k in RULE_DEF){const o=document.createElement('option');o.value=k;o.textContent=RULE_DEF[k].name;sel.appendChild(o);}sel.value=r.m;
+  sel.onchange=()=>{r.m=sel.value;saveSet();rulesOpen();rulesChanged();};row('Станок',sel,'Для каждого станка свои числа');
+  const P=r.P[r.m],num=(k,t,tip,step)=>{const i=document.createElement('input');i.type='number';i.step=step||'0.1';i.min='0';i.value=P[k];i.style.width='80px';
+    i.onchange=()=>{const v=parseFloat(i.value);if(v>=0){P[k]=v;saveSet();rulesChanged();}};row(t,i,tip);};
+  const sec=t=>{const d=document.createElement('div');d.className='set-sec';d.textContent=t;B.appendChild(d);};
+  sec('Отверстия и перемычки — от толщины s (из имени файла)');
+  num('holeK','Отверстие не меньше, × s','Минимальный диаметр отверстия (ширина выреза) = коэффициент × толщина');
+  num('holeAbs','…и не меньше, мм','Но не меньше этого числа миллиметров');
+  num('webK','Перемычка не меньше, × s','Минимальное расстояние между контурами (отверстие–отверстие, отверстие–край)');
+  num('webAbs','…и не меньше, мм','');
+  sec('Контуры');
+  num('gapMax','Разрыв считать до, мм','Концы незамкнутого контура ближе этого — «разрыв контура»; дальше — «незамкнутый контур»');
+  num('join','Концы сходятся, если ближе, мм','Точность стыковки элементов в контур','0.001');
+  num('minLen','Мелкий элемент — короче, мм','');
+  sec('Что проверять');
+  for(const k in CHK_N){const l=document.createElement('label');l.className='set-row';l.innerHTML='<span></span><input type="checkbox">';l.firstChild.textContent=CHK_N[k];
+    const cb=l.querySelector('input');cb.checked=!!r.chk[k];cb.onchange=()=>{r.chk[k]=cb.checked;saveSet();rulesChanged();};B.appendChild(l);}
+  sec('Плотность материала, г/см³ (для массы)');
+  const ta=document.createElement('textarea');ta.rows=6;ta.style.width='100%';ta.value=r.dens;ta.title='Слова из названия материала через запятую = плотность. «остальное» — для всех прочих';
+  ta.onchange=()=>{r.dens=ta.value;saveSet();if(!$('tblPanel').hidden)tblRender();};B.appendChild(ta);
+  const rs=document.createElement('button');rs.textContent='Вернуть стандартные значения для «'+RULE_DEF[r.m].name+'»';rs.onclick=()=>{r.P[r.m]=Object.assign({},RULE_DEF[r.m]);r.chk=Object.assign({},CHK_DEF);r.dens=DENS_DEF;saveSet();rulesOpen();rulesChanged();};
+  const d=document.createElement('div');d.style.margin='10px 0';d.appendChild(rs);B.appendChild(d);
+}
+let rulesT=0;
+function rulesChanged(){clearTimeout(rulesT);rulesT=setTimeout(()=>{$('tblMachine').value=rules().m;for(const p of panes)if(p.chk)chkRun(p);if(!$('tblPanel').hidden)tblOpen();},400);}
+/* ---------- проверка на детали (кнопка «✓ Проверка» в просмотре) ---------- */
+async function chkRun(p){
+  if(!p.it||p.it.type!=='dxf'||!p.doc)return;const it=p.it;p.chk={busy:true};
+  try{const r=await anaGet(it);if(p.it!==it)return;p.chk={r,cur:-1};}catch(e){p.chk=null;flash('Проверка не удалась: '+e.message);return;}
+  p.draw();chkList(p);
+  const n=p.chk.r.issues.length;flash(n?'Проверка ('+rules().P[rules().m].name+'): замечаний '+n+' — список справа, клик приближает':'Проверка ('+rules().P[rules().m].name+'): замечаний нет ✓');
+}
+function chkToggle(on){
+  const p=panes[VW.active]||panes[0];if(!p)return;on=on===undefined?!p.chk:on;
+  for(const q of panes){q.chk=null;q.draw();}
+  $('vChk').classList.toggle('on',on);$('chkList').hidden=true;
+  if(on)for(const q of panes.slice(0,VW.set.length))if(q.it&&q.it.type==='dxf')chkRun(q);
+}
+function chkList(p){
+  const L=$('chkList'),r=p.chk&&p.chk.r;L.textContent='';if(!r)return;L.hidden=false;
+  const h=document.createElement('div');h.className='pp-h';h.innerHTML='<b></b><span class="sp"></span><button title="Правила проверки">Правила…</button><button>✕</button>';
+  h.querySelector('b').textContent=(r.issues.length?'Замечаний: '+r.issues.length:'Замечаний нет ✓')+' · '+rules().P[rules().m].name;
+  h.querySelectorAll('button')[0].onclick=rulesOpen;h.querySelectorAll('button')[1].onclick=()=>{L.hidden=true;};L.appendChild(h);
+  const info=document.createElement('div');info.className='pp-empty';
+  info.textContent='Площадь '+f1(r.area/1e6,4)+' м² · рез '+f1(r.cut/1000,2)+' м · врезок '+r.pierces+(rulesFor(p.it).s?' · толщина '+rulesFor(p.it).s+' мм':' · толщина в имени не найдена — правила «× s» не применяются');L.appendChild(info);
+  r.issues.forEach((x,i)=>{const d=document.createElement('div');d.className='ovl'+(i===p.chk.cur?' cur':'');d.innerHTML='<b></b><span></span>';d.querySelector('b').textContent=numTxt(i);d.querySelector('span').textContent=x.text;
+    d.onclick=()=>{p.chk.cur=i;const w=Math.max(x.bb[2]-x.bb[0],x.bb[3]-x.bb[1],10);const [wx,wy]=mApply(xfMat(p.xf),(x.bb[0]+x.bb[2])/2,(x.bb[1]+x.bb[3])/2);
+      p.fitted=false;p.s=p.clampS(Math.min(p.W,p.H)/(w*4));p.cx=wx;p.cy=wy;p.draw();chkList(p);};L.appendChild(d);});
+}
+function chkPaint(p,c,d){
+  const r=p.chk&&p.chk.r;if(!r)return;c.save();c.setTransform(d,0,0,d,0,0);c.font='bold 13px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';
+  r.issues.forEach((x,i)=>{const [X,Y]=m2s(p,x.x,x.y),cur=p.chk.cur===i;
+    const a=m2s(p,x.bb[0],x.bb[1]),b=m2s(p,x.bb[2],x.bb[3]);c.strokeStyle='#ff8c4d';c.lineWidth=cur?2.5:1.5;c.setLineDash([5,3]);
+    const rx=Math.min(a[0],b[0])-6,ry=Math.min(a[1],b[1])-6;c.strokeRect(rx,ry,Math.abs(b[0]-a[0])+12,Math.abs(b[1]-a[1])+12);c.setLineDash([]);
+    c.fillStyle=cur?'#ffd23f':'#ff8c4d';c.beginPath();c.arc(rx,ry,10,0,Math.PI*2);c.fill();c.fillStyle='#111';c.fillText(String(i+1),rx,ry+0.5);});
+  c.restore();
+}
+$('btnTable').onclick=tblOpen;$('tblClose').onclick=()=>{$('tblPanel').hidden=true;TBL.tok++;};
+$('tblColBtn').onclick=tblCols;$('tblRules').onclick=rulesOpen;$('tblXlsx').onclick=tblExport;
+$('tblMachine').onchange=e=>{rules().m=e.target.value;saveSet();rulesChanged();};
+$('rulesClose').onclick=()=>{$('rulesPanel').hidden=true;};
+$('vChk').onclick=()=>chkToggle();
 function cycleLineK(){const n=LINEMODES.length-(anyLw()?0:1);let i=(LINEMODES.indexOf(lineMode())+1)%n;const m=LINEMODES[i];
   SET.lw=m[1];SET.lineK=m[2];saveSet();panes.forEach(p=>p.draw());$('sLineK').value=String(SET.lineK);updateBar();flash('Линии DXF: '+m[0]);}
 $('sScope').onchange=e=>{SET.pairScope=e.target.value;saveSet();if(VW.idx>=0&&viewerShown())showItem(VW.idx);};
@@ -3586,6 +3985,8 @@ document.addEventListener('keydown',e=>{
   if(e.target.id==='filter'&&(k==='ArrowDown'||k==='Enter')){e.target.blur();e.preventDefault();if(view.length&&VW.idx<0){if(docked())showItem(0);else{VW.idx=0;markCurrent(view[0]);}}return;}
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
   if(k==='Escape'&&!$('pickPanel').hidden){pickClose();return;}
+  if(k==='Escape'&&!$('rulesPanel').hidden){$('rulesPanel').hidden=true;return;}
+  if(!$('tblPanel').hidden){if(k==='Escape'){$('tblPanel').hidden=true;TBL.tok++;}return;}
   if(k==='Escape'&&MEAS.on&&viewerShown()){const has=panes.some(p=>p.ms&&(p.ms.items.length||p.ms.pts.length));if(has)for(const p of panes){if(p.ms){p.ms.items=[];p.ms.pts=[];p.draw();}}else measToggle(false);return;}
   if(k==='Escape'&&SEL.size&&!VW.full){clearSel();return;}
   if(FOLLOW){ // второй монитор: листание передаётся в основное окно
@@ -3638,6 +4039,7 @@ document.addEventListener('keydown',e=>{
   else if(/^[rRкК]$/.test(k))$('vSide').click();
   else if(/^[wWцЦ]$/.test(k))cycleLineK();
   else if(/^[dDвВ]$/.test(k)&&!$('vMeas').hidden)measToggle();
+  else if(/^[cCсС]$/.test(k)&&!$('vChk').hidden)chkToggle();
   else if(k==='['||k==='х'||k==='Х')setContrast(SET.pdfLv-1);
   else if(k===']'||k==='ъ'||k==='Ъ')setContrast(SET.pdfLv+1);
   else if(/^[qQйЙ]$/.test(k))$('vRotL').click();

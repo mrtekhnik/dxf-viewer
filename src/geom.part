@@ -236,7 +236,116 @@ function GEOCORE(){
     const d=diff(A,B,M,tol);let desc=[];try{desc=describe(A,B,M,d,tol);}catch(e){desc=d.clusters.map(bb=>({bb,text:'отличие'}));}
     return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]],desc},d);
   }
-  return {prep,align,diff,compare,mul,bulgeArc};
+  /* =====================================================================
+     АНАЛИЗ ДЕТАЛИ для таблицы и проверки перед резкой: контуры, площадь, длина реза, врезки, замечания.
+     R — правила: {s (толщина), join, minLen, gapMax, holeK, holeAbs, webK, webAbs, chk:{open,gap,dup,small,hole,web,text,out}}
+     Каждое замечание: {k (вид), text, x, y, bb}
+     ===================================================================== */
+  function analyze(doc,R){
+    R=R||{};const eps=R.join||0.01,chord=Math.min(0.01,eps);
+    const issues=[],add=(k,text,x,y,bb)=>issues.push({k,text,x,y,bb:bb||[x-1,y-1,x+1,y+1]});
+    const f=v=>{const r=Math.round(v*100)/100;return String(r).replace('.',',');};
+    // 1) элементы как ломаные; одинаковые (двойные линии) — убрать и отметить
+    const P=[],seen=new Map();let nText=0;
+    for(const G of doc.groups||[]){if(G.off)continue;if(G.texts)nText+=G.texts.length;
+      for(const p of G.prims){
+        let o=[];
+        if(p[0]==='L')o=[p[1],p[2],p[3],p[4]];
+        else if(p[0]==='C')arcPts(o,p[1],p[2],p[3],0,TAU,true,chord,true);
+        else if(p[0]==='A')arcPts(o,p[1],p[2],p[3],p[4],p[5],true,chord,true);
+        else if(p[0]==='P'){const a=p[2],n=a.length/3,segs=p[1]?n:n-1;if(n<2)continue;o=[a[0],a[1]];
+          for(let i=0;i<segs;i++){const j=(i+1)%n,x1=a[i*3],y1=a[i*3+1],x2=a[j*3],y2=a[j*3+1],b=a[i*3+2],A=b?bulgeArc(x1,y1,x2,y2,b):null;
+            if(A)arcPts(o,A.cx,A.cy,A.r,A.a0,A.a1,A.ccw,chord,false);else o.push(x2,y2);}}
+        if(o.length<4)continue;
+        let len=0;for(let i=2;i<o.length;i+=2)len+=Math.hypot(o[i]-o[i-2],o[i+1]-o[i-1]);
+        const q=v=>Math.round(v/0.01),e1=q(o[0])+','+q(o[1]),e2=q(o[o.length-2])+','+q(o[o.length-1]),
+          mid=Math.floor(o.length/4)*2,key=[e1,e2].sort().join('|')+'|'+Math.round(len*100)+'|'+q(o[mid])+','+q(o[mid+1]);
+        if(seen.has(key)){if(R.chk&&R.chk.dup)add('dup','двойная линия (лежит точно поверх другой)',o[mid],o[mid+1]);continue;}
+        seen.set(key,1);
+        if(R.chk&&R.chk.small&&len<(R.minLen||0.1))add('small',len<0.005?'элемент нулевой длины':'очень мелкий элемент: '+f(len)+' мм',o[0],o[1]);
+        P.push({o,len,circle:p[0]==='C'?p[3]:0});
+      }}
+    // 2) сборка контуров: концы ближе eps — один узел
+    const nodes=[],grid=new Map(),cell=eps*2;
+    const node=(x,y)=>{const gx=Math.floor(x/cell),gy=Math.floor(y/cell);
+      for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=grid.get((gx+i)+','+(gy+j));if(L)for(const n of L){const N=nodes[n];if(Math.hypot(N.x-x,N.y-y)<=eps)return n;}}
+      const id=nodes.length;nodes.push({x,y,e:[]});const k=gx+','+gy;(grid.get(k)||grid.set(k,[]).get(k)).push(id);return id;};
+    const E=P.map((p,i)=>{const o=p.o,a=node(o[0],o[1]),b=node(o[o.length-2],o[o.length-1]);nodes[a].e.push(i);nodes[b].e.push(i);return {a,b,p};});
+    // компоненты
+    const comp=new Int32Array(E.length).fill(-1),C=[];
+    for(let i=0;i<E.length;i++){if(comp[i]>=0)continue;const id=C.length,st=[i],es=[];comp[i]=id;
+      while(st.length){const k=st.pop();es.push(k);for(const n of [E[k].a,E[k].b])for(const j of nodes[n].e)if(comp[j]<0){comp[j]=id;st.push(j);}}
+      C.push(es);}
+    const contours=[];
+    for(const es of C){
+      const ns=new Map();for(const k of es)for(const n of [E[k].a,E[k].b])ns.set(n,(ns.get(n)||0)+(E[k].a===E[k].b?2:1)/(E[k].a===E[k].b?2:1));
+      let deg=new Map();for(const k of es){deg.set(E[k].a,(deg.get(E[k].a)||0)+1);deg.set(E[k].b,(deg.get(E[k].b)||0)+1);}
+      const ends=[...deg].filter(([n,d])=>d===1).map(([n])=>n),branch=[...deg].filter(([n,d])=>d>2).map(([n])=>n);
+      let len=0,x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+      for(const k of es){const o=E[k].p.o;len+=E[k].p.len;for(let i=0;i<o.length;i+=2){const x=o[i],y=o[i+1];if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}}
+      const c={es,len,bb:[x0,y0,x1,y1],closed:!ends.length&&!branch.length,ends,branch,area:0,poly:null,circle:es.length===1?E[es[0]].p.circle:0};
+      if(c.closed){ // обход по кругу — многоугольник для площади и «внутри / снаружи»
+        const pts=[];let k=es[0],at=E[k].a;const used=new Set();
+        for(let guard=0;guard<es.length;guard++){used.add(k);const o=E[k].p.o,fw=E[k].a===at;
+          if(fw)for(let i=0;i<o.length-2;i+=2)pts.push(o[i],o[i+1]);else for(let i=o.length-2;i>0;i-=2)pts.push(o[i],o[i+1]);
+          at=fw?E[k].b:E[k].a;const nx=nodes[at].e.find(j=>!used.has(j)&&comp[j]===comp[k]);if(nx===undefined)break;k=nx;}
+        let A=0;for(let i=0;i<pts.length;i+=2){const j=(i+2)%pts.length;A+=pts[i]*pts[j+1]-pts[j]*pts[i+1];}
+        c.area=Math.abs(A)/2;c.poly=pts;
+      }
+      contours.push(c);
+    }
+    const closed=contours.filter(c=>c.closed&&c.area>0);
+    const inside=(poly,x,y)=>{let r=false;for(let i=0,j=poly.length-2;i<poly.length;j=i,i+=2){const xi=poly[i],yi=poly[i+1],xj=poly[j],yj=poly[j+1];if(((yi>y)!==(yj>y))&&(x<(xj-xi)*(y-yi)/(yj-yi)+xi))r=!r;}return r;};
+    const outer=closed.reduce((m,c)=>!m||c.area>m.area?c:m,null);
+    let area=0,holes=[];
+    if(outer){area=outer.area;
+      for(const c of closed){if(c===outer)continue;const x=c.poly[0],y=c.poly[1];
+        if(inside(outer.poly,x,y)){c.hole=true;holes.push(c);}else{c.out=true;}}
+      for(const h of holes){h.top=!holes.some(o=>o!==h&&o.area>h.area&&inside(o.poly,h.poly[0],h.poly[1]));if(h.top)area-=h.area;}
+    }
+    // 3) незамкнутые контуры и разрывы
+    const openC=contours.filter(c=>!c.closed);
+    if(R.chk&&(R.chk.open||R.chk.gap)){
+      const endPts=[];for(const c of openC)for(const n of c.ends)endPts.push({c,n,x:nodes[n].x,y:nodes[n].y});
+      const gm=R.gapMax||2,EG=new Map(),gk=(x,y)=>Math.floor(x/gm)+','+Math.floor(y/gm);
+      for(const e of endPts){const k=gk(e.x,e.y);(EG.get(k)||EG.set(k,[]).get(k)).push(e);}
+      const done=new Set(),doneN=new Set();let ng=0;
+      for(const e of endPts){if(done.has(e))continue;let best=null,bd=gm;const gx=Math.floor(e.x/gm),gy=Math.floor(e.y/gm);
+        for(let i=-1;i<=1;i++)for(let j=-1;j<=1;j++){const L=EG.get((gx+i)+','+(gy+j));if(L)for(const q of L){if(q===e||done.has(q))continue;const d=Math.hypot(q.x-e.x,q.y-e.y);if(d<bd){bd=d;best=q;}}}
+        if(best&&R.chk.gap){done.add(e);done.add(best);doneN.add(e.n);doneN.add(best.n);if(++ng<=200)add('gap','разрыв контура '+f(bd)+' мм',(e.x+best.x)/2,(e.y+best.y)/2,[Math.min(e.x,best.x),Math.min(e.y,best.y),Math.max(e.x,best.x),Math.max(e.y,best.y)]);}}
+      if(R.chk.open){let no=0;for(const c of openC){if(no>=200)break;const free=c.ends.filter(n=>!doneN.has(n));no++;
+        if(c.branch.length)add('open','контур с ответвлением (наложенные линии)',nodes[c.branch[0]].x,nodes[c.branch[0]].y,c.bb);
+        else if(free.length)add('open','незамкнутый контур ('+(c.es.length===1&&E[c.es[0]].p.o.length===4?'отрезок ':'')+f(c.len)+' мм)',nodes[free[0]].x,nodes[free[0]].y,c.bb);}
+        if(openC.length>200)add('open','и ещё незамкнутых контуров: '+(openC.length-200),0,0);}
+    }
+    // 4) лишнее: надписи, элементы вне детали
+    if(R.chk&&R.chk.text&&nText)add('text','в файле есть надписи: '+nText+' (на резку не нужны?)',outer?outer.bb[0]:0,outer?outer.bb[3]:0,outer?outer.bb:null);
+    if(R.chk&&R.chk.out&&outer)for(const c of contours)if(c!==outer&&(c.out||(!c.closed&&!(c.bb[0]>=outer.bb[0]-eps&&c.bb[2]<=outer.bb[2]+eps&&c.bb[1]>=outer.bb[1]-eps&&c.bb[3]<=outer.bb[3]+eps))))
+      add('out','элемент вне контура детали',(c.bb[0]+c.bb[2])/2,(c.bb[1]+c.bb[3])/2,c.bb);
+    // 5) отверстия и перемычки — от толщины
+    const s=+R.s||0,dMin=Math.max(R.holeAbs||0,(R.holeK||0)*s),wMin=Math.max(R.webAbs||0,(R.webK||0)*s);
+    if(R.chk&&R.chk.hole&&dMin>0)for(const h of holes){if(!h.top)continue;const d=h.circle?h.circle*2:Math.min(h.bb[2]-h.bb[0],h.bb[3]-h.bb[1]);
+      if(d<dMin-1e-6)add('hole',(h.circle?'отверстие Ø'+f(d):'вырез шириной '+f(d)+' мм')+' меньше '+f(dMin)+(s?' (толщина '+f(s)+')':''),(h.bb[0]+h.bb[2])/2,(h.bb[1]+h.bb[3])/2,h.bb);}
+    if(R.chk&&R.chk.web&&wMin>0&&outer){
+      const cs=[outer,...holes.filter(h=>h.top)],segs=[];
+      cs.forEach((c,ci)=>{for(let i=0;i<c.poly.length;i+=2){const j=(i+2)%c.poly.length;segs.push([c.poly[i],c.poly[i+1],c.poly[j],c.poly[j+1],ci]);}});
+      const cl=Math.max(wMin*2,1),G=new Map();
+      segs.forEach((g,si)=>{const i0=Math.floor(Math.min(g[0],g[2])/cl),i1=Math.floor(Math.max(g[0],g[2])/cl),j0=Math.floor(Math.min(g[1],g[3])/cl),j1=Math.floor(Math.max(g[1],g[3])/cl);
+        for(let i=i0;i<=i1;i++)for(let j=j0;j<=j1;j++){const k=i+','+j;(G.get(k)||G.set(k,[]).get(k)).push(si);}});
+      const pair=new Map();
+      cs.forEach((c,ci)=>{const P=c.poly,st=Math.max(wMin/3,0.2);
+        for(let i=0;i<P.length;i+=2){const j=(i+2)%P.length,L=Math.hypot(P[j]-P[i],P[j+1]-P[i+1]),n=Math.max(1,Math.ceil(L/st));
+          for(let t=0;t<n;t++){const x=P[i]+(P[j]-P[i])*t/n,y=P[i+1]+(P[j+1]-P[i+1])*t/n,gx=Math.floor(x/cl),gy=Math.floor(y/cl);
+            for(let a=-1;a<=1;a++)for(let b=-1;b<=1;b++){const L2=G.get((gx+a)+','+(gy+b));if(!L2)continue;
+              for(const si of L2){const g=segs[si];if(g[4]<=ci)continue;const dx=g[2]-g[0],dy=g[3]-g[1],l=dx*dx+dy*dy;let u=l?((x-g[0])*dx+(y-g[1])*dy)/l:0;u=u<0?0:u>1?1:u;
+                const d=Math.hypot(x-g[0]-u*dx,y-g[1]-u*dy);if(d<wMin-1e-6){const k=ci+'|'+g[4],o=pair.get(k);if(!o||d<o.d)pair.set(k,{d,x,y,px:g[0]+u*dx,py:g[1]+u*dy});}}}}}});
+      for(const [k,o] of pair)add('web','перемычка '+f(o.d)+' мм меньше '+f(wMin)+(s?' (толщина '+f(s)+')':''),(o.x+o.px)/2,(o.y+o.py)/2,[Math.min(o.x,o.px),Math.min(o.y,o.py),Math.max(o.x,o.px),Math.max(o.y,o.py)]);
+    }
+    let cut=0;for(const c of contours)cut+=c.len;
+    return {area,outerArea:outer?outer.area:0,holes:holes.filter(h=>h.top).length,cut,pierces:contours.length,open:openC.length,
+      bb:outer?outer.bb:null,size:outer?[outer.bb[2]-outer.bb[0],outer.bb[3]-outer.bb[1]]:null,issues};
+  }
+  return {prep,align,diff,compare,mul,bulgeArc,analyze};
 }
 const GEO=GEOCORE();
 /* сравнение в отдельном потоке, чтобы окно не замирало на больших файлах */
@@ -244,7 +353,7 @@ const geoCompare=(()=>{
   let w=null,seq=0;const wait=new Map();
   function start(){
     try{
-      const src='const GEO=('+GEOCORE.toString()+')();onmessage=e=>{const {id,a,b,tol,M}=e.data;let r,err=null;try{r=GEO.compare(a,b,tol,M);'+
+      const src='const GEO=('+GEOCORE.toString()+')();onmessage=e=>{const {id,a,b,tol,M,ana}=e.data;let r,err=null;if(ana){try{r=GEO.analyze(a,ana);}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});return;}try{r=GEO.compare(a,b,tol,M);'+
         'r={M:r.M,mir:r.mir,same:r.same,fail:r.fail,clusters:r.clusters||[],a:r.a?{runs:r.a.runs,bad:r.a.bad,frac:r.a.frac}:null,b:r.b?{runs:r.b.runs,bad:r.b.bad,frac:r.b.frac}:null,'+
         'LA:r.A.L,LB:r.LB||[],sizeA:r.sizeA,sizeB:r.sizeB,bbA:r.A.bbox,desc:r.desc||[]};}catch(x){err=String(x&&x.message||x);}postMessage({id,r,err});};';
       w=new Worker(URL.createObjectURL(new Blob([src],{type:'text/javascript'})));
@@ -252,11 +361,17 @@ const geoCompare=(()=>{
       w.onerror=()=>{for(const p of wait.values())p.rej(new Error('Сбой потока сравнения'));wait.clear();w=null;};
     }catch(e){w=null;}
   }
-  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,prims:G.prims}))});
-  return (docA,docB,tol,M)=>{
+  const slim=d=>({groups:(d.groups||[]).map(G=>({off:!!G.off,prims:G.prims,texts:G.texts?G.texts.map(()=>0):undefined}))});
+  const fn=(docA,docB,tol,M)=>{
     if(!w)start();
     if(!w){const r=GEO.compare(docA,docB,tol,M);return Promise.resolve(Object.assign(r,{LA:r.A.L,bbA:r.A.bbox}));}
     const id=++seq;return new Promise((res,rej)=>{wait.set(id,{res,rej});w.postMessage({id,a:slim(docA),b:slim(docB),tol,M:M||null});});
   };
+  fn.analyze=(doc,R)=>{ // анализ детали (площадь, рез, проверка) — тоже в потоке
+    if(!w)start();
+    if(!w)return Promise.resolve(GEO.analyze(doc,R));
+    const id=++seq;return new Promise((res,rej)=>{wait.set(id,{res,rej});w.postMessage({id,a:slim(doc),ana:R});});
+  };
+  return fn;
 })();
 

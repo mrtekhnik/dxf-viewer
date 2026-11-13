@@ -175,6 +175,22 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 #mtBar .mt-c{padding:2px 9px;font-size:12px;border-radius:12px;white-space:pre}
 #mtBar .mt-c.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 #mtBar .mt-s{margin-left:auto;color:var(--mut);display:flex;gap:5px;align-items:center}
+#tblPanel{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.45);display:flex;padding:20px}
+#tblPanel[hidden]{display:none}
+#tblBox{background:var(--panel);border:1px solid var(--line);border-radius:12px;flex:1;display:flex;flex-direction:column;overflow:hidden}
+#tblBox .pp-h{gap:8px;flex-wrap:wrap}#tblScroll{overflow:auto;flex:1}
+.mut{color:var(--mut);font-size:12px}
+#rulesBody input[type=number],#rulesBody textarea{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit}
+table.tbl{border-collapse:collapse;width:100%;font-size:13px}
+table.tbl th{position:sticky;top:0;background:var(--panel);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
+table.tbl td{padding:4px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.tbl tr:hover td{background:var(--hover,#2b2f36)}table.tbl .n{text-align:right}
+table.tbl td.bad{color:#ff8c4d;font-weight:600}table.tbl td.ok{color:#39d353}
+table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.tbl.sum tr.tot td{font-weight:700}
+#tblColMenu label{display:flex;gap:6px;align-items:center;padding:3px 6px;white-space:nowrap}
+#tblColMenu{right:0;left:auto}
+.chkb{position:absolute;left:4px;bottom:4px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff}
+.chkb.bad{background:#d9822b}.chkb.ok{background:#2e8b57}
 .pk-for{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
 .pk:hover,.pk.cur{background:var(--hover,#2b2f36)}
@@ -246,7 +262,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.7</small></div>
+  <div class="brand">DXF <small>+PDF · v3.8</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -274,6 +290,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <!-- действия с выделенным файлом -->
   <span class="grp">
     <button id="btnSideG" title="Открыть выделенный файл: чертёж и все его развёртки рядом (R)">⧉ <span class="lbl b">Рядом</span></button>
+    <button id="btnTable" title="Таблица по всем DXF папки: материал, толщина, количество, площадь, масса, рез, врезки, проверка; выгрузка в Excel">▤ <span class="lbl b">Таблица</span></button>
     <button id="btnCmp" hidden title="Сравнить с другой папкой (прошлый заказ, архив)">⇆ <span class="lbl b">Сравнить</span></button>
   </span>
   <!-- служебное -->
@@ -320,6 +337,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
+    <button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓ Проверка</button>
     <button id="vMeas" hidden title="Измерения: расстояние между точками (привязка к концам, серединам, центрам), клик по линии — длина, по дуге или окружности — R / Ø (D)">📏 Измерить</button>
     <button id="vLw" title="Толщина линий DXF (W — по кругу)">Линии</button>
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
@@ -375,6 +393,24 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
   <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), проверяется содержимое: = одинаковые, ≈ пересохранён (геометрия DXF та же), ≠ отличается. Если в сетке выделен файл — сразу откроется его сравнение; не нашлась пара по имени — список похожих по габариту.</div>
   <input id="inCmp" type="file" webkitdirectory multiple hidden>
 </div>
+<div id="tblPanel" hidden>
+ <div id="tblBox">
+  <div class="pp-h"><b id="tblTitle">Таблица DXF</b><span id="tblProg" class="mut"></span><span class="sp"></span>
+   <span class="mwrap"><button id="tblColBtn" title="Какие колонки показывать">Колонки ▾</button><div id="tblColMenu" class="menu" hidden></div></span>
+   <label title="Нормы проверки — для какого станка">Станок <select id="tblMachine"><option value="laser">Лазер</option><option value="plasma">Плазма</option><option value="punch">Координатно-пробивной</option></select></label>
+   <button id="tblRules" title="Правила проверки перед резкой и плотность материалов">Правила…</button>
+   <button id="tblXlsx" title="Сохранить таблицу и итоги в Excel">⬇ Excel</button>
+   <button id="tblClose" title="Закрыть (Esc)">✕</button></div>
+  <div id="tblScroll"><table id="tblBody" class="tbl"></table>
+   <div class="set-sec" style="margin:14px 10px 4px">Итоги по материалу и толщине (с учётом количества)</div><table id="tblSum" class="tbl sum"></table>
+   <p class="mut" style="margin:8px 10px 20px;font-size:12px">Материал, толщина и количество — из имени файла. Площадь — внешний контур минус отверстия. Длина реза — все контуры, врезки — по числу контуров. Клик по строке — открыть деталь, по заголовку — сортировать.</p></div>
+ </div>
+</div>
+<div id="rulesPanel" class="pop" hidden style="z-index:45">
+  <div class="pp-h"><b>Правила проверки перед резкой</b><span class="sp"></span><button id="rulesClose">✕</button></div>
+  <div id="rulesBody" style="padding:4px 12px 8px"></div>
+</div>
+<div id="chkList" class="pop" hidden style="top:96px"></div>
 <div id="pickPanel" class="pop" hidden>
   <div class="pp-h"><b>Сравнить с…</b><span class="sp"></span><button id="pickFile" title="Любой DXF — с сервера, из архива, с диска">Файл с диска…</button><button id="pickClose">✕</button></div>
   <div class="pp-row"><span id="pickFor" class="pk-for"></span></div>
