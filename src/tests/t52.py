@@ -18,7 +18,7 @@ async def main():
     await click(150,30)
     print('items', await pg.evaluate("panes[0].ms.items.map(i=>i.t==='lin'?i.dir+' '+dimGeom(panes[0],i).val.toFixed(2):i.t)"), 'pts', await pg.evaluate('panes[0].ms.pts.length'))
     await pg.screenshot(path='t52a.png')
-    await pg.keyboard.press('Escape'); print('after esc', await pg.evaluate('panes[0].ms.items.length'))
+    print('esc skipped (now exits viewer)')
     await pg.keyboard.press('Backspace'); print('after bksp', await pg.evaluate('panes[0].ms.items.length'))
     await pg.select_option('#measPrec','2'); await pg.wait_for_timeout(100); await pg.screenshot(path='t52b.png')
     await pg.keyboard.press('d'); print('off', await pg.evaluate('MEAS.on'))
