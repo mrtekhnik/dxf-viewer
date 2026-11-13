@@ -226,10 +226,10 @@ function DXFCORE(){
         .replace(/\\[AaCcFfHhQqTtWw][^;]*;/g,'').replace(/\\[LlOoKkNX]/g,'')
         .replace(/\\\\/g,'\u0001').replace(/[{}]/g,'').replace(/\u0001/g,'\\');
     }
-    function addTextRec(sp,g,x,y,h,r,str,ha,va){
+    function addTextRec(sp,g,x,y,h,r,str,ha,va,ex){
       if(!(h>0)||!str||!str.trim())return false;
       if(str.includes('\uFFFD')){txtBroken++;str=str.replace(/\uFFFD/g,'?');}
-      const G=grp(style(g),sp);(G.texts||(G.texts=[])).push({x,y,h,r,l:str.split('\n'),ha,va});return true;
+      const G=grp(style(g),sp);(G.texts||(G.texts=[])).push(Object.assign({x,y,h,r,l:str.split('\n'),ha,va},ex));return true;
     }
     function addText(sp,g){
       const h72=gn(g,72,0),v73=gn(g,73,0),al=h72||v73;
@@ -237,7 +237,8 @@ function DXFCORE(){
       if(gn(g,230,1)<0){x=-x;r=Math.PI-r;}
       const ha=h72===1||h72===4?'center':h72===2?'right':'left';
       const va=h72===4?'middle':v73===1?'bottom':v73===2?'middle':v73===3?'top':'alphabetic';
-      return addTextRec(sp,g,x,y,gn(g,40,0),r,spec(unesc(gs(g,1,''))),ha,va);
+      const fl=gn(g,71,0);   // 2 — «задом наперёд» (зеркально), 4 — вверх ногами
+      return addTextRec(sp,g,x,y,gn(g,40,0),r,spec(unesc(gs(g,1,''))),ha,va,fl&6?{bk:fl&2?1:0,ud:fl&4?1:0}:null);
     }
     function addMText(sp,g){
       let t='';for(let i=0;i<g.length;i+=2)if(g[i]===3)t+=g[i+1];t+=gs(g,1,'');
@@ -245,7 +246,7 @@ function DXFCORE(){
       let r=isFinite(dx)&&isFinite(dy)&&(dx||dy)?Math.atan2(dy,dx):gn(g,50,0)*D2R,x=gn(g,10,0);
       if(gn(g,230,1)<0){x=-x;r=Math.PI-r;}
       const ha=['left','center','right'][(a-1)%3]||'left',va=['top','middle','bottom'][Math.floor((a-1)/3)]||'top';
-      return addTextRec(sp,g,x,gn(g,20,0),gn(g,40,2.5),r,mtextPlain(t),ha,va);
+      return addTextRec(sp,g,x,gn(g,20,0),gn(g,40,2.5),r,mtextPlain(t),ha,va,{mt:1});
     }
     /* Кодировка надписи испорчена при экспорте (вместо букв «�»). Ищем исходный текст в резервной
        графике выноски (код 310): там он хранится в кодовой странице файла. */
@@ -302,7 +303,7 @@ function DXFCORE(){
       }
       if(txt.includes('\uFFFD'))txt=recoverText(txt,hex);
       const ha=['left','center','right'][(att-1)%3]||'left',va=['top','middle','bottom'][Math.floor((att-1)/3)]||'top';
-      if(txt&&isFinite(tx)&&isFinite(ty)&&addTextRec(sp,g,tx,ty,th||2.5,Math.atan2(tdy,tdx),mtextPlain(txt),ha,va))drawn++;
+      if(txt&&isFinite(tx)&&isFinite(ty)&&addTextRec(sp,g,tx,ty,th||2.5,Math.atan2(tdy,tdx),mtextPlain(txt),ha,va,{mt:1}))drawn++;
       return drawn>0;
     }
     function addLeader(sp,g){
@@ -468,6 +469,9 @@ function DXFCORE(){
       for(const G of list){for(const p of G.prims)shiftPrim(p,ox,oy);if(G.texts)for(const T of G.texts){T.x-=ox;T.y-=oy;}if(G.bbox)G.bbox=[G.bbox[0]-ox,G.bbox[1]-oy,G.bbox[2]-ox,G.bbox[3]-oy];}
       doc.bbox=[B[0]-ox,B[1]-oy,B[2]-ox,B[3]-oy];doc.size=[B[2]-B[0],B[3]-B[1]];
     }
+    // надпись на слое, где есть контур, — часть детали (при зеркале отражается); остальные — пояснения
+    {const geo=new Set();for(const G of list)if(!G.dim&&G.prims.length)geo.add(G.layer);
+     for(const G of list)if(G.texts)for(const T of G.texts)T.c=!T.mt&&!G.dim&&geo.has(G.layer)?1:0;}
     doc.groups=list;doc.hasLw=list.some(G=>G.lw>25);   // есть ли в файле толщины, отличимые на экране
 
     // 5. Журнал

@@ -25,6 +25,7 @@ header .grp.grow{flex:1 1 150px}header .grp.grow #filter{flex:1;min-width:80px;w
 header .grp.end{margin-left:auto;padding-right:0}
 header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg button:first-child{border-radius:8px 0 0 8px}header .seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .mwrap{position:relative}
+.xfm-t{font-weight:600;padding:2px 4px}.xfm-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:2px 4px}.xfm-n{font-size:12px;opacity:.75;padding:2px 4px;max-width:300px}#xfTxt{max-width:250px}
 .menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:170px}
 .menu[hidden]{display:none}.menu button{text-align:left}
 @media (max-width:1700px){header .lbl.a{display:none}header .szbox input{width:80px}}
@@ -268,7 +269,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.0.6</small></div>
+  <div class="brand">DXF <small>+PDF · v4.1.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -339,7 +340,15 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
     <span id="vName"></span>
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
     <span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span>
-    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button></span>
+    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vMirV" title="Зеркально сверху вниз (Shift+M)">⇅</button><span class="mwrap"><button id="vXfSave" title="Записать поворот / зеркало в файл DXF; произвольный угол">💾</button>
+      <div id="xfMenu" class="menu" hidden style="min-width:290px">
+        <div id="xfDesc" class="xfm-t"></div>
+        <div class="xfm-r">Повернуть ещё на <input id="xfAng" type="number" step="any" value="15" style="width:64px">° <button id="xfAngL" title="Против часовой">⟲</button><button id="xfAngR" title="По часовой">⟳</button></div>
+        <label id="xfTxtRow" class="xfm-r">Тексты при зеркале <select id="xfTxt"><option value="auto">авто: на контуре — отражать, надписи — читаемые</option><option value="read">все читаемые</option><option value="mirror">все отражать</option></select></label>
+        <label><input type="checkbox" id="xfBak"> старый файл сохранить рядом как .bak</label>
+        <button id="xfGo">💾 Записать в файл</button>
+        <div id="xfNote" class="xfm-n"></div>
+      </div></span></span>
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>
@@ -592,7 +601,13 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <h2>Просмотр DXF</h2>
 <ul>
 <li>Колесо — масштаб к курсору, перетаскивание — сдвиг, двойной клик или <kbd>F</kbd> — показать всё. На телефоне — двумя пальцами, свайп влево/вправо по листу — соседний файл.</li>
-<li><b>⟲ ⟳ ⇋</b> (<kbd>Q</kbd> <kbd>E</kbd> <kbd>M</kbd>) — повернуть на 90° и отразить. Поворот запоминается для этого файла. <kbd>O</kbd> — на время показать исходное положение, <kbd>0</kbd> — сбросить поворот.</li>
+<li><b>⟲ ⟳</b> (<kbd>Q</kbd> <kbd>E</kbd>) — повернуть на 90°; <b>⇋</b> (<kbd>M</kbd>) — зеркально слева направо, <b>⇅</b> (<kbd>Shift</kbd>+<kbd>M</kbd>) — сверху вниз. Поворот запоминается для этого файла (только для просмотра, файл не меняется). <kbd>O</kbd> — на время показать исходное положение, <kbd>0</kbd> — сбросить поворот.</li>
+<li><b>💾 Записать в файл</b> — сохранить поворот и зеркало в сам DXF, без AutoCAD. В меню кнопки:
+<ul><li><b>Повернуть ещё на угол</b> — произвольный угол (⟲ против часовой, ⟳ по часовой); сразу видно на экране.</li>
+<li><b>Тексты при зеркале</b>: <i>авто</i> — надпись на слое, где лежит контур детали (маркировка), отражается вместе с деталью; пояснения на других слоях, многострочный текст и размеры остаются читаемыми. Можно выбрать «все читаемые» или «все отражать». Как будет — видно на экране до записи.</li>
+<li><b>старый файл сохранить как .bak</b> — прежний вариант ляжет рядом: <code>деталь.bak</code> (переименуйте в .dxf, чтобы вернуть).</li></ul>
+Левый нижний угол детали остаётся на месте. Меняются только координаты и углы — слои, цвета, типы линий, кодировка надписей остаются как были. Поддерживаются линии, дуги, окружности, полилинии (в т.ч. со скруглениями), эллипсы, сплайны, тексты, блоки, размеры, выноски, штриховка. Если в файле есть объекты, которые программа поворачивать не умеет, она перечислит их и спросит.
+<br>Запись прямо в файл — когда папка открыта кнопкой «Папка» (Chrome на ПК спросит разрешение на изменение файлов один раз). Если файл открыт иначе или на телефоне — будет предложено сохранить новым файлом.</li>
 <li><b>Линии</b> (<kbd>W</kbd>) — толщина линий на экране по кругу: тонкие → средние → жирные → «по файлу» (только если толщины записаны в файле).</li>
 <li>Подпись в углу: имя файла, габарит, материал · толщина · количество из имени, подпапка, дата — что показывать, выбирается в ⚙.</li>
 <li>Внизу — габарит и координаты курсора в мм. Значок замечаний — что в файле не удалось прочитать или нарисовать.</li>
@@ -812,7 +827,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <tr><td><kbd>Z</kbd> (удерживать)</td><td>лупа</td></tr>
 <tr><td><kbd>F</kbd> <kbd>Home</kbd> / двойной клик</td><td>показать всё (в окне просмотра рядом со списком Home/End — первый/последний файл)</td></tr>
 <tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>масштаб</td></tr>
-<tr><td><kbd>Q</kbd> <kbd>E</kbd> <kbd>M</kbd> <kbd>0</kbd> <kbd>O</kbd></td><td>повернуть влево / вправо, зеркало, сбросить, исходное положение</td></tr>
+<tr><td><kbd>Q</kbd> <kbd>E</kbd> <kbd>M</kbd> <kbd>Shift</kbd>+<kbd>M</kbd> <kbd>0</kbd> <kbd>O</kbd></td><td>повернуть влево / вправо, зеркало слева направо / сверху вниз, сбросить, исходное положение</td></tr>
 <tr><td><kbd>W</kbd></td><td>линии DXF</td></tr>
 <tr><td><kbd>D</kbd></td><td>размеры (измерения); Backspace — убрать последний</td></tr>
 <tr><td><kbd>C</kbd></td><td>проверка перед резкой</td></tr>
@@ -1082,10 +1097,10 @@ function DXFCORE(){
         .replace(/\\[AaCcFfHhQqTtWw][^;]*;/g,'').replace(/\\[LlOoKkNX]/g,'')
         .replace(/\\\\/g,'\u0001').replace(/[{}]/g,'').replace(/\u0001/g,'\\');
     }
-    function addTextRec(sp,g,x,y,h,r,str,ha,va){
+    function addTextRec(sp,g,x,y,h,r,str,ha,va,ex){
       if(!(h>0)||!str||!str.trim())return false;
       if(str.includes('\uFFFD')){txtBroken++;str=str.replace(/\uFFFD/g,'?');}
-      const G=grp(style(g),sp);(G.texts||(G.texts=[])).push({x,y,h,r,l:str.split('\n'),ha,va});return true;
+      const G=grp(style(g),sp);(G.texts||(G.texts=[])).push(Object.assign({x,y,h,r,l:str.split('\n'),ha,va},ex));return true;
     }
     function addText(sp,g){
       const h72=gn(g,72,0),v73=gn(g,73,0),al=h72||v73;
@@ -1093,7 +1108,8 @@ function DXFCORE(){
       if(gn(g,230,1)<0){x=-x;r=Math.PI-r;}
       const ha=h72===1||h72===4?'center':h72===2?'right':'left';
       const va=h72===4?'middle':v73===1?'bottom':v73===2?'middle':v73===3?'top':'alphabetic';
-      return addTextRec(sp,g,x,y,gn(g,40,0),r,spec(unesc(gs(g,1,''))),ha,va);
+      const fl=gn(g,71,0);   // 2 — «задом наперёд» (зеркально), 4 — вверх ногами
+      return addTextRec(sp,g,x,y,gn(g,40,0),r,spec(unesc(gs(g,1,''))),ha,va,fl&6?{bk:fl&2?1:0,ud:fl&4?1:0}:null);
     }
     function addMText(sp,g){
       let t='';for(let i=0;i<g.length;i+=2)if(g[i]===3)t+=g[i+1];t+=gs(g,1,'');
@@ -1101,7 +1117,7 @@ function DXFCORE(){
       let r=isFinite(dx)&&isFinite(dy)&&(dx||dy)?Math.atan2(dy,dx):gn(g,50,0)*D2R,x=gn(g,10,0);
       if(gn(g,230,1)<0){x=-x;r=Math.PI-r;}
       const ha=['left','center','right'][(a-1)%3]||'left',va=['top','middle','bottom'][Math.floor((a-1)/3)]||'top';
-      return addTextRec(sp,g,x,gn(g,20,0),gn(g,40,2.5),r,mtextPlain(t),ha,va);
+      return addTextRec(sp,g,x,gn(g,20,0),gn(g,40,2.5),r,mtextPlain(t),ha,va,{mt:1});
     }
     /* Кодировка надписи испорчена при экспорте (вместо букв «�»). Ищем исходный текст в резервной
        графике выноски (код 310): там он хранится в кодовой странице файла. */
@@ -1158,7 +1174,7 @@ function DXFCORE(){
       }
       if(txt.includes('\uFFFD'))txt=recoverText(txt,hex);
       const ha=['left','center','right'][(att-1)%3]||'left',va=['top','middle','bottom'][Math.floor((att-1)/3)]||'top';
-      if(txt&&isFinite(tx)&&isFinite(ty)&&addTextRec(sp,g,tx,ty,th||2.5,Math.atan2(tdy,tdx),mtextPlain(txt),ha,va))drawn++;
+      if(txt&&isFinite(tx)&&isFinite(ty)&&addTextRec(sp,g,tx,ty,th||2.5,Math.atan2(tdy,tdx),mtextPlain(txt),ha,va,{mt:1}))drawn++;
       return drawn>0;
     }
     function addLeader(sp,g){
@@ -1324,6 +1340,9 @@ function DXFCORE(){
       for(const G of list){for(const p of G.prims)shiftPrim(p,ox,oy);if(G.texts)for(const T of G.texts){T.x-=ox;T.y-=oy;}if(G.bbox)G.bbox=[G.bbox[0]-ox,G.bbox[1]-oy,G.bbox[2]-ox,G.bbox[3]-oy];}
       doc.bbox=[B[0]-ox,B[1]-oy,B[2]-ox,B[3]-oy];doc.size=[B[2]-B[0],B[3]-B[1]];
     }
+    // надпись на слое, где есть контур, — часть детали (при зеркале отражается); остальные — пояснения
+    {const geo=new Set();for(const G of list)if(!G.dim&&G.prims.length)geo.add(G.layer);
+     for(const G of list)if(G.texts)for(const T of G.texts)T.c=!T.mt&&!G.dim&&geo.has(G.layer)?1:0;}
     doc.groups=list;doc.hasLw=list.some(G=>G.lw>25);   // есть ли в файле толщины, отличимые на экране
 
     // 5. Журнал
@@ -1721,6 +1740,295 @@ const geoCompare=(()=>{
   return fn;
 })();
 
+
+/* =====================================================================
+   ЗАПИСЬ ПОВОРОТА / ЗЕРКАЛА В DXF
+   Меняются только координаты, углы и признаки зеркальности — остальное (слои, цвета, типы линий,
+   кодировка, порядок записей) остаётся побайтно как было. Работает с файлом как с байтами (latin1):
+   русские надписи в любой кодировке не портятся.
+     DXFXF.run(bytes, M, opt) → {bytes, n, skipped:{тип:кол-во}, txtMir, txtRead, err}
+       M = [a,b,c,d,e,f]: x' = a·x + c·y + e,  y' = b·x + d·y + f  (поворот/зеркало + сдвиг)
+       opt.text: 'auto' | 'mirror' | 'read' — тексты при зеркале: отражать / оставлять читаемыми / авто
+                 (авто: текст на слое, где есть контур, — часть детали, отражается; остальные — читаемые)
+       opt.ext: [x0,y0,x1,y1] — записать в заголовок $EXTMIN/$EXTMAX
+   ===================================================================== */
+const DXFXF=(()=>{
+  const D=Math.PI/180;
+  function num(x){if(!isFinite(x))return '0';if(Math.abs(x)<5e-11)return '0';let s=x.toFixed(10);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,'');return s==='-0'?'0':s;}
+  const nrm=a=>{a%=360;if(a<0)a+=360;if(a>=360-1e-10)a=0;return a;};
+  function toStr(u8){let s='';for(let i=0;i<u8.length;i+=32768)s+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return s;}
+  function toBytes(s){const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i)&255;return u;}
+  const GEOM=new Set(['LINE','ARC','CIRCLE','LWPOLYLINE','POLYLINE','SPLINE','ELLIPSE']);
+  const OCS=new Set(['ARC','CIRCLE','LWPOLYLINE','POLYLINE','VERTEX','TEXT','ATTRIB','ATTDEF','INSERT','HATCH','SOLID','TRACE']);
+  const PASS=new Set(['SEQEND','ENDBLK','BLOCK','VIEWPORT','SECTION','ENDSEC','EOF']);
+
+  function run(bytes,M0,opt={}){
+    const src=toStr(bytes instanceof Uint8Array?bytes:new Uint8Array(bytes));
+    if(src.startsWith('AutoCAD Binary DXF'))return {err:'Двоичный DXF записывать не умею'};
+    const em=/\r\n|\n|\r/.exec(src),EOL=em?em[0]:'\n';
+    const Ls=src.split(/\r\n|\n|\r/);
+    const utf8=(/\$ACADVER\s*[\r\n]+\s*1\s*[\r\n]+\s*AC10(\d\d)/.exec(src.slice(0,4000))||[])[1]>=21;
+    // пары «код / значение» с исходным видом строки кода
+    const C=[],CR=[],V=[];let tail=[];
+    for(let i=0;i<Ls.length;){
+      const cs=Ls[i].trim();
+      if(cs===''&&i>=Ls.length-2){tail=Ls.slice(i);break;}
+      const c=+cs;if(cs===''||!Number.isInteger(c)||i+1>=Ls.length)return {err:'Нарушена структура файла (строка '+(i+1)+') — записывать не буду'};
+      C.push(c);CR.push(Ls[i]);V.push(Ls[i+1]);i+=2;
+    }
+    const pad=CR.length>1&&/^\s+\d/.test(CR[1])?(CR.find(x=>/^\s+\d/.test(x))||'').length:0;
+    const mkCode=c=>{const s=String(c);return pad&&s.length<pad?' '.repeat(pad-s.length)+s:s;};
+
+    // предварительный проход: размерные блоки и слои с контуром (только пространство модели)
+    const dimBlocks=new Set(),geoLayers=new Set();let sec='';
+    for(let i=0;i<C.length;i++){
+      if(C[i]!==0)continue;const t=V[i].trim().toUpperCase();
+      if(t==='SECTION'&&C[i+1]===2){sec=V[i+1].trim().toUpperCase();continue;}
+      if(sec!=='ENTITIES')continue;
+      let ly='0',bn='',ps=false;for(let k=i+1;k<C.length&&C[k]!==0;k++){if(C[k]===8)ly=V[k].trim();else if(C[k]===2)bn=V[k].trim();else if(C[k]===67&&+V[k]===1)ps=true;}
+      if(ps)continue;
+      if(t==='DIMENSION'&&bn)dimBlocks.add(bn.toUpperCase());
+      if(GEOM.has(t))geoLayers.add(ly.toUpperCase());
+    }
+
+    const stat={n:0,skipped:{},txtMir:0,txtRead:0};
+    const skip=t=>{stat.skipped[t]=(stat.skipped[t]||0)+1;};
+    const isIdL=Math.abs(M0[0]-1)<1e-12&&Math.abs(M0[3]-1)<1e-12&&Math.abs(M0[1])<1e-12&&Math.abs(M0[2])<1e-12;
+
+    function xEnt(t,g,polyOcs,readOnly){
+      // g: [{c,cr,v}] без строки «0 / тип»
+      const idx=(c,from=0)=>{for(let k=from;k<g.length;k++)if(g[k].c===c)return k;return -1;};
+      const gv=(c,d)=>{const k=idx(c);return k<0?d:(+g[k].v||0);};
+      const setv=(k,x)=>{g[k].v=num(x);};
+      // система координат объекта (OCS): обычная или зеркальная Z=-1
+      let M=M0;
+      if(OCS.has(t)){
+        let nx=0,ny=0,nz=1;
+        if(t==='VERTEX'&&polyOcs)[nx,ny,nz]=polyOcs;else{nx=gv(210,0);ny=gv(220,0);nz=gv(230,1);}
+        if(Math.abs(nx)>1e-9||Math.abs(ny)>1e-9)return false;     // наклонная плоскость — не трогаем
+        if(nz<0)M=[M0[0],-M0[1],-M0[2],M0[3],-M0[4],M0[5]];
+      }
+      const [a,b,c,d,e,f]=M,s=a*d-b*c<0?-1:1;
+      const PT=(x,y)=>[a*x+c*y+e,b*x+d*y+f],VC=(x,y)=>[a*x+c*y,b*x+d*y];
+      const ang=deg=>{const [x,y]=VC(Math.cos(deg*D),Math.sin(deg*D));return nrm(Math.atan2(y,x)/D);};
+      const yOf=k=>{for(let j=k+1;j<Math.min(g.length,k+4);j++)if(g[j].c===g[k].c+10)return j;return -1;};
+      const pt=(k,vec)=>{const j=yOf(k);if(j<0)return;const [x,y]=(vec?VC:PT)(+g[k].v||0,+g[j].v||0);setv(k,x);setv(j,y);};
+      const pts=(P,Vv=[])=>{for(let k=0;k<g.length;k++){if(P.includes(g[k].c))pt(k,false);else if(Vv.includes(g[k].c))pt(k,true);}};
+      const put=(code,val,after)=>{const k=idx(code);if(k>=0){setv(k,val);return;}
+        let at=-1;for(const ac of after){const j=idx(ac);if(j>=0){at=j;break;}}
+        g.splice(at+1,0,{c:code,cr:mkCode(code),v:num(val)});};
+      switch(t){
+        case 'LINE':pts([10,11]);break;
+        case 'POINT':case 'CIRCLE':pts([10]);break;
+        case 'SOLID':case 'TRACE':case '3DFACE':pts([10,11,12,13]);break;
+        case 'XLINE':case 'RAY':case 'TOLERANCE':pts([10],[11]);break;
+        case 'IMAGE':case 'WIPEOUT':pts([10],[11,12]);break;
+        case 'LEADER':pts([10],[211,212,213]);break;
+        case 'SPLINE':pts([10,11],[12,13]);break;
+        case 'POLYLINE':break;   // её 10 — только высота (0,0,Z); вершины — в VERTEX
+        case 'ARC':{pts([10]);const k0=idx(50),k1=idx(51);if(k0<0||k1<0)break;
+          const a0=ang(+g[k0].v),a1=ang(+g[k1].v);if(s>0){setv(k0,a0);setv(k1,a1);}else{setv(k0,a1);setv(k1,a0);}break;}
+        case 'ELLIPSE':{pts([10],[11]);if(s<0){const k0=idx(41),k1=idx(42);if(k0<0||k1<0)break;
+          const t0=+g[k0].v,t1=+g[k1].v,P2=Math.PI*2;
+          if(Math.abs(t1-t0-P2)<1e-9||Math.abs(t1-t0)<1e-12)break;   // полный эллипс
+          const n=x=>{x%=P2;if(x<0)x+=P2;return x;};setv(k0,n(-t1));setv(k1,n(-t0));}break;}
+        case 'LWPOLYLINE':case 'VERTEX':pts([10]);if(s<0)for(const q of g)if(q.c===42&&+q.v)q.v=num(-q.v);
+          if(t==='VERTEX'){const k=idx(50);if(k>=0)setv(k,ang(+g[k].v));}break;
+        case 'INSERT':{pts([10]);const r=gv(50,0),sy=gv(42,1),[ux,uy]=VC(Math.cos(r*D),Math.sin(r*D));
+          const r2=nrm(Math.atan2(uy,ux)/D);
+          if(s<0){put(42,-sy,[41,30,20]);const k45=idx(45);if(k45>=0)setv(k45,-(+g[k45].v));}
+          if(idx(50)>=0||Math.abs(r2)>1e-10)put(50,r2,[43,42,41,30,20]);break;}
+        case 'DIMENSION':{pts([10,11,12,13,14,15,16]);const k=idx(50);if(k>=0)setv(k,ang(+g[k].v));break;}
+        case 'TEXT':case 'ATTRIB':case 'ATTDEF':return xText(t,g,{idx,gv,setv,put,PT,VC,s,isId:isIdL,forceRead:readOnly});
+        case 'MTEXT':return xMText(g,{idx,gv,setv,put,PT,VC,s,isId:isIdL});
+        case 'HATCH':return xHatch(g,{idx,setv,PT,VC,ang,s});
+        case 'MULTILEADER':case 'MLEADER':return xMLeader(g,{setv,PT,VC,s});
+        default:return false;
+      }
+      return true;
+    }
+
+    // выбор положения читаемого текста: базовая линия слева направо (или снизу вверх для вертикальных)
+    function pickFrame(Lu,s,rigid){
+      const cands=rigid?[[1,1]]:s>0?[[1,1],[-1,-1]]:[[-1,1],[1,-1]];
+      for(const [al,be] of cands){const ux=al*Lu[0],uy=al*Lu[1];if(ux>1e-9||(Math.abs(ux)<=1e-9&&uy>0))return [al,be];}
+      return cands[0];
+    }
+    function xText(t,g,h){
+      const {idx,gv,setv,put,PT,VC,s}=h;
+      const vjc=t==='TEXT'?73:74;
+      const hj=gv(72,0),vj=gv(vjc,0),r=gv(50,0)*D,ht=gv(40,1)||1,wf=gv(41,1)||1;
+      const k1=idx(1);let str=k1>=0?g[k1].v.replace(/\\U\+[0-9A-Fa-f]{4}/g,'_').replace(/%%[a-z%]/gi,'_').replace(/\\[A-Za-z][^;]*;/g,''):'';
+      if(utf8)str=str.replace(/[\x80-\xBF]/g,'');   // UTF-8: буква — 2 байта
+      const ly=(g[idx(8)]||{v:'0'}).v.trim().toUpperCase();
+      const u=[Math.cos(r),Math.sin(r)],v=[-u[1],u[0]],Lu=VC(...u);
+      const k10=idx(10),k11=idx(11);
+      const P=k=>{const j=k+1<g.length&&g[k+1].c===g[k].c+10?k+1:-1;return j<0?null:[+g[k].v||0,+g[j].v||0,j];};
+      const p10=k10>=0?P(k10):null,p11=k11>=0?P(k11):null;
+      const wr=(k,p,sh)=>{if(!p)return;const [x,y]=PT(p[0]+sh[0],p[1]+sh[1]);setv(k,x);setv(p[2],y);};
+      const contour=!h.forceRead&&t!=='ATTDEF'&&(opt.text==='mirror'||(opt.text!=='read'&&geoLayers.has(ly)));
+      if(h.isId){wr(k10,p10,[0,0]);wr(k11,p11,[0,0]);return true;}
+      if(s<0&&contour){   // часть контура: настоящее зеркало (текст «задом наперёд»)
+        wr(k10,p10,[0,0]);wr(k11,p11,[0,0]);
+        put(50,nrm(Math.atan2(-Lu[1],-Lu[0])/D),[1,40,30,20]);
+        put(71,gv(71,0)^2,[51,41,50,1]);stat.txtMir++;return true;
+      }
+      const rigid=s>0&&contour;
+      const [al,be]=pickFrame(Lu,s,rigid);
+      const sh=[0,0],W=Math.max(1,str.length)*ht*wf*0.75;
+      let swap=false;
+      if(al<0){ // перевернуть текст вокруг его вертикальной оси: левый край ↔ правый
+        if(hj===0){sh[0]+=W*u[0];sh[1]+=W*u[1];}
+        else if(hj===2){const k=idx(72);setv(k,0);if(p11&&p10){p10[0]=p11[0];p10[1]=p11[1];}}
+        else if(hj===3||hj===5)swap=true;
+      }
+      if(be<0){ // вокруг горизонтальной оси: низ ↔ верх
+        if(hj===4){}else if(vj===1||vj===3)setv(idx(vjc),4-vj);
+        else if(vj===0){sh[0]+=ht*v[0];sh[1]+=ht*v[1];}
+      }
+      if(swap&&p10&&p11){const q=p10.slice(0,2);p10[0]=p11[0];p10[1]=p11[1];p11[0]=q[0];p11[1]=q[1];}
+      wr(k10,p10,sh);wr(k11,p11,sh);
+      const r2=nrm(Math.atan2(al*Lu[1],al*Lu[0])/D);
+      if(idx(50)>=0||Math.abs(r2)>1e-10)put(50,r2,[1,40,30,20]);
+      if(s<0)stat.txtRead++;return true;
+    }
+    function xMText(g,h){
+      const {idx,gv,setv,put,PT,VC}=h;
+      const k10=idx(10),k11=idx(11),j10=k10>=0&&g[k10+1]&&g[k10+1].c===20?k10+1:-1;
+      if(j10>=0){const [x,y]=PT(+g[k10].v||0,+g[j10].v||0);setv(k10,x);setv(j10,y);}
+      if(h.isId)return true;
+      const j11=k11>=0&&g[k11+1]&&g[k11+1].c===21?k11+1:-1;
+      const r=j11>=0&&(+g[k11].v||+g[j11].v)?Math.atan2(+g[j11].v,+g[k11].v):gv(50,0)*D;
+      const Lu=VC(Math.cos(r),Math.sin(r)),s=h.s;
+      const [al,be]=pickFrame(Lu,s,false);
+      const a=gv(71,1);let col=(a-1)%3,row=Math.floor((a-1)/3);if(al<0)col=2-col;if(be<0)row=2-row;
+      const a2=row*3+col+1;if(a2!==a)put(71,a2,[41,40,30,20]);
+      const ux=al*Lu[0],uy=al*Lu[1];
+      if(j11>=0){setv(k11,ux);setv(j11,uy);}
+      const r2=nrm(Math.atan2(uy,ux)/D);
+      if(idx(50)>=0||(j11<0&&Math.abs(r2)>1e-10))put(50,r2,[30,20]);
+      if(s<0)stat.txtRead++;return true;
+    }
+    // выноска MULTILEADER: точки и направления внутри CONTEXT_DATA{ … }; текст остаётся читаемым
+    function xMLeader(g,h){
+      const {setv,PT,VC,s}=h;let ctx=false,lead=0,line=0,any=false;
+      const two=(k,vec)=>{const j=k+1<g.length&&g[k+1].c===g[k].c+10?k+1:-1;if(j<0)return;const [x,y]=(vec?VC:PT)(+g[k].v||0,+g[j].v||0);setv(k,x);setv(j,y);};
+      for(let k=0;k<g.length;k++){
+        const c=g[k].c,v=g[k].v.trim();
+        if(c===300&&/CONTEXT_DATA\{/i.test(v)){ctx=true;any=true;continue;}
+        if(!ctx)continue;
+        if(c===301){ctx=false;continue;}
+        if(c===302&&/LEADER\{/i.test(v)){lead++;continue;}if(c===303){lead=Math.max(0,lead-1);continue;}
+        if(c===304&&/LEADER_LINE\{/i.test(v)){line++;continue;}if(c===305){line=Math.max(0,line-1);continue;}
+        if(c===10||c===110||c===15)two(k,false);
+        else if(c===12)two(k,false);
+        else if(c===11){if(line)two(k,false);else if(lead)two(k,true);}   // вне выноски 11 — нормаль текста, не трогаем
+        else if(c===13){if(lead)two(k,false);else{const j=k+1;if(g[j]&&g[j].c===23){const [x,y]=VC(+g[k].v||0,+g[j].v||0),[al]=pickFrame([x,y],1,true);setv(k,x);setv(j,y);
+            if(s<0&&(x<-1e-9||(Math.abs(x)<=1e-9&&y<0))){setv(k,-x);setv(j,-y);}}}}
+        else if(c===111){const j=k+1;if(g[j]&&g[j].c===121){const [x,y]=VC(+g[k].v||0,+g[j].v||0);const f=s<0&&(x<-1e-9||(Math.abs(x)<=1e-9&&y<0))?-1:1;setv(k,f*x);setv(j,f*y);}}
+        else if(c===112){const j=k+1;if(g[j]&&g[j].c===122){const [x,y]=VC(+g[k].v||0,+g[j].v||0);   // ось Y плоскости: правая тройка с осью X
+            let q=k-1;while(q>=0&&g[q].c!==111)q--;if(q>=0&&g[q+1]&&g[q+1].c===121){setv(k,-(+g[q+1].v));setv(j,+g[q].v);}else{setv(k,x);setv(j,y);}}}
+        else if(c===42||c===46){const a=+g[k].v||0,[x,y]=VC(Math.cos(a),Math.sin(a));let r=Math.atan2(y,x);if(s<0&&Math.cos(r)<-1e-9)r+=Math.PI;setv(k,((r%(2*Math.PI))+2*Math.PI)%(2*Math.PI));}
+      }
+      if(any&&s<0)stat.txtRead++;return any;
+    }
+    function xHatch(g0,h){
+      const g=g0.map(q=>({c:q.c,cr:q.cr,v:q.v}));   // работаем на копии: при непонятной структуре файл не трогаем
+      const {PT,VC,ang,s}=h;
+      const setv=(k,x)=>{g[k].v=num(x);};
+      let k=g.findIndex(q=>q.c===91);if(k<0)return false;
+      const at=c=>k<g.length&&g[k].c===c;
+      const P2=(vec)=>{if(!(at(10)||at(11)||at(12)||at(13))||!g[k+1]||g[k+1].c!==g[k].c+10)throw 0;const [x,y]=(vec?VC:PT)(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k+=2;};
+      const need=c=>{if(!at(c))throw 0;return +g[k++].v||0;};
+      const arcOut=(k50,gs,ge,dir)=>{   // по часовой DXF хранит углы как 360−угол
+        if(dir>0){setv(k50,nrm(gs));setv(k50+1,nrm(ge));g[k50+2].v=String(1);}else{setv(k50,nrm(360-gs));setv(k50+1,nrm(360-ge));g[k50+2].v=String(0);}
+      };
+      try{
+        const np=need(91);
+        for(let p=0;p<np;p++){
+          const fl=need(92);
+          if(fl&2){const hb=at(72)?need(72):0;if(at(73))k++;const nv=need(93);
+            for(let i=0;i<nv;i++){P2(false);if(at(42)){if(s<0&&+g[k].v)g[k].v=num(-g[k].v);k++;}}
+          }else{
+            const ne=need(93);
+            for(let i=0;i<ne;i++){
+              const et=need(72);
+              if(et===1){P2(false);P2(false);}
+              else if(et===2||et===3){P2(false);if(et===3)P2(true);need(40);
+                const k50=k;if(!at(50)||g[k+1].c!==51||g[k+2].c!==73)throw 0;
+                const a0=+g[k].v,a1=+g[k+1].v,ccw=+g[k+2].v?1:-1;
+                let gs=ccw>0?a0:360-a0,ge=ccw>0?a1:360-a1;
+                if(et===2){gs=ang(gs);ge=ang(ge);}else if(s<0){gs=-gs;ge=-ge;}
+                const full=Math.abs(Math.abs(a1-a0)-360)<1e-9;
+                if(full){k+=3;continue;}
+                arcOut(k50,gs,ge,ccw*s);k+=3;}
+              else if(et===4){need(94);if(at(73))k++;if(at(74))k++;const nk=need(95),nc=need(96);
+                for(let j=0;j<nk;j++)need(40);
+                for(let j=0;j<nc;j++){P2(false);if(at(42))k++;}
+                while(at(42))k++;
+                if(at(97)&&g[k+1]&&([11,12,13].includes(g[k+1].c))){const nf=need(97);for(let j=0;j<nf;j++)P2(false);}
+                if(at(12))P2(true);if(at(13))P2(true);}
+              else throw 0;
+            }
+          }
+          if(at(97)){const n=need(97);k+=n;}
+        }
+        // узор, затравочные точки, градиент
+        for(;k<g.length;k++){
+          const c=g[k].c;
+          if(c===52||c===53)setv(k,ang(+g[k].v));
+          else if(c===43&&g[k+1]&&g[k+1].c===44){const [x,y]=PT(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k++;}
+          else if(c===45&&g[k+1]&&g[k+1].c===46){const [x,y]=VC(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k++;}
+          else if(c===10&&g[k+1]&&g[k+1].c===20){const [x,y]=PT(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k++;}
+          else if(c===460)g[k].v=num(ang(+g[k].v/D)*D);
+        }
+      }catch(x){return false;}
+      for(let i=0;i<g.length;i++)g0[i]=g[i];return true;
+    }
+
+    // основной проход
+    const out=[];const emit=(cr,v)=>{out.push(cr,v);};
+    sec='';let blk='',inDimBlk=false,polyOcs=null;
+    for(let i=0;i<C.length;){
+      if(C[i]!==0){emit(CR[i],V[i]);i++;continue;}
+      const t=V[i].trim().toUpperCase();let j=i+1;while(j<C.length&&C[j]!==0)j++;
+      if(t==='SECTION'&&C[i+1]===2)sec=V[i+1].trim().toUpperCase();
+      if(t==='ENDSEC')sec='';
+      let work=false,readOnly=false;
+      if(sec==='ENTITIES')work=true;
+      else if(sec==='BLOCKS'){
+        if(t==='BLOCK'){blk='';for(let k=i+1;k<j;k++)if(C[k]===2){blk=V[k].trim().toUpperCase();break;}inDimBlk=dimBlocks.has(blk);}
+        else if(t==='ENDBLK')inDimBlk=false;
+        else if(inDimBlk){work=true;readOnly=true;}
+      }
+      else if(sec==='HEADER'&&opt.ext){
+        // $EXTMIN / $EXTMAX
+        emit(CR[i],V[i]);
+        for(let k=i+1;k<j;k++){
+          if(C[k]===9){const nm=V[k].trim().toUpperCase();emit(CR[k],V[k]);
+            if(nm==='$EXTMIN'||nm==='$EXTMAX'){const mx=nm==='$EXTMAX';
+              while(k+1<j&&C[k+1]!==9){k++;const v=C[k]===10?num(opt.ext[mx?2:0]):C[k]===20?num(opt.ext[mx?3:1]):V[k];emit(CR[k],v);}}
+            continue;}
+          emit(CR[k],V[k]);
+        }
+        i=j;continue;
+      }
+      let ps=false;if(work)for(let k=i+1;k<j;k++)if(C[k]===67&&+V[k]===1){ps=true;break;}
+      if(work&&!ps&&!PASS.has(t)){
+        const g=[];for(let k=i+1;k<j;k++)g.push({c:C[k],cr:CR[k],v:V[k]});
+        if(t==='POLYLINE'){polyOcs=[0,0,1];for(const q of g){if(q.c===210)polyOcs[0]=+q.v;else if(q.c===220)polyOcs[1]=+q.v;else if(q.c===230)polyOcs[2]=+q.v;}}
+        const ok=xEnt(t,g,polyOcs,readOnly);
+        if(t==='SEQEND')polyOcs=null;
+        if(ok)stat.n++;else skip(t);
+        emit(CR[i],V[i]);for(const q of g)emit(q.cr,q.v);
+      }else{for(let k=i;k<j;k++)emit(CR[k],V[k]);}
+      i=j;
+    }
+    const txt=out.join(EOL)+(tail.length?EOL+tail.join(EOL):'');
+    return Object.assign({bytes:toBytes(txt)},stat);
+  }
+  return {run};
+})();
 /* =====================================================================
    ОСНОВНОЙ ПОТОК
    ===================================================================== */
@@ -1822,9 +2130,10 @@ const XFS=new Map(Object.entries(LS.get('xf',{})));
 const xfKey=it=>it.name.toLowerCase()+'|'+it.file.size;
 function saveXf(it,xf){const k=xfKey(it);if(isId(xf))XFS.delete(k);else XFS.set(k,{rot:xf.rot,mirror:xf.mirror});
   while(XFS.size>1000)XFS.delete(XFS.keys().next().value);LS.set('xf',Object.fromEntries(XFS));updXfBadges(k);}
-const rotText=r=>r===90?'повёрнут на 90° против часовой':r===270?'повёрнут на 90° по часовой':r===180?'повёрнут на 180°':'';
-const xfDesc=x=>!x||isId(x)?'':[rotText(x.rot),x.mirror?'зеркально':''].filter(Boolean).join(', ');
-const xfShort=x=>[x.rot===90?'⟲90°':x.rot===270?'⟳90°':x.rot===180?'180°':'',x.mirror?'⇋':''].filter(Boolean).join(' ');
+const angTxt=a=>String(+(+a).toFixed(2)).replace('.',',');
+const rotText=r=>!r?'':r===90?'повёрнут на 90° против часовой':r===270?'повёрнут на 90° по часовой':r===180?'повёрнут на 180°':r<180?'повёрнут на '+angTxt(r)+'° против часовой':'повёрнут на '+angTxt(360-r)+'° по часовой';
+const xfDesc=x=>!x||isId(x)?'':x.mirror&&x.rot===180?'зеркально сверху вниз':x.mirror&&!x.rot?'зеркально слева направо':[rotText(x.rot),x.mirror?'зеркально':''].filter(Boolean).join(', ');
+const xfShort=x=>[!x.rot?'':x.rot===180?'180°':x.rot<180?'⟲'+angTxt(x.rot)+'°':'⟳'+angTxt(360-x.rot)+'°',x.mirror?'⇋':''].filter(Boolean).join(' ');
 function updXfBadges(k){for(const it of items){if(it.type!=='dxf'||(k&&xfKey(it)!==k))continue;
   const x=XFS.get(xfKey(it));it.xfb.hidden=!x;if(x){it.xfb.textContent=xfShort(x);it.xfb.title='При просмотре: '+xfDesc(x)+' (файл не изменён)';}}}
 function lwPx(lw){if(!(lw>=0))return 1;const mm=lw/100;return mm<=0.25?1:Math.min(8,mm*3.5);}
@@ -1868,10 +2177,16 @@ function renderTexts(ctx,doc,o){
     ctx.fillStyle=o.color||mapCol(G.color);
     for(const T of G.texts){
       const hp=T.h*o.s*d;if(hp<3)continue;
-      let px=T.x,py=T.y,dx=Math.cos(T.r),dy=Math.sin(T.r);
-      if(X){[px,py]=mApply(X,px,py);const ex=X[0]*dx+X[2]*dy,ey=X[1]*dx+X[3]*dy;dx=ex;dy=ey;}
-      ctx.setTransform(1,0,0,1,V[0]*px+V[1],V[2]*py+V[3]);ctx.rotate(Math.atan2(-dy,dx));
-      ctx.font=(hp*1.4)+'px Arial,"Segoe UI",sans-serif';ctx.textAlign=T.ha;ctx.textBaseline=T.va;
+      let px=T.x,py=T.y,ux=Math.cos(T.r),uy=Math.sin(T.r),vx=-uy,vy=ux,ha=T.ha,va=T.va;
+      if(T.bk){ux=-ux;uy=-uy;}if(T.ud){vx=-vx;vy=-vy;}
+      if(X){[px,py]=mApply(X,px,py);[ux,uy]=[X[0]*ux+X[2]*uy,X[1]*ux+X[3]*uy];[vx,vy]=[X[0]*vx+X[2]*vy,X[1]*vx+X[3]*vy];
+        // как при записи в файл: надпись на контуре поворачивается/отражается вместе с деталью, пояснения остаются читаемыми
+        if(!T.c){const sg=X[0]*X[3]-X[1]*X[2]<0,C=sg?[[-1,1],[1,-1]]:[[1,1],[-1,-1]];
+          let [al,be]=C[0];for(const q of C){const x=q[0]*ux,y=q[0]*uy;if(x>1e-9||(Math.abs(x)<=1e-9&&y>0)){[al,be]=q;break;}}
+          if(al<0){ux=-ux;uy=-uy;ha=ha==='left'?'right':ha==='right'?'left':ha;}
+          if(be<0){vx=-vx;vy=-vy;va=va==='top'?'alphabetic':va==='middle'?'middle':'top';}}}
+      ctx.setTransform(ux,-uy,-vx,vy,V[0]*px+V[1],V[2]*py+V[3]);
+      ctx.font=(hp*1.4)+'px Arial,"Segoe UI",sans-serif';ctx.textAlign=ha;ctx.textBaseline=va;
       const n=T.l.length,lh=hp*1.6;
       for(let i=0;i<n;i++)ctx.fillText(T.l[i],0,T.va==='top'?i*lh:T.va==='middle'?(i-(n-1)/2)*lh:-(n-1-i)*lh);
     }
@@ -1978,7 +2293,7 @@ function setFiles(arr,src={}){
   docCache.clear();inflight.clear();tq.length=0;io.disconnect();baseCache.clear();
   items=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name))
     .sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}))
-    .map(x=>makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:'')));
+    .map(x=>{const it=makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:''));it.h=x.h||null;it.dh=x.dh||null;return it;});
   $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;$('btnCmp').hidden=!items.length||FOLLOW;
   if(CMP&&!src.keepCmp){CMP=null;}MTF="";if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;
   if(!arr.length)$('empty').innerHTML=EMPTY_HTML;
@@ -2090,6 +2405,78 @@ function applyFilter(){
 const EMPTY_HTML=$('empty').innerHTML;
 function closeAll(){LS.set('lastRoot',null);if(VW.full)setFull(false);closePairPanel();$('filter').value='';$('typeSel').value='';clearTimeout(histT);setFiles([],{});}
 $('btnClose').onclick=closeAll;
+/* ---------- Запись поворота / зеркала в файл DXF ---------- */
+function xfMenuFill(){
+  const p=panes[VW.active];if(!p||!p.doc||p.isPdf)return;
+  const x=p.orig?p.keepXf:p.xf,id=isId(x);
+  $('xfDesc').textContent=id?'Положение как в файле — поверните или отразите кнопками ⟲ ⟳ ⇋ ⇅':'В файл: '+xfDesc(x);
+  $('xfGo').disabled=id;$('xfTxtRow').hidden=!(x&&x.mirror);$('xfTxt').value=SET.xfText||'auto';$('xfBak').checked=SET.xfBak!==false;
+  const it=p.it;$('xfNote').textContent=!it?'':!it.h?'Файл открыт без доступа к записи — будет предложено сохранить как новый файл.':
+    !it.dh?'Файл открыт отдельно (не папкой): .bak рядом сделать нельзя.':'Положение детали: левый нижний угол остаётся на месте.';
+}
+/* меню кнопок панели просмотра: панель прокручивается и обрезает выпадающее — ставим меню поверх, под кнопкой */
+function menuFix(M,btn){const r=btn.getBoundingClientRect();M.style.position='fixed';M.style.top=(r.bottom+4)+'px';M.style.right='auto';
+  const w=M.offsetWidth||290;M.style.left=Math.max(4,Math.min(r.left,innerWidth-w-8))+'px';}
+$('vXfSave').onclick=e=>{e.stopPropagation();const M=$('xfMenu');M.hidden=!M.hidden;if(!M.hidden){xfMenuFill();menuFix(M,$('vXfSave'));}};
+document.addEventListener('click',e=>{if(!e.target.closest('#xfMenu')&&e.target.id!=='vXfSave')$('xfMenu').hidden=true;});
+$('xfTxt').onchange=e=>{SET.xfText=e.target.value;saveSet();};
+$('xfBak').onchange=e=>{SET.xfBak=e.target.checked;saveSet();};
+const xfAngGo=sg=>apDo(p=>{const a=parseFloat(String($('xfAng').value).replace(',','.'));if(!(Math.abs(a)>0))return;
+  p.setXf({rot:((p.xf.rot+sg*a)%360+360)%360,mirror:p.xf.mirror});xfMenuFill();});
+$('xfAngL').onclick=()=>xfAngGo(1);$('xfAngR').onclick=()=>xfAngGo(-1);
+async function xfWrite(){
+  const p=panes[VW.active];if(!p||!p.it||p.isPdf||!p.doc||!p.doc.bbox)return;
+  const it=p.it,x=p.orig?p.keepXf:p.xf;if(isId(x))return;
+  $('xfMenu').hidden=true;
+  // разрешение на запись — сразу, пока действует нажатие кнопки
+  let canW=false;
+  if(it.h&&it.h.createWritable){const tgt=(it.rid&&ROOTH.get(it.rid))||it.dh||it.h;
+    try{let q=await tgt.queryPermission({mode:'readwrite'});if(q!=='granted')q=await tgt.requestPermission({mode:'readwrite'});canW=q==='granted';}catch(e){canW=false;}
+    if(!canW&&!confirm('Нет разрешения на запись в папку. Сохранить как новый файл?'))return;}
+  const bak=SET.xfBak!==false;
+  if(canW&&bak&&!it.dh&&!confirm('Копию .bak сделать нельзя: файл открыт отдельно, без папки.\nПерезаписать файл без копии?'))return;
+  $('status').textContent='Запись «'+it.name+'»…';
+  try{
+    const buf=new Uint8Array(await it.file.arrayBuffer());
+    const L=xfMat({rot:x.rot,mirror:x.mirror,tx:0,ty:0});
+    for(let i=0;i<4;i++){if(Math.abs(L[i])<1e-12)L[i]=0;else if(Math.abs(Math.abs(L[i])-1)<1e-12)L[i]=Math.sign(L[i]);}
+    const r1=DXFXF.run(buf,L,{text:SET.xfText||'auto'});
+    if(r1.err){flash(r1.err);return;}
+    const sk=Object.entries(r1.skipped);
+    if(sk.length&&!confirm('Эти объекты программа поворачивать не умеет, они останутся на старом месте:\n'+sk.map(([t,n])=>t+' — '+n).join('\n')+'\n\nВсё равно записать?'))return;
+    const d1=Core.parseDXF(r1.bytes.buffer.slice(0),it.name),d0=p.doc;
+    if(!d1.bbox){flash('После поворота файл не читается — запись отменена');return;}
+    const ox=d0.bbox[0]+d0.origin[0],oy=d0.bbox[1]+d0.origin[1],nx=d1.bbox[0]+d1.origin[0],ny=d1.bbox[1]+d1.origin[1];
+    const r2=DXFXF.run(r1.bytes,[1,0,0,1,ox-nx,oy-ny],{text:'auto',ext:[ox,oy,ox+d1.bbox[2]-d1.bbox[0],oy+d1.bbox[3]-d1.bbox[1]]});
+    if(r2.err){flash(r2.err);return;}
+    const out=r2.bytes,txt=r1.txtMir||r1.txtRead?` Тексты: отражено ${r1.txtMir}, читаемых ${r1.txtRead}.`:'';
+    if(canW){
+      let bk='';
+      if(bak&&it.dh){const bn=it.name.replace(/\.[^.]*$/,'')+'.bak';const bh=await it.dh.getFileHandle(bn,{create:true});const w=await bh.createWritable();await w.write(buf);await w.close();bk=' Старый — «'+bn+'».';}
+      const w=await it.h.createWritable();await w.write(out);await w.close();
+      await xfReload(it,await it.h.getFile());
+      flash('Записано в «'+it.name+'»: '+xfDesc(x)+'.'+bk+txt,6000);
+    }else{
+      const blob=new Blob([out],{type:'application/dxf'});
+      if('showSaveFilePicker' in window){
+        let h;try{h=await showSaveFilePicker({suggestedName:it.name,types:[{description:'DXF',accept:{'application/dxf':['.dxf']}}]});}catch(e){if(e&&e.name==='AbortError')return;throw e;}
+        const w=await h.createWritable();await w.write(blob);await w.close();
+      }else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=it.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
+      flash('Сохранено новым файлом: '+xfDesc(x)+'.'+txt,6000);
+    }
+  }catch(e){flash('Не удалось записать: '+(e&&e.message||e),6000);}
+  finally{if($('status').textContent.startsWith('Запись «'))updateStatus();}
+}
+async function xfReload(it,nf){   // файл перезаписан: перечитать, обновить миниатюру, положение — «как в файле»
+  const ok=it.key;saveXf(it,{rot:0,mirror:false});
+  docCache.delete(ok);if(MEAS.store)MEAS.store.delete(ok);SAVED.delete(ok);
+  it.file=nf;it.key=it.path+'|'+nf.size+'|'+nf.lastModified;
+  it.state=0;it.err=false;applyCaps();makeThumb(it).catch(()=>{});
+  for(const p of panes)if(p.it===it){p.it=null;p.doc=null;await p.show(it);}
+  updateBar();
+}
+$('xfGo').onclick=xfWrite;
+
 /* подписи под миниатюрами: свои настройки для сетки и для списка */
 function capText(it,c){const p=[];if(c.type)p.push(it.type.toUpperCase());if(c.size)p.push(fmtSize(it.file.size));if(c.date)p.push(fmtDate(it.file.lastModified));
   if(c.dir){const d=it.path.split('/').slice(1,-1).join(' / ');if(d)p.push(d);}return p.join(' · ');}
@@ -2213,7 +2600,8 @@ $('logAll').onclick=()=>{for(const it of items)if(it.state===0){it.force=true;en
 $('logClear').onclick=async()=>{await IDB.clear('thumbs');resetThumbs(false);};
 
 /* ---------- Открытие файлов и папок ---------- */
-const FSA='showDirectoryPicker' in window;           // ПК Chrome: доступ к папке можно запомнить для истории
+const FSA='showDirectoryPicker' in window;
+const ROOTH=new Map();   // открытые папки (id → дескриптор): разрешение на запись спрашиваем у папки целиком           // ПК Chrome: доступ к папке можно запомнить для истории
 /* обход папки: файлы и подпапки читаются параллельно — по сети это в разы быстрее, чем по одному */
 async function pmap(arr,n,fn){let i=0;const run=async()=>{while(i<arr.length){const k=i++;await fn(arr[k]);}};await Promise.all(Array.from({length:Math.min(n,arr.length)},run));}
 let walkShown=0;
@@ -2223,7 +2611,7 @@ async function walkDir(dir,prefix,out){
     if(e.kind==='file'){if(/\.(dxf|pdf)$/i.test(name))files.push([name,e]);}
     else if(e.kind==='directory')dirs.push([name,e]);
   }
-  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name});}catch(err){}});
+  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name,h:e,dh:dir});}catch(err){}});
   if(out.length-walkShown>=40){walkShown=out.length;$('status').textContent='Чтение папки… найдено файлов: '+out.length;}
   await pmap(dirs,6,([name,e])=>walkDir(e,prefix+'/'+name,out));
 }
@@ -2238,12 +2626,12 @@ async function rememberRoot(h){
 async function openDirHandle(h){
   $('status').textContent='Чтение папки «'+h.name+'»…';
   const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
-  const rid=await rememberRoot(h);
+  const rid=await rememberRoot(h);if(rid)ROOTH.set(rid,h);
   setFiles(out,{rid,rootName:h.name,folder:true});
   if(rid&&!FOLLOW)LS.set('lastRoot',{rid,name:h.name});
 }
 async function openFileHandles(hs){
-  const out=[];for(const h of hs){try{const f=await h.getFile();const rid=await rememberRoot(h);out.push({file:f,path:f.name,rid});}catch(e){}}
+  const out=[];for(const h of hs){try{const f=await h.getFile();const rid=await rememberRoot(h);out.push({file:f,path:f.name,rid,h});}catch(e){}}
   setFiles(out,{rootName:''});
   if(items.length===1){showItem(0);if(!docked())setFull(true);}
 }
@@ -2557,6 +2945,7 @@ class Pane{
   }
   rotate(d){if(this.isPdf){this.pdfRotate(-d);return;}this.setXf({rot:((this.xf.rot+d)%360+360)%360,mirror:this.xf.mirror});}
   mirror(){this.setXf({rot:(360-this.xf.rot)%360,mirror:!this.xf.mirror});}   // зеркало по горизонтали экрана
+  mirrorV(){this.setXf({rot:(540-this.xf.rot)%360,mirror:!this.xf.mirror});}  // по вертикали = по горизонтали + 180°
   xfText(){if(this.isPdf)return '';return this.orig?'показано как в файле':xfDesc(this.xf);}
   clear(){this.save();this.tok++;this.it=null;this.doc=null;this.loading=false;this.pdfReset();this.pending=null;this.draw();}
   pageGo(d){
@@ -2776,7 +3165,7 @@ function updateBar(){
   $('vPairMenu').hidden=!has;
   $('vPin').hidden=!(has&&cur.rid);
   $('vSide').classList.toggle('on',SET.side);
-  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!(dx||(has&&ap&&ap.isPdf&&ap.doc&&ap.doc.pdf));$('vMir').hidden=!dx;
+  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!(dx||(has&&ap&&ap.isPdf&&ap.doc&&ap.doc.pdf));$('vMir').hidden=$('vMirV').hidden=!dx;$('vXfSave').parentNode.hidden=!dx;if(!dx)$('xfMenu').hidden=true;else if(!$('xfMenu').hidden)xfMenuFill();
   const sug=has&&ap&&ap.isPdf&&ap.sugRot!=null&&ap.sugRot!==(ap.prot||0);$('vPdfRot').hidden=!sug;
   if(sug)$('vPdfRot').title='Текст на листе лежит боком — повернуть лист на '+(((ap.sugRot-(ap.prot||0))%360+360)%360)+'° по часовой (запомнится для этого файла)';
   $('vFitW').hidden=!has;
@@ -2847,7 +3236,7 @@ $('vPgNext').onclick=()=>{const p=panes[VW.active];p&&p.pageGo(1);};
 const apDo=f=>{const p=panes[VW.active];if(p&&VW.set.length)f(p);};
 $('vRotL').onclick=()=>apDo(p=>p.rotate(90));
 $('vRotR').onclick=()=>apDo(p=>p.rotate(-90));
-$('vMir').onclick=()=>apDo(p=>p.mirror());
+$('vMir').onclick=()=>apDo(p=>p.mirror());$('vMirV').onclick=()=>apDo(p=>p.mirrorV());
 $('vLw').onclick=()=>cycleLineK();
 $('vCtM').onclick=()=>setContrast(SET.pdfLv-1);$('vCtP').onclick=()=>setContrast(SET.pdfLv+1);
 $('vCont').onclick=()=>{$('sPdfCont').value=SET.pdfCont?'0':'1';$('sPdfCont').onchange({target:$('sPdfCont')});updateBar();flash(SET.pdfCont?'PDF: все страницы подряд':'PDF: по одной странице');};
@@ -3784,7 +4173,7 @@ document.addEventListener('keyup',e=>{if(e.key==='z'||e.key==='Z'||e.key==='я'|
 window.addEventListener('blur',()=>{LOUPE.key=false;LOUPE.boost=false;loupeSet();});
 
 /* ---------- сохранить вид картинкой (PNG): всё, только PDF или только DXF; по желанию — в буфер обмена ---------- */
-function pngOpen(){const M=$('pngMenu');M.hidden=!M.hidden;$('pngClip').checked=!!SET.pngClip;
+function pngOpen(){const M=$('pngMenu');M.hidden=!M.hidden;if(!M.hidden)menuFix(M,$('vPng'));$('pngClip').checked=!!SET.pngClip;
   const kinds=new Set(VW.set.map((x,i)=>panes[i]&&panes[i].isPdf?'pdf':'dxf'));$('pngOnlyPdf').disabled=!kinds.has('pdf');$('pngOnlyDxf').disabled=!kinds.has('dxf');}
 async function pngSave(){
   const what=(document.querySelector('input[name=pngWhat]:checked')||{}).value||'all';$('pngMenu').hidden=true;
@@ -4452,7 +4841,8 @@ document.addEventListener('keydown',e=>{
   else if(k===']'||k==='ъ'||k==='Ъ')setContrast(SET.pdfLv+1);
   else if(/^[qQйЙ]$/.test(k))$('vRotL').click();
   else if(/^[eEуУ]$/.test(k))$('vRotR').click();
-  else if(/^[mMьЬ]$/.test(k))$('vMir').click();
+  else if(/^[MЬ]$/.test(k))$('vMirV').click();
+  else if(/^[mь]$/.test(k))$('vMir').click();
   else if(k==='0')apDo(p=>p.setXf({rot:0,mirror:false}));
   else if(/^[oOщЩ]$/.test(k))apDo(p=>p.toggleOrig());
   else if((k==='Home'||k==='End')&&docked()&&!VW.full&&view.length)showItem(k==='Home'?0:view.length-1);  // окно рядом: первый / последний файл

@@ -22,6 +22,7 @@ header .grp.grow{flex:1 1 150px}header .grp.grow #filter{flex:1;min-width:80px;w
 header .grp.end{margin-left:auto;padding-right:0}
 header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg button:first-child{border-radius:8px 0 0 8px}header .seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .mwrap{position:relative}
+.xfm-t{font-weight:600;padding:2px 4px}.xfm-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:2px 4px}.xfm-n{font-size:12px;opacity:.75;padding:2px 4px;max-width:300px}#xfTxt{max-width:250px}
 .menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:170px}
 .menu[hidden]{display:none}.menu button{text-align:left}
 @media (max-width:1700px){header .lbl.a{display:none}header .szbox input{width:80px}}
@@ -265,7 +266,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.0.6</small></div>
+  <div class="brand">DXF <small>+PDF · v4.1.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -336,7 +337,15 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
     <span id="vName"></span>
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
     <span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span>
-    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button></span>
+    <span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vMirV" title="Зеркально сверху вниз (Shift+M)">⇅</button><span class="mwrap"><button id="vXfSave" title="Записать поворот / зеркало в файл DXF; произвольный угол">💾</button>
+      <div id="xfMenu" class="menu" hidden style="min-width:290px">
+        <div id="xfDesc" class="xfm-t"></div>
+        <div class="xfm-r">Повернуть ещё на <input id="xfAng" type="number" step="any" value="15" style="width:64px">° <button id="xfAngL" title="Против часовой">⟲</button><button id="xfAngR" title="По часовой">⟳</button></div>
+        <label id="xfTxtRow" class="xfm-r">Тексты при зеркале <select id="xfTxt"><option value="auto">авто: на контуре — отражать, надписи — читаемые</option><option value="read">все читаемые</option><option value="mirror">все отражать</option></select></label>
+        <label><input type="checkbox" id="xfBak"> старый файл сохранить рядом как .bak</label>
+        <button id="xfGo">💾 Записать в файл</button>
+        <div id="xfNote" class="xfm-n"></div>
+      </div></span></span>
     <button id="vPin" title="Добавить файл в ярлыки">★</button>
     <button id="vSide" title="Чертёж и все его развёртки одновременно (R)">Рядом</button>
     <button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆ Сравнить с…</button>

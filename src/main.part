@@ -99,9 +99,10 @@ const XFS=new Map(Object.entries(LS.get('xf',{})));
 const xfKey=it=>it.name.toLowerCase()+'|'+it.file.size;
 function saveXf(it,xf){const k=xfKey(it);if(isId(xf))XFS.delete(k);else XFS.set(k,{rot:xf.rot,mirror:xf.mirror});
   while(XFS.size>1000)XFS.delete(XFS.keys().next().value);LS.set('xf',Object.fromEntries(XFS));updXfBadges(k);}
-const rotText=r=>r===90?'повёрнут на 90° против часовой':r===270?'повёрнут на 90° по часовой':r===180?'повёрнут на 180°':'';
-const xfDesc=x=>!x||isId(x)?'':[rotText(x.rot),x.mirror?'зеркально':''].filter(Boolean).join(', ');
-const xfShort=x=>[x.rot===90?'⟲90°':x.rot===270?'⟳90°':x.rot===180?'180°':'',x.mirror?'⇋':''].filter(Boolean).join(' ');
+const angTxt=a=>String(+(+a).toFixed(2)).replace('.',',');
+const rotText=r=>!r?'':r===90?'повёрнут на 90° против часовой':r===270?'повёрнут на 90° по часовой':r===180?'повёрнут на 180°':r<180?'повёрнут на '+angTxt(r)+'° против часовой':'повёрнут на '+angTxt(360-r)+'° по часовой';
+const xfDesc=x=>!x||isId(x)?'':x.mirror&&x.rot===180?'зеркально сверху вниз':x.mirror&&!x.rot?'зеркально слева направо':[rotText(x.rot),x.mirror?'зеркально':''].filter(Boolean).join(', ');
+const xfShort=x=>[!x.rot?'':x.rot===180?'180°':x.rot<180?'⟲'+angTxt(x.rot)+'°':'⟳'+angTxt(360-x.rot)+'°',x.mirror?'⇋':''].filter(Boolean).join(' ');
 function updXfBadges(k){for(const it of items){if(it.type!=='dxf'||(k&&xfKey(it)!==k))continue;
   const x=XFS.get(xfKey(it));it.xfb.hidden=!x;if(x){it.xfb.textContent=xfShort(x);it.xfb.title='При просмотре: '+xfDesc(x)+' (файл не изменён)';}}}
 function lwPx(lw){if(!(lw>=0))return 1;const mm=lw/100;return mm<=0.25?1:Math.min(8,mm*3.5);}
@@ -145,10 +146,16 @@ function renderTexts(ctx,doc,o){
     ctx.fillStyle=o.color||mapCol(G.color);
     for(const T of G.texts){
       const hp=T.h*o.s*d;if(hp<3)continue;
-      let px=T.x,py=T.y,dx=Math.cos(T.r),dy=Math.sin(T.r);
-      if(X){[px,py]=mApply(X,px,py);const ex=X[0]*dx+X[2]*dy,ey=X[1]*dx+X[3]*dy;dx=ex;dy=ey;}
-      ctx.setTransform(1,0,0,1,V[0]*px+V[1],V[2]*py+V[3]);ctx.rotate(Math.atan2(-dy,dx));
-      ctx.font=(hp*1.4)+'px Arial,"Segoe UI",sans-serif';ctx.textAlign=T.ha;ctx.textBaseline=T.va;
+      let px=T.x,py=T.y,ux=Math.cos(T.r),uy=Math.sin(T.r),vx=-uy,vy=ux,ha=T.ha,va=T.va;
+      if(T.bk){ux=-ux;uy=-uy;}if(T.ud){vx=-vx;vy=-vy;}
+      if(X){[px,py]=mApply(X,px,py);[ux,uy]=[X[0]*ux+X[2]*uy,X[1]*ux+X[3]*uy];[vx,vy]=[X[0]*vx+X[2]*vy,X[1]*vx+X[3]*vy];
+        // как при записи в файл: надпись на контуре поворачивается/отражается вместе с деталью, пояснения остаются читаемыми
+        if(!T.c){const sg=X[0]*X[3]-X[1]*X[2]<0,C=sg?[[-1,1],[1,-1]]:[[1,1],[-1,-1]];
+          let [al,be]=C[0];for(const q of C){const x=q[0]*ux,y=q[0]*uy;if(x>1e-9||(Math.abs(x)<=1e-9&&y>0)){[al,be]=q;break;}}
+          if(al<0){ux=-ux;uy=-uy;ha=ha==='left'?'right':ha==='right'?'left':ha;}
+          if(be<0){vx=-vx;vy=-vy;va=va==='top'?'alphabetic':va==='middle'?'middle':'top';}}}
+      ctx.setTransform(ux,-uy,-vx,vy,V[0]*px+V[1],V[2]*py+V[3]);
+      ctx.font=(hp*1.4)+'px Arial,"Segoe UI",sans-serif';ctx.textAlign=ha;ctx.textBaseline=va;
       const n=T.l.length,lh=hp*1.6;
       for(let i=0;i<n;i++)ctx.fillText(T.l[i],0,T.va==='top'?i*lh:T.va==='middle'?(i-(n-1)/2)*lh:-(n-1-i)*lh);
     }
@@ -255,7 +262,7 @@ function setFiles(arr,src={}){
   docCache.clear();inflight.clear();tq.length=0;io.disconnect();baseCache.clear();
   items=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name))
     .sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}))
-    .map(x=>makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:'')));
+    .map(x=>{const it=makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:''));it.h=x.h||null;it.dh=x.dh||null;return it;});
   $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;$('btnCmp').hidden=!items.length||FOLLOW;
   if(CMP&&!src.keepCmp){CMP=null;}MTF="";if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;
   if(!arr.length)$('empty').innerHTML=EMPTY_HTML;
@@ -367,6 +374,78 @@ function applyFilter(){
 const EMPTY_HTML=$('empty').innerHTML;
 function closeAll(){LS.set('lastRoot',null);if(VW.full)setFull(false);closePairPanel();$('filter').value='';$('typeSel').value='';clearTimeout(histT);setFiles([],{});}
 $('btnClose').onclick=closeAll;
+/* ---------- Запись поворота / зеркала в файл DXF ---------- */
+function xfMenuFill(){
+  const p=panes[VW.active];if(!p||!p.doc||p.isPdf)return;
+  const x=p.orig?p.keepXf:p.xf,id=isId(x);
+  $('xfDesc').textContent=id?'Положение как в файле — поверните или отразите кнопками ⟲ ⟳ ⇋ ⇅':'В файл: '+xfDesc(x);
+  $('xfGo').disabled=id;$('xfTxtRow').hidden=!(x&&x.mirror);$('xfTxt').value=SET.xfText||'auto';$('xfBak').checked=SET.xfBak!==false;
+  const it=p.it;$('xfNote').textContent=!it?'':!it.h?'Файл открыт без доступа к записи — будет предложено сохранить как новый файл.':
+    !it.dh?'Файл открыт отдельно (не папкой): .bak рядом сделать нельзя.':'Положение детали: левый нижний угол остаётся на месте.';
+}
+/* меню кнопок панели просмотра: панель прокручивается и обрезает выпадающее — ставим меню поверх, под кнопкой */
+function menuFix(M,btn){const r=btn.getBoundingClientRect();M.style.position='fixed';M.style.top=(r.bottom+4)+'px';M.style.right='auto';
+  const w=M.offsetWidth||290;M.style.left=Math.max(4,Math.min(r.left,innerWidth-w-8))+'px';}
+$('vXfSave').onclick=e=>{e.stopPropagation();const M=$('xfMenu');M.hidden=!M.hidden;if(!M.hidden){xfMenuFill();menuFix(M,$('vXfSave'));}};
+document.addEventListener('click',e=>{if(!e.target.closest('#xfMenu')&&e.target.id!=='vXfSave')$('xfMenu').hidden=true;});
+$('xfTxt').onchange=e=>{SET.xfText=e.target.value;saveSet();};
+$('xfBak').onchange=e=>{SET.xfBak=e.target.checked;saveSet();};
+const xfAngGo=sg=>apDo(p=>{const a=parseFloat(String($('xfAng').value).replace(',','.'));if(!(Math.abs(a)>0))return;
+  p.setXf({rot:((p.xf.rot+sg*a)%360+360)%360,mirror:p.xf.mirror});xfMenuFill();});
+$('xfAngL').onclick=()=>xfAngGo(1);$('xfAngR').onclick=()=>xfAngGo(-1);
+async function xfWrite(){
+  const p=panes[VW.active];if(!p||!p.it||p.isPdf||!p.doc||!p.doc.bbox)return;
+  const it=p.it,x=p.orig?p.keepXf:p.xf;if(isId(x))return;
+  $('xfMenu').hidden=true;
+  // разрешение на запись — сразу, пока действует нажатие кнопки
+  let canW=false;
+  if(it.h&&it.h.createWritable){const tgt=(it.rid&&ROOTH.get(it.rid))||it.dh||it.h;
+    try{let q=await tgt.queryPermission({mode:'readwrite'});if(q!=='granted')q=await tgt.requestPermission({mode:'readwrite'});canW=q==='granted';}catch(e){canW=false;}
+    if(!canW&&!confirm('Нет разрешения на запись в папку. Сохранить как новый файл?'))return;}
+  const bak=SET.xfBak!==false;
+  if(canW&&bak&&!it.dh&&!confirm('Копию .bak сделать нельзя: файл открыт отдельно, без папки.\nПерезаписать файл без копии?'))return;
+  $('status').textContent='Запись «'+it.name+'»…';
+  try{
+    const buf=new Uint8Array(await it.file.arrayBuffer());
+    const L=xfMat({rot:x.rot,mirror:x.mirror,tx:0,ty:0});
+    for(let i=0;i<4;i++){if(Math.abs(L[i])<1e-12)L[i]=0;else if(Math.abs(Math.abs(L[i])-1)<1e-12)L[i]=Math.sign(L[i]);}
+    const r1=DXFXF.run(buf,L,{text:SET.xfText||'auto'});
+    if(r1.err){flash(r1.err);return;}
+    const sk=Object.entries(r1.skipped);
+    if(sk.length&&!confirm('Эти объекты программа поворачивать не умеет, они останутся на старом месте:\n'+sk.map(([t,n])=>t+' — '+n).join('\n')+'\n\nВсё равно записать?'))return;
+    const d1=Core.parseDXF(r1.bytes.buffer.slice(0),it.name),d0=p.doc;
+    if(!d1.bbox){flash('После поворота файл не читается — запись отменена');return;}
+    const ox=d0.bbox[0]+d0.origin[0],oy=d0.bbox[1]+d0.origin[1],nx=d1.bbox[0]+d1.origin[0],ny=d1.bbox[1]+d1.origin[1];
+    const r2=DXFXF.run(r1.bytes,[1,0,0,1,ox-nx,oy-ny],{text:'auto',ext:[ox,oy,ox+d1.bbox[2]-d1.bbox[0],oy+d1.bbox[3]-d1.bbox[1]]});
+    if(r2.err){flash(r2.err);return;}
+    const out=r2.bytes,txt=r1.txtMir||r1.txtRead?` Тексты: отражено ${r1.txtMir}, читаемых ${r1.txtRead}.`:'';
+    if(canW){
+      let bk='';
+      if(bak&&it.dh){const bn=it.name.replace(/\.[^.]*$/,'')+'.bak';const bh=await it.dh.getFileHandle(bn,{create:true});const w=await bh.createWritable();await w.write(buf);await w.close();bk=' Старый — «'+bn+'».';}
+      const w=await it.h.createWritable();await w.write(out);await w.close();
+      await xfReload(it,await it.h.getFile());
+      flash('Записано в «'+it.name+'»: '+xfDesc(x)+'.'+bk+txt,6000);
+    }else{
+      const blob=new Blob([out],{type:'application/dxf'});
+      if('showSaveFilePicker' in window){
+        let h;try{h=await showSaveFilePicker({suggestedName:it.name,types:[{description:'DXF',accept:{'application/dxf':['.dxf']}}]});}catch(e){if(e&&e.name==='AbortError')return;throw e;}
+        const w=await h.createWritable();await w.write(blob);await w.close();
+      }else{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=it.name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
+      flash('Сохранено новым файлом: '+xfDesc(x)+'.'+txt,6000);
+    }
+  }catch(e){flash('Не удалось записать: '+(e&&e.message||e),6000);}
+  finally{if($('status').textContent.startsWith('Запись «'))updateStatus();}
+}
+async function xfReload(it,nf){   // файл перезаписан: перечитать, обновить миниатюру, положение — «как в файле»
+  const ok=it.key;saveXf(it,{rot:0,mirror:false});
+  docCache.delete(ok);if(MEAS.store)MEAS.store.delete(ok);SAVED.delete(ok);
+  it.file=nf;it.key=it.path+'|'+nf.size+'|'+nf.lastModified;
+  it.state=0;it.err=false;applyCaps();makeThumb(it).catch(()=>{});
+  for(const p of panes)if(p.it===it){p.it=null;p.doc=null;await p.show(it);}
+  updateBar();
+}
+$('xfGo').onclick=xfWrite;
+
 /* подписи под миниатюрами: свои настройки для сетки и для списка */
 function capText(it,c){const p=[];if(c.type)p.push(it.type.toUpperCase());if(c.size)p.push(fmtSize(it.file.size));if(c.date)p.push(fmtDate(it.file.lastModified));
   if(c.dir){const d=it.path.split('/').slice(1,-1).join(' / ');if(d)p.push(d);}return p.join(' · ');}
@@ -490,7 +569,8 @@ $('logAll').onclick=()=>{for(const it of items)if(it.state===0){it.force=true;en
 $('logClear').onclick=async()=>{await IDB.clear('thumbs');resetThumbs(false);};
 
 /* ---------- Открытие файлов и папок ---------- */
-const FSA='showDirectoryPicker' in window;           // ПК Chrome: доступ к папке можно запомнить для истории
+const FSA='showDirectoryPicker' in window;
+const ROOTH=new Map();   // открытые папки (id → дескриптор): разрешение на запись спрашиваем у папки целиком           // ПК Chrome: доступ к папке можно запомнить для истории
 /* обход папки: файлы и подпапки читаются параллельно — по сети это в разы быстрее, чем по одному */
 async function pmap(arr,n,fn){let i=0;const run=async()=>{while(i<arr.length){const k=i++;await fn(arr[k]);}};await Promise.all(Array.from({length:Math.min(n,arr.length)},run));}
 let walkShown=0;
@@ -500,7 +580,7 @@ async function walkDir(dir,prefix,out){
     if(e.kind==='file'){if(/\.(dxf|pdf)$/i.test(name))files.push([name,e]);}
     else if(e.kind==='directory')dirs.push([name,e]);
   }
-  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name});}catch(err){}});
+  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name,h:e,dh:dir});}catch(err){}});
   if(out.length-walkShown>=40){walkShown=out.length;$('status').textContent='Чтение папки… найдено файлов: '+out.length;}
   await pmap(dirs,6,([name,e])=>walkDir(e,prefix+'/'+name,out));
 }
@@ -515,12 +595,12 @@ async function rememberRoot(h){
 async function openDirHandle(h){
   $('status').textContent='Чтение папки «'+h.name+'»…';
   const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
-  const rid=await rememberRoot(h);
+  const rid=await rememberRoot(h);if(rid)ROOTH.set(rid,h);
   setFiles(out,{rid,rootName:h.name,folder:true});
   if(rid&&!FOLLOW)LS.set('lastRoot',{rid,name:h.name});
 }
 async function openFileHandles(hs){
-  const out=[];for(const h of hs){try{const f=await h.getFile();const rid=await rememberRoot(h);out.push({file:f,path:f.name,rid});}catch(e){}}
+  const out=[];for(const h of hs){try{const f=await h.getFile();const rid=await rememberRoot(h);out.push({file:f,path:f.name,rid,h});}catch(e){}}
   setFiles(out,{rootName:''});
   if(items.length===1){showItem(0);if(!docked())setFull(true);}
 }
@@ -834,6 +914,7 @@ class Pane{
   }
   rotate(d){if(this.isPdf){this.pdfRotate(-d);return;}this.setXf({rot:((this.xf.rot+d)%360+360)%360,mirror:this.xf.mirror});}
   mirror(){this.setXf({rot:(360-this.xf.rot)%360,mirror:!this.xf.mirror});}   // зеркало по горизонтали экрана
+  mirrorV(){this.setXf({rot:(540-this.xf.rot)%360,mirror:!this.xf.mirror});}  // по вертикали = по горизонтали + 180°
   xfText(){if(this.isPdf)return '';return this.orig?'показано как в файле':xfDesc(this.xf);}
   clear(){this.save();this.tok++;this.it=null;this.doc=null;this.loading=false;this.pdfReset();this.pending=null;this.draw();}
   pageGo(d){
@@ -1053,7 +1134,7 @@ function updateBar(){
   $('vPairMenu').hidden=!has;
   $('vPin').hidden=!(has&&cur.rid);
   $('vSide').classList.toggle('on',SET.side);
-  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!(dx||(has&&ap&&ap.isPdf&&ap.doc&&ap.doc.pdf));$('vMir').hidden=!dx;
+  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!(dx||(has&&ap&&ap.isPdf&&ap.doc&&ap.doc.pdf));$('vMir').hidden=$('vMirV').hidden=!dx;$('vXfSave').parentNode.hidden=!dx;if(!dx)$('xfMenu').hidden=true;else if(!$('xfMenu').hidden)xfMenuFill();
   const sug=has&&ap&&ap.isPdf&&ap.sugRot!=null&&ap.sugRot!==(ap.prot||0);$('vPdfRot').hidden=!sug;
   if(sug)$('vPdfRot').title='Текст на листе лежит боком — повернуть лист на '+(((ap.sugRot-(ap.prot||0))%360+360)%360)+'° по часовой (запомнится для этого файла)';
   $('vFitW').hidden=!has;
@@ -1124,7 +1205,7 @@ $('vPgNext').onclick=()=>{const p=panes[VW.active];p&&p.pageGo(1);};
 const apDo=f=>{const p=panes[VW.active];if(p&&VW.set.length)f(p);};
 $('vRotL').onclick=()=>apDo(p=>p.rotate(90));
 $('vRotR').onclick=()=>apDo(p=>p.rotate(-90));
-$('vMir').onclick=()=>apDo(p=>p.mirror());
+$('vMir').onclick=()=>apDo(p=>p.mirror());$('vMirV').onclick=()=>apDo(p=>p.mirrorV());
 $('vLw').onclick=()=>cycleLineK();
 $('vCtM').onclick=()=>setContrast(SET.pdfLv-1);$('vCtP').onclick=()=>setContrast(SET.pdfLv+1);
 $('vCont').onclick=()=>{$('sPdfCont').value=SET.pdfCont?'0':'1';$('sPdfCont').onchange({target:$('sPdfCont')});updateBar();flash(SET.pdfCont?'PDF: все страницы подряд':'PDF: по одной странице');};
@@ -2061,7 +2142,7 @@ document.addEventListener('keyup',e=>{if(e.key==='z'||e.key==='Z'||e.key==='я'|
 window.addEventListener('blur',()=>{LOUPE.key=false;LOUPE.boost=false;loupeSet();});
 
 /* ---------- сохранить вид картинкой (PNG): всё, только PDF или только DXF; по желанию — в буфер обмена ---------- */
-function pngOpen(){const M=$('pngMenu');M.hidden=!M.hidden;$('pngClip').checked=!!SET.pngClip;
+function pngOpen(){const M=$('pngMenu');M.hidden=!M.hidden;if(!M.hidden)menuFix(M,$('vPng'));$('pngClip').checked=!!SET.pngClip;
   const kinds=new Set(VW.set.map((x,i)=>panes[i]&&panes[i].isPdf?'pdf':'dxf'));$('pngOnlyPdf').disabled=!kinds.has('pdf');$('pngOnlyDxf').disabled=!kinds.has('dxf');}
 async function pngSave(){
   const what=(document.querySelector('input[name=pngWhat]:checked')||{}).value||'all';$('pngMenu').hidden=true;
@@ -2729,7 +2810,8 @@ document.addEventListener('keydown',e=>{
   else if(k===']'||k==='ъ'||k==='Ъ')setContrast(SET.pdfLv+1);
   else if(/^[qQйЙ]$/.test(k))$('vRotL').click();
   else if(/^[eEуУ]$/.test(k))$('vRotR').click();
-  else if(/^[mMьЬ]$/.test(k))$('vMir').click();
+  else if(/^[MЬ]$/.test(k))$('vMirV').click();
+  else if(/^[mь]$/.test(k))$('vMir').click();
   else if(k==='0')apDo(p=>p.setXf({rot:0,mirror:false}));
   else if(/^[oOщЩ]$/.test(k))apDo(p=>p.toggleOrig());
   else if((k==='Home'||k==='End')&&docked()&&!VW.full&&view.length)showItem(k==='Home'?0:view.length-1);  // окно рядом: первый / последний файл

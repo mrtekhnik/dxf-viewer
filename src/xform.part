@@ -1,0 +1,289 @@
+
+/* =====================================================================
+   ЗАПИСЬ ПОВОРОТА / ЗЕРКАЛА В DXF
+   Меняются только координаты, углы и признаки зеркальности — остальное (слои, цвета, типы линий,
+   кодировка, порядок записей) остаётся побайтно как было. Работает с файлом как с байтами (latin1):
+   русские надписи в любой кодировке не портятся.
+     DXFXF.run(bytes, M, opt) → {bytes, n, skipped:{тип:кол-во}, txtMir, txtRead, err}
+       M = [a,b,c,d,e,f]: x' = a·x + c·y + e,  y' = b·x + d·y + f  (поворот/зеркало + сдвиг)
+       opt.text: 'auto' | 'mirror' | 'read' — тексты при зеркале: отражать / оставлять читаемыми / авто
+                 (авто: текст на слое, где есть контур, — часть детали, отражается; остальные — читаемые)
+       opt.ext: [x0,y0,x1,y1] — записать в заголовок $EXTMIN/$EXTMAX
+   ===================================================================== */
+const DXFXF=(()=>{
+  const D=Math.PI/180;
+  function num(x){if(!isFinite(x))return '0';if(Math.abs(x)<5e-11)return '0';let s=x.toFixed(10);if(s.indexOf('.')>=0)s=s.replace(/0+$/,'').replace(/\.$/,'');return s==='-0'?'0':s;}
+  const nrm=a=>{a%=360;if(a<0)a+=360;if(a>=360-1e-10)a=0;return a;};
+  function toStr(u8){let s='';for(let i=0;i<u8.length;i+=32768)s+=String.fromCharCode.apply(null,u8.subarray(i,i+32768));return s;}
+  function toBytes(s){const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i)&255;return u;}
+  const GEOM=new Set(['LINE','ARC','CIRCLE','LWPOLYLINE','POLYLINE','SPLINE','ELLIPSE']);
+  const OCS=new Set(['ARC','CIRCLE','LWPOLYLINE','POLYLINE','VERTEX','TEXT','ATTRIB','ATTDEF','INSERT','HATCH','SOLID','TRACE']);
+  const PASS=new Set(['SEQEND','ENDBLK','BLOCK','VIEWPORT','SECTION','ENDSEC','EOF']);
+
+  function run(bytes,M0,opt={}){
+    const src=toStr(bytes instanceof Uint8Array?bytes:new Uint8Array(bytes));
+    if(src.startsWith('AutoCAD Binary DXF'))return {err:'Двоичный DXF записывать не умею'};
+    const em=/\r\n|\n|\r/.exec(src),EOL=em?em[0]:'\n';
+    const Ls=src.split(/\r\n|\n|\r/);
+    const utf8=(/\$ACADVER\s*[\r\n]+\s*1\s*[\r\n]+\s*AC10(\d\d)/.exec(src.slice(0,4000))||[])[1]>=21;
+    // пары «код / значение» с исходным видом строки кода
+    const C=[],CR=[],V=[];let tail=[];
+    for(let i=0;i<Ls.length;){
+      const cs=Ls[i].trim();
+      if(cs===''&&i>=Ls.length-2){tail=Ls.slice(i);break;}
+      const c=+cs;if(cs===''||!Number.isInteger(c)||i+1>=Ls.length)return {err:'Нарушена структура файла (строка '+(i+1)+') — записывать не буду'};
+      C.push(c);CR.push(Ls[i]);V.push(Ls[i+1]);i+=2;
+    }
+    const pad=CR.length>1&&/^\s+\d/.test(CR[1])?(CR.find(x=>/^\s+\d/.test(x))||'').length:0;
+    const mkCode=c=>{const s=String(c);return pad&&s.length<pad?' '.repeat(pad-s.length)+s:s;};
+
+    // предварительный проход: размерные блоки и слои с контуром (только пространство модели)
+    const dimBlocks=new Set(),geoLayers=new Set();let sec='';
+    for(let i=0;i<C.length;i++){
+      if(C[i]!==0)continue;const t=V[i].trim().toUpperCase();
+      if(t==='SECTION'&&C[i+1]===2){sec=V[i+1].trim().toUpperCase();continue;}
+      if(sec!=='ENTITIES')continue;
+      let ly='0',bn='',ps=false;for(let k=i+1;k<C.length&&C[k]!==0;k++){if(C[k]===8)ly=V[k].trim();else if(C[k]===2)bn=V[k].trim();else if(C[k]===67&&+V[k]===1)ps=true;}
+      if(ps)continue;
+      if(t==='DIMENSION'&&bn)dimBlocks.add(bn.toUpperCase());
+      if(GEOM.has(t))geoLayers.add(ly.toUpperCase());
+    }
+
+    const stat={n:0,skipped:{},txtMir:0,txtRead:0};
+    const skip=t=>{stat.skipped[t]=(stat.skipped[t]||0)+1;};
+    const isIdL=Math.abs(M0[0]-1)<1e-12&&Math.abs(M0[3]-1)<1e-12&&Math.abs(M0[1])<1e-12&&Math.abs(M0[2])<1e-12;
+
+    function xEnt(t,g,polyOcs,readOnly){
+      // g: [{c,cr,v}] без строки «0 / тип»
+      const idx=(c,from=0)=>{for(let k=from;k<g.length;k++)if(g[k].c===c)return k;return -1;};
+      const gv=(c,d)=>{const k=idx(c);return k<0?d:(+g[k].v||0);};
+      const setv=(k,x)=>{g[k].v=num(x);};
+      // система координат объекта (OCS): обычная или зеркальная Z=-1
+      let M=M0;
+      if(OCS.has(t)){
+        let nx=0,ny=0,nz=1;
+        if(t==='VERTEX'&&polyOcs)[nx,ny,nz]=polyOcs;else{nx=gv(210,0);ny=gv(220,0);nz=gv(230,1);}
+        if(Math.abs(nx)>1e-9||Math.abs(ny)>1e-9)return false;     // наклонная плоскость — не трогаем
+        if(nz<0)M=[M0[0],-M0[1],-M0[2],M0[3],-M0[4],M0[5]];
+      }
+      const [a,b,c,d,e,f]=M,s=a*d-b*c<0?-1:1;
+      const PT=(x,y)=>[a*x+c*y+e,b*x+d*y+f],VC=(x,y)=>[a*x+c*y,b*x+d*y];
+      const ang=deg=>{const [x,y]=VC(Math.cos(deg*D),Math.sin(deg*D));return nrm(Math.atan2(y,x)/D);};
+      const yOf=k=>{for(let j=k+1;j<Math.min(g.length,k+4);j++)if(g[j].c===g[k].c+10)return j;return -1;};
+      const pt=(k,vec)=>{const j=yOf(k);if(j<0)return;const [x,y]=(vec?VC:PT)(+g[k].v||0,+g[j].v||0);setv(k,x);setv(j,y);};
+      const pts=(P,Vv=[])=>{for(let k=0;k<g.length;k++){if(P.includes(g[k].c))pt(k,false);else if(Vv.includes(g[k].c))pt(k,true);}};
+      const put=(code,val,after)=>{const k=idx(code);if(k>=0){setv(k,val);return;}
+        let at=-1;for(const ac of after){const j=idx(ac);if(j>=0){at=j;break;}}
+        g.splice(at+1,0,{c:code,cr:mkCode(code),v:num(val)});};
+      switch(t){
+        case 'LINE':pts([10,11]);break;
+        case 'POINT':case 'CIRCLE':pts([10]);break;
+        case 'SOLID':case 'TRACE':case '3DFACE':pts([10,11,12,13]);break;
+        case 'XLINE':case 'RAY':case 'TOLERANCE':pts([10],[11]);break;
+        case 'IMAGE':case 'WIPEOUT':pts([10],[11,12]);break;
+        case 'LEADER':pts([10],[211,212,213]);break;
+        case 'SPLINE':pts([10,11],[12,13]);break;
+        case 'POLYLINE':break;   // её 10 — только высота (0,0,Z); вершины — в VERTEX
+        case 'ARC':{pts([10]);const k0=idx(50),k1=idx(51);if(k0<0||k1<0)break;
+          const a0=ang(+g[k0].v),a1=ang(+g[k1].v);if(s>0){setv(k0,a0);setv(k1,a1);}else{setv(k0,a1);setv(k1,a0);}break;}
+        case 'ELLIPSE':{pts([10],[11]);if(s<0){const k0=idx(41),k1=idx(42);if(k0<0||k1<0)break;
+          const t0=+g[k0].v,t1=+g[k1].v,P2=Math.PI*2;
+          if(Math.abs(t1-t0-P2)<1e-9||Math.abs(t1-t0)<1e-12)break;   // полный эллипс
+          const n=x=>{x%=P2;if(x<0)x+=P2;return x;};setv(k0,n(-t1));setv(k1,n(-t0));}break;}
+        case 'LWPOLYLINE':case 'VERTEX':pts([10]);if(s<0)for(const q of g)if(q.c===42&&+q.v)q.v=num(-q.v);
+          if(t==='VERTEX'){const k=idx(50);if(k>=0)setv(k,ang(+g[k].v));}break;
+        case 'INSERT':{pts([10]);const r=gv(50,0),sy=gv(42,1),[ux,uy]=VC(Math.cos(r*D),Math.sin(r*D));
+          const r2=nrm(Math.atan2(uy,ux)/D);
+          if(s<0){put(42,-sy,[41,30,20]);const k45=idx(45);if(k45>=0)setv(k45,-(+g[k45].v));}
+          if(idx(50)>=0||Math.abs(r2)>1e-10)put(50,r2,[43,42,41,30,20]);break;}
+        case 'DIMENSION':{pts([10,11,12,13,14,15,16]);const k=idx(50);if(k>=0)setv(k,ang(+g[k].v));break;}
+        case 'TEXT':case 'ATTRIB':case 'ATTDEF':return xText(t,g,{idx,gv,setv,put,PT,VC,s,isId:isIdL,forceRead:readOnly});
+        case 'MTEXT':return xMText(g,{idx,gv,setv,put,PT,VC,s,isId:isIdL});
+        case 'HATCH':return xHatch(g,{idx,setv,PT,VC,ang,s});
+        case 'MULTILEADER':case 'MLEADER':return xMLeader(g,{setv,PT,VC,s});
+        default:return false;
+      }
+      return true;
+    }
+
+    // выбор положения читаемого текста: базовая линия слева направо (или снизу вверх для вертикальных)
+    function pickFrame(Lu,s,rigid){
+      const cands=rigid?[[1,1]]:s>0?[[1,1],[-1,-1]]:[[-1,1],[1,-1]];
+      for(const [al,be] of cands){const ux=al*Lu[0],uy=al*Lu[1];if(ux>1e-9||(Math.abs(ux)<=1e-9&&uy>0))return [al,be];}
+      return cands[0];
+    }
+    function xText(t,g,h){
+      const {idx,gv,setv,put,PT,VC,s}=h;
+      const vjc=t==='TEXT'?73:74;
+      const hj=gv(72,0),vj=gv(vjc,0),r=gv(50,0)*D,ht=gv(40,1)||1,wf=gv(41,1)||1;
+      const k1=idx(1);let str=k1>=0?g[k1].v.replace(/\\U\+[0-9A-Fa-f]{4}/g,'_').replace(/%%[a-z%]/gi,'_').replace(/\\[A-Za-z][^;]*;/g,''):'';
+      if(utf8)str=str.replace(/[\x80-\xBF]/g,'');   // UTF-8: буква — 2 байта
+      const ly=(g[idx(8)]||{v:'0'}).v.trim().toUpperCase();
+      const u=[Math.cos(r),Math.sin(r)],v=[-u[1],u[0]],Lu=VC(...u);
+      const k10=idx(10),k11=idx(11);
+      const P=k=>{const j=k+1<g.length&&g[k+1].c===g[k].c+10?k+1:-1;return j<0?null:[+g[k].v||0,+g[j].v||0,j];};
+      const p10=k10>=0?P(k10):null,p11=k11>=0?P(k11):null;
+      const wr=(k,p,sh)=>{if(!p)return;const [x,y]=PT(p[0]+sh[0],p[1]+sh[1]);setv(k,x);setv(p[2],y);};
+      const contour=!h.forceRead&&t!=='ATTDEF'&&(opt.text==='mirror'||(opt.text!=='read'&&geoLayers.has(ly)));
+      if(h.isId){wr(k10,p10,[0,0]);wr(k11,p11,[0,0]);return true;}
+      if(s<0&&contour){   // часть контура: настоящее зеркало (текст «задом наперёд»)
+        wr(k10,p10,[0,0]);wr(k11,p11,[0,0]);
+        put(50,nrm(Math.atan2(-Lu[1],-Lu[0])/D),[1,40,30,20]);
+        put(71,gv(71,0)^2,[51,41,50,1]);stat.txtMir++;return true;
+      }
+      const rigid=s>0&&contour;
+      const [al,be]=pickFrame(Lu,s,rigid);
+      const sh=[0,0],W=Math.max(1,str.length)*ht*wf*0.75;
+      let swap=false;
+      if(al<0){ // перевернуть текст вокруг его вертикальной оси: левый край ↔ правый
+        if(hj===0){sh[0]+=W*u[0];sh[1]+=W*u[1];}
+        else if(hj===2){const k=idx(72);setv(k,0);if(p11&&p10){p10[0]=p11[0];p10[1]=p11[1];}}
+        else if(hj===3||hj===5)swap=true;
+      }
+      if(be<0){ // вокруг горизонтальной оси: низ ↔ верх
+        if(hj===4){}else if(vj===1||vj===3)setv(idx(vjc),4-vj);
+        else if(vj===0){sh[0]+=ht*v[0];sh[1]+=ht*v[1];}
+      }
+      if(swap&&p10&&p11){const q=p10.slice(0,2);p10[0]=p11[0];p10[1]=p11[1];p11[0]=q[0];p11[1]=q[1];}
+      wr(k10,p10,sh);wr(k11,p11,sh);
+      const r2=nrm(Math.atan2(al*Lu[1],al*Lu[0])/D);
+      if(idx(50)>=0||Math.abs(r2)>1e-10)put(50,r2,[1,40,30,20]);
+      if(s<0)stat.txtRead++;return true;
+    }
+    function xMText(g,h){
+      const {idx,gv,setv,put,PT,VC}=h;
+      const k10=idx(10),k11=idx(11),j10=k10>=0&&g[k10+1]&&g[k10+1].c===20?k10+1:-1;
+      if(j10>=0){const [x,y]=PT(+g[k10].v||0,+g[j10].v||0);setv(k10,x);setv(j10,y);}
+      if(h.isId)return true;
+      const j11=k11>=0&&g[k11+1]&&g[k11+1].c===21?k11+1:-1;
+      const r=j11>=0&&(+g[k11].v||+g[j11].v)?Math.atan2(+g[j11].v,+g[k11].v):gv(50,0)*D;
+      const Lu=VC(Math.cos(r),Math.sin(r)),s=h.s;
+      const [al,be]=pickFrame(Lu,s,false);
+      const a=gv(71,1);let col=(a-1)%3,row=Math.floor((a-1)/3);if(al<0)col=2-col;if(be<0)row=2-row;
+      const a2=row*3+col+1;if(a2!==a)put(71,a2,[41,40,30,20]);
+      const ux=al*Lu[0],uy=al*Lu[1];
+      if(j11>=0){setv(k11,ux);setv(j11,uy);}
+      const r2=nrm(Math.atan2(uy,ux)/D);
+      if(idx(50)>=0||(j11<0&&Math.abs(r2)>1e-10))put(50,r2,[30,20]);
+      if(s<0)stat.txtRead++;return true;
+    }
+    // выноска MULTILEADER: точки и направления внутри CONTEXT_DATA{ … }; текст остаётся читаемым
+    function xMLeader(g,h){
+      const {setv,PT,VC,s}=h;let ctx=false,lead=0,line=0,any=false;
+      const two=(k,vec)=>{const j=k+1<g.length&&g[k+1].c===g[k].c+10?k+1:-1;if(j<0)return;const [x,y]=(vec?VC:PT)(+g[k].v||0,+g[j].v||0);setv(k,x);setv(j,y);};
+      for(let k=0;k<g.length;k++){
+        const c=g[k].c,v=g[k].v.trim();
+        if(c===300&&/CONTEXT_DATA\{/i.test(v)){ctx=true;any=true;continue;}
+        if(!ctx)continue;
+        if(c===301){ctx=false;continue;}
+        if(c===302&&/LEADER\{/i.test(v)){lead++;continue;}if(c===303){lead=Math.max(0,lead-1);continue;}
+        if(c===304&&/LEADER_LINE\{/i.test(v)){line++;continue;}if(c===305){line=Math.max(0,line-1);continue;}
+        if(c===10||c===110||c===15)two(k,false);
+        else if(c===12)two(k,false);
+        else if(c===11){if(line)two(k,false);else if(lead)two(k,true);}   // вне выноски 11 — нормаль текста, не трогаем
+        else if(c===13){if(lead)two(k,false);else{const j=k+1;if(g[j]&&g[j].c===23){const [x,y]=VC(+g[k].v||0,+g[j].v||0),[al]=pickFrame([x,y],1,true);setv(k,x);setv(j,y);
+            if(s<0&&(x<-1e-9||(Math.abs(x)<=1e-9&&y<0))){setv(k,-x);setv(j,-y);}}}}
+        else if(c===111){const j=k+1;if(g[j]&&g[j].c===121){const [x,y]=VC(+g[k].v||0,+g[j].v||0);const f=s<0&&(x<-1e-9||(Math.abs(x)<=1e-9&&y<0))?-1:1;setv(k,f*x);setv(j,f*y);}}
+        else if(c===112){const j=k+1;if(g[j]&&g[j].c===122){const [x,y]=VC(+g[k].v||0,+g[j].v||0);   // ось Y плоскости: правая тройка с осью X
+            let q=k-1;while(q>=0&&g[q].c!==111)q--;if(q>=0&&g[q+1]&&g[q+1].c===121){setv(k,-(+g[q+1].v));setv(j,+g[q].v);}else{setv(k,x);setv(j,y);}}}
+        else if(c===42||c===46){const a=+g[k].v||0,[x,y]=VC(Math.cos(a),Math.sin(a));let r=Math.atan2(y,x);if(s<0&&Math.cos(r)<-1e-9)r+=Math.PI;setv(k,((r%(2*Math.PI))+2*Math.PI)%(2*Math.PI));}
+      }
+      if(any&&s<0)stat.txtRead++;return any;
+    }
+    function xHatch(g0,h){
+      const g=g0.map(q=>({c:q.c,cr:q.cr,v:q.v}));   // работаем на копии: при непонятной структуре файл не трогаем
+      const {PT,VC,ang,s}=h;
+      const setv=(k,x)=>{g[k].v=num(x);};
+      let k=g.findIndex(q=>q.c===91);if(k<0)return false;
+      const at=c=>k<g.length&&g[k].c===c;
+      const P2=(vec)=>{if(!(at(10)||at(11)||at(12)||at(13))||!g[k+1]||g[k+1].c!==g[k].c+10)throw 0;const [x,y]=(vec?VC:PT)(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k+=2;};
+      const need=c=>{if(!at(c))throw 0;return +g[k++].v||0;};
+      const arcOut=(k50,gs,ge,dir)=>{   // по часовой DXF хранит углы как 360−угол
+        if(dir>0){setv(k50,nrm(gs));setv(k50+1,nrm(ge));g[k50+2].v=String(1);}else{setv(k50,nrm(360-gs));setv(k50+1,nrm(360-ge));g[k50+2].v=String(0);}
+      };
+      try{
+        const np=need(91);
+        for(let p=0;p<np;p++){
+          const fl=need(92);
+          if(fl&2){const hb=at(72)?need(72):0;if(at(73))k++;const nv=need(93);
+            for(let i=0;i<nv;i++){P2(false);if(at(42)){if(s<0&&+g[k].v)g[k].v=num(-g[k].v);k++;}}
+          }else{
+            const ne=need(93);
+            for(let i=0;i<ne;i++){
+              const et=need(72);
+              if(et===1){P2(false);P2(false);}
+              else if(et===2||et===3){P2(false);if(et===3)P2(true);need(40);
+                const k50=k;if(!at(50)||g[k+1].c!==51||g[k+2].c!==73)throw 0;
+                const a0=+g[k].v,a1=+g[k+1].v,ccw=+g[k+2].v?1:-1;
+                let gs=ccw>0?a0:360-a0,ge=ccw>0?a1:360-a1;
+                if(et===2){gs=ang(gs);ge=ang(ge);}else if(s<0){gs=-gs;ge=-ge;}
+                const full=Math.abs(Math.abs(a1-a0)-360)<1e-9;
+                if(full){k+=3;continue;}
+                arcOut(k50,gs,ge,ccw*s);k+=3;}
+              else if(et===4){need(94);if(at(73))k++;if(at(74))k++;const nk=need(95),nc=need(96);
+                for(let j=0;j<nk;j++)need(40);
+                for(let j=0;j<nc;j++){P2(false);if(at(42))k++;}
+                while(at(42))k++;
+                if(at(97)&&g[k+1]&&([11,12,13].includes(g[k+1].c))){const nf=need(97);for(let j=0;j<nf;j++)P2(false);}
+                if(at(12))P2(true);if(at(13))P2(true);}
+              else throw 0;
+            }
+          }
+          if(at(97)){const n=need(97);k+=n;}
+        }
+        // узор, затравочные точки, градиент
+        for(;k<g.length;k++){
+          const c=g[k].c;
+          if(c===52||c===53)setv(k,ang(+g[k].v));
+          else if(c===43&&g[k+1]&&g[k+1].c===44){const [x,y]=PT(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k++;}
+          else if(c===45&&g[k+1]&&g[k+1].c===46){const [x,y]=VC(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k++;}
+          else if(c===10&&g[k+1]&&g[k+1].c===20){const [x,y]=PT(+g[k].v||0,+g[k+1].v||0);setv(k,x);setv(k+1,y);k++;}
+          else if(c===460)g[k].v=num(ang(+g[k].v/D)*D);
+        }
+      }catch(x){return false;}
+      for(let i=0;i<g.length;i++)g0[i]=g[i];return true;
+    }
+
+    // основной проход
+    const out=[];const emit=(cr,v)=>{out.push(cr,v);};
+    sec='';let blk='',inDimBlk=false,polyOcs=null;
+    for(let i=0;i<C.length;){
+      if(C[i]!==0){emit(CR[i],V[i]);i++;continue;}
+      const t=V[i].trim().toUpperCase();let j=i+1;while(j<C.length&&C[j]!==0)j++;
+      if(t==='SECTION'&&C[i+1]===2)sec=V[i+1].trim().toUpperCase();
+      if(t==='ENDSEC')sec='';
+      let work=false,readOnly=false;
+      if(sec==='ENTITIES')work=true;
+      else if(sec==='BLOCKS'){
+        if(t==='BLOCK'){blk='';for(let k=i+1;k<j;k++)if(C[k]===2){blk=V[k].trim().toUpperCase();break;}inDimBlk=dimBlocks.has(blk);}
+        else if(t==='ENDBLK')inDimBlk=false;
+        else if(inDimBlk){work=true;readOnly=true;}
+      }
+      else if(sec==='HEADER'&&opt.ext){
+        // $EXTMIN / $EXTMAX
+        emit(CR[i],V[i]);
+        for(let k=i+1;k<j;k++){
+          if(C[k]===9){const nm=V[k].trim().toUpperCase();emit(CR[k],V[k]);
+            if(nm==='$EXTMIN'||nm==='$EXTMAX'){const mx=nm==='$EXTMAX';
+              while(k+1<j&&C[k+1]!==9){k++;const v=C[k]===10?num(opt.ext[mx?2:0]):C[k]===20?num(opt.ext[mx?3:1]):V[k];emit(CR[k],v);}}
+            continue;}
+          emit(CR[k],V[k]);
+        }
+        i=j;continue;
+      }
+      let ps=false;if(work)for(let k=i+1;k<j;k++)if(C[k]===67&&+V[k]===1){ps=true;break;}
+      if(work&&!ps&&!PASS.has(t)){
+        const g=[];for(let k=i+1;k<j;k++)g.push({c:C[k],cr:CR[k],v:V[k]});
+        if(t==='POLYLINE'){polyOcs=[0,0,1];for(const q of g){if(q.c===210)polyOcs[0]=+q.v;else if(q.c===220)polyOcs[1]=+q.v;else if(q.c===230)polyOcs[2]=+q.v;}}
+        const ok=xEnt(t,g,polyOcs,readOnly);
+        if(t==='SEQEND')polyOcs=null;
+        if(ok)stat.n++;else skip(t);
+        emit(CR[i],V[i]);for(const q of g)emit(q.cr,q.v);
+      }else{for(let k=i;k<j;k++)emit(CR[k],V[k]);}
+      i=j;
+    }
+    const txt=out.join(EOL)+(tail.length?EOL+tail.join(EOL):'');
+    return Object.assign({bytes:toBytes(txt)},stat);
+  }
+  return {run};
+})();
