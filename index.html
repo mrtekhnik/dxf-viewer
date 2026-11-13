@@ -183,6 +183,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 #tblBox{background:var(--panel);border:1px solid var(--line);border-radius:12px;flex:1;display:flex;flex-direction:column;overflow:hidden}
 #tblBox .pp-h{gap:8px;flex-wrap:wrap}#tblScroll{overflow:auto;flex:1}
 .mut{color:var(--mut);font-size:12px}
+#loupe{position:fixed;z-index:30;pointer-events:none;border-radius:50%;box-shadow:0 6px 24px rgba(0,0,0,.55)}#loupe[hidden]{display:none}
+#pngMenu label{display:flex;gap:6px;align-items:center;padding:3px 4px;white-space:nowrap}
+button.warn{border-color:#d9822b;color:#ffb36b}
 #rulesBody input[type=number],#rulesBody textarea{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit}
 table.tbl{border-collapse:collapse;width:100%;font-size:13px}
 table.tbl th{position:sticky;top:0;background:var(--panel);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
@@ -265,7 +268,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.9.4</small></div>
+  <div class="brand">DXF <small>+PDF · v4.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -347,6 +350,17 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
+    <button id="vFitW" hidden title="Вписать по ширине окна (Shift+F)">↔ По ширине</button>
+    <button id="vLoupe" title="Лупа (или удерживайте Z): колесо — увеличение, левая кнопка с удержанием — ещё ×2">🔍</button>
+    <button id="vPdfRot" hidden class="warn">⤾ Повернуть лист</button>
+    <span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼 PNG</button>
+      <div id="pngMenu" class="menu" hidden style="right:0;left:auto;min-width:240px">
+        <label><input type="radio" name="pngWhat" value="all" checked> всё, что на экране</label>
+        <label><input type="radio" name="pngWhat" id="pngOnlyPdf" value="pdf"> только чертежи PDF</label>
+        <label><input type="radio" name="pngWhat" id="pngOnlyDxf" value="dxf"> только развёртки DXF</label>
+        <label><input type="checkbox" id="pngClip"> ещё и копировать в буфер обмена</label>
+        <button id="pngGo">Сохранить PNG</button>
+      </div></span>
     <button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒 синхронно</button>
     <button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button>
     <button id="vMon" hidden title="Пара текущего файла — на втором мониторе">🖵 2-й монитор</button>
@@ -397,6 +411,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), проверяется содержимое: = одинаковые, ≈ пересохранён (геометрия DXF та же), ≠ отличается. Если в сетке выделен файл — сразу откроется его сравнение; не нашлась пара по имени — список похожих по габариту.</div>
   <input id="inCmp" type="file" webkitdirectory multiple hidden>
 </div>
+<canvas id="loupe" hidden></canvas>
 <div id="tblPanel" hidden>
  <div id="tblBox">
   <div class="pp-h"><b id="tblTitle">Таблица DXF</b><span id="tblProg" class="mut"></span><span class="sp"></span>
@@ -439,6 +454,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Картинка PNG</span><select id="sPngClip"><option value="0">только сохранять файлом</option><option value="1">сохранять и копировать в буфер обмена</option></select></div>
   <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
   <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
@@ -661,6 +677,29 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </ul>
 </section>
 
+<section data-t="Лупа, по ширине, поворот, PNG">
+<h2>Лупа, «по ширине», поворот листа, картинка PNG</h2>
+<h3>Лупа</h3>
+<ul>
+<li>Удерживайте <kbd>Z</kbd> — под курсором круг с увеличением; отпустили — лупа пропала. Кнопка <b>🔍</b> включает лупу постоянно (курсор становится лупой), повторный клик — выключает.</li>
+<li>В режиме лупы: <b>колесо</b> — сильнее или слабее (×2…×16), <b>левая кнопка с удержанием</b> — ещё ×2, пока держите. Общий масштаб окна при этом не меняется.</li>
+<li>Работает в DXF и PDF. В PDF место под лупой сразу дорисовывается в полном качестве.</li>
+</ul>
+<h3>По ширине</h3>
+<ul><li><b>↔ По ширине</b> или <kbd>Shift+F</kbd> — лист или деталь во всю ширину окна; у PDF — от верха листа, дальше колесом вниз.</li></ul>
+<h3>Поворот листа PDF</h3>
+<ul>
+<li>Если текст на листе лежит боком (альбомный чертёж сохранён как книжный и т. п.), появляется оранжевая кнопка <b>⤾ Повернуть лист</b> — на остальных листах её нет. Клик — лист повёрнут так, чтобы текст читался; поворот запоминается для этого файла.</li>
+<li>Повернуть вручную — <b>⟲ ⟳</b> или <kbd>Q</kbd> <kbd>E</kbd>, как у DXF.</li>
+</ul>
+<h3>Картинка PNG</h3>
+<ul>
+<li><b>🖼 PNG</b> → что сохранить: <b>всё, что на экране</b> (например, чертёж и развёртки рядом), <b>только PDF</b> или <b>только DXF</b> → «Сохранить PNG». Файл попадает в «Загрузки».</li>
+<li>В картинку входит то, что видно: масштаб, размеры, замечания проверки, сравнение; сверху — имя файла и формат листа или габарит.</li>
+<li>Галочка <b>«ещё и копировать в буфер обмена»</b> — сразу вставить Ctrl+V в письмо или мессенджер. Включить по умолчанию — ⚙ «Картинка PNG».</li>
+</ul>
+</section>
+
 <section data-t="Пары PDF ⇄ DXF">
 <h2>Чертёж и его развёртки (пары PDF ⇄ DXF)</h2>
 <ul>
@@ -765,6 +804,8 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <tr><td><kbd>←</kbd> <kbd>→</kbd> / <kbd>пробел</kbd></td><td>предыдущий / следующий файл</td></tr>
 <tr><td><kbd>Tab</kbd> <kbd>Shift+Tab</kbd></td><td>чертёж ⇄ развёртки</td></tr>
 <tr><td><kbd>PgUp</kbd> <kbd>PgDn</kbd></td><td>страницы PDF</td></tr>
+<tr><td><kbd>Shift+F</kbd></td><td>вписать по ширине</td></tr>
+<tr><td><kbd>Z</kbd> (удерживать)</td><td>лупа</td></tr>
 <tr><td><kbd>F</kbd> <kbd>Home</kbd> / двойной клик</td><td>показать всё (в окне просмотра рядом со списком Home/End — первый/последний файл)</td></tr>
 <tr><td><kbd>+</kbd> <kbd>−</kbd></td><td>масштаб</td></tr>
 <tr><td><kbd>Q</kbd> <kbd>E</kbd> <kbd>M</kbd> <kbd>0</kbd> <kbd>O</kbd></td><td>повернуть влево / вправо, зеркало, сбросить, исходное положение</td></tr>
@@ -2271,11 +2312,11 @@ function baseScale(vp,pane){
   return Math.min(6,Math.max(0.2,Math.min(W*0.96/vp.width,H*0.96/vp.height)*d));
 }
 async function renderBase(page,key,pane){return renderBaseAt(page,key,baseScale(page.getViewport({scale:1}),pane));}
-async function renderBaseAt(page,key,sc){
-  const vp=page.getViewport({scale:1});
+async function renderBaseAt(page,key,sc,rot){
+  rot=rot||0;key+='|r'+rot;const vp=page.getViewport({scale:1,rotation:rot});
   const hit=baseCache.get(key);if(hit&&Math.abs(hit.sc/sc-1)<0.02){baseCache.delete(key);baseCache.set(key,hit);return hit;}
   const c=document.createElement('canvas');c.width=Math.ceil(vp.width*sc);c.height=Math.ceil(vp.height*sc);
-  await page.render({canvasContext:c.getContext('2d'),viewport:page.getViewport({scale:sc})}).promise;
+  await page.render({canvasContext:c.getContext('2d'),viewport:page.getViewport({scale:sc,rotation:rot})}).promise;
   const r={c,sc};baseCache.set(key,r);while(baseCache.size>8)baseCache.delete(baseCache.keys().next().value);
   return r;
 }
@@ -2357,7 +2398,7 @@ class Pane{
     return this.cont?Math.min(6,Math.max(0.2,Math.min((this.W||innerWidth)*0.96/this.pw,(this.H||innerHeight)*0.96/e.h)*d)):baseScale({width:e.w,height:e.h},this);}
   ensureBase(e){
     if(e.base||e.bp)return e.bp;const tok=this.tok;
-    e.bp=renderBaseAt(e.page,this.it.key+'|'+e.n+(this.cont?'|c':''),this.baseScFor(e)).then(b=>{e.bp=null;if(tok!==this.tok)return;e.base=b.c;e.baseSc=b.sc;this.draw();},()=>{e.bp=null;});
+    e.bp=renderBaseAt(e.page,this.it.key+'|'+e.n+(this.cont?'|c':''),this.baseScFor(e),e.rot).then(b=>{e.bp=null;if(tok!==this.tok)return;e.base=b.c;e.baseSc=b.sc;this.draw();},()=>{e.bp=null;});
     return e.bp;
   }
   viewRectAll(){const s=this.s;return {x0:this.cx-this.W/2/s,x1:this.cx+this.W/2/s,y0:this.ph-(this.cy+this.H/2/s),y1:this.ph-(this.cy-this.H/2/s)};}
@@ -2419,7 +2460,7 @@ class Pane{
       const h=e.hv;if(h&&h.s===s&&r.x0>=h.x0-1e-6&&r.x1<=h.x1+1e-6&&r.y0>=h.y0-1e-6&&r.y1<=h.y1+1e-6)continue;
       if(e.task){try{e.task.cancel();}catch(x){}}
       const c=document.createElement('canvas');c.width=Math.max(1,Math.round((r.x1-r.x0)*S));c.height=Math.max(1,Math.round((r.y1-r.y0)*S));
-      const task=e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:S,offsetX:-r.x0*S,offsetY:-r.y0*S})});
+      const task=e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:S,rotation:e.rot,offsetX:-r.x0*S,offsetY:-r.y0*S})});
       e.task=task;
       try{await task.promise;}catch(x){return;}
       if(e.task!==task)return;e.task=null;
@@ -2434,7 +2475,7 @@ class Pane{
       const e=this.pg[0],tok=this.tok;if(!e||!e.base||!this.el.isConnected)return;
       const sc=Math.min(e.baseSc*3,4096/Math.max(e.w,e.h));if(!(sc>e.baseSc*1.3))return;
       const c=document.createElement('canvas');c.width=Math.ceil(e.w*sc);c.height=Math.ceil(e.h*sc);
-      const task=e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:sc})});e.mtask=task;
+      const task=e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:sc,rotation:e.rot})});e.mtask=task;
       try{await task.promise;}catch(x){return;}
       if(tok!==this.tok||this.pg[0]!==e)return;e.mid=c;e.midSc=sc;e.mtask=null;this.draw();
     },350);
@@ -2449,12 +2490,13 @@ class Pane{
   pdfReset(){const P=this.P;for(const e of this.pg||[]){for(const k of ['task','mtask'])if(e[k]){try{e[k].cancel();}catch(x){}}}
     for(const k of ['timer','t2','midTimer','rbTimer'])clearTimeout(P[k]);this.pg=[];this.page=null;this.cont=false;}
   async pdfShow(n,sv){
-    const doc=this.doc,tok=++this.tok;this.pdfReset();this.loading=true;this.draw();
+    const doc=this.doc,tok=++this.tok;this.pdfReset();this.loading=true;this.sugRot=null;this.draw();
     const cont=!!SET.pdfCont&&doc.pages>1,nums=cont?Array.from({length:Math.min(doc.pages,300)},(_,i)=>i+1):[n];
     let pages;try{pages=await Promise.all(nums.map(k=>doc.pdf.getPage(k)));}catch(e){if(tok===this.tok){this.loading=false;this.draw();this.onUpdate();}return;}
     if(tok!==this.tok)return;
     const G=cont?14:0;let y=0,maxW=0;
-    const pg=pages.map((page,i)=>{const vp=page.getViewport({scale:1});maxW=Math.max(maxW,vp.width);const e={n:nums[i],page,w:vp.width,h:vp.height,oy:y,ox:0};y+=vp.height+G;return e;});
+    const extra=PROT.get(this.it.key)||0;this.prot=extra;
+    const pg=pages.map((page,i)=>{const rot=((page.rotate||0)+extra)%360,vp=page.getViewport({scale:1,rotation:rot});maxW=Math.max(maxW,vp.width);const e={n:nums[i],page,rot,w:vp.width,h:vp.height,oy:y,ox:0};y+=vp.height+G;return e;});
     for(const e of pg)e.ox=(maxW-e.w)/2;
     this.cont=cont;this.pg=pg;this.pw=maxW;this.ph=Math.max(1,y-G);this.pageNo=n;this.page=(pg.find(e=>e.n===n)||pg[0]).page;
     doc.bbox=[0,0,this.pw,this.ph];
@@ -2465,6 +2507,11 @@ class Pane{
     this.applyView(sv&&sv.page===n&&!!sv.cont===cont?sv:'fit');
     this.scheduleMid();this.rebase(); // если размер окна успел поменяться, пока готовился растр
     this.onUpdate();
+    pdfSuggestRot(this,first);
+  }
+  pdfRotate(d){ // повернуть лист PDF на d градусов по часовой (запоминается для файла)
+    if(!this.isPdf||!this.doc||!this.doc.pdf)return;const v=(((this.prot||0)+d)%360+360)%360;
+    if(v)PROT.set(this.it.key,v);else PROT.delete(this.it.key);savePROT();this.save();this.pdfShow(this.pageNo,null);
   }
   async show(it){
     if(this.it===it&&this.doc){this.onUpdate();return;}
@@ -2504,7 +2551,7 @@ class Pane{
     this.chip.children[0].textContent=this.orig?'Показано как в файле':'⟳ '+xfDesc(x);
     this.chip.children[1].textContent=this.orig?'вернуть':'исходное';
   }
-  rotate(d){this.setXf({rot:((this.xf.rot+d)%360+360)%360,mirror:this.xf.mirror});}
+  rotate(d){if(this.isPdf){this.pdfRotate(-d);return;}this.setXf({rot:((this.xf.rot+d)%360+360)%360,mirror:this.xf.mirror});}
   mirror(){this.setXf({rot:(360-this.xf.rot)%360,mirror:!this.xf.mirror});}   // зеркало по горизонтали экрана
   xfText(){if(this.isPdf)return '';return this.orig?'показано как в файле':xfDesc(this.xf);}
   clear(){this.save();this.tok++;this.it=null;this.doc=null;this.loading=false;this.pdfReset();this.pending=null;this.draw();}
@@ -2545,13 +2592,15 @@ class Pane{
     const cv=this.cv,ptrs=new Map();let tapT=0,tapX=0,tapY=0,downT=0,downX=0,downY=0,moved=false,multi=false,fitDown=false,sv0=null;
     const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
     cv.addEventListener('pointerdown',e=>{
+      if(loupeOn()&&e.button===0&&e.pointerType==='mouse'){LOUPE.boost=true;loupeDraw();return;}   // лупа: нажата левая кнопка — увеличение ×2, пока держите
       setActive(this);try{cv.setPointerCapture(e.pointerId);}catch(x){}const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});
       if(ptrs.size===1){downT=performance.now();downX=x;downY=y;moved=false;multi=false;fitDown=this.fitted;sv0={s:this.s,cx:this.cx,cy:this.cy};}else{moved=true;multi=true;}
     });
     cv.addEventListener('pointermove',e=>{
       const [x,y]=pos(e);
       if(this.doc&&!this.isPdf&&this.doc.bbox&&e.pointerType==='mouse'){const [wx,wy]=mApply(mInv(xfMat(this.xf)),...this.s2w(x,y));$('vCoord').textContent=`X ${fmt(wx+this.doc.origin[0])}   Y ${fmt(wy+this.doc.origin[1])}`;}
-      if(MEAS.on&&!ptrs.size&&e.pointerType==='mouse')measHover(this,x,y);
+      if(e.pointerType==='mouse')loupeMove(this,x,y);
+      if(MEAS.on&&!ptrs.size&&e.pointerType==='mouse'&&!loupeOn())measHover(this,x,y);
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
       if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
@@ -2578,7 +2627,10 @@ class Pane{
       }
     };
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
-    cv.addEventListener('wheel',e=>{e.preventDefault();const [x,y]=pos(e);const k=e.deltaMode===1?33:e.deltaMode===2?400:1,dy=e.deltaY*k;
+    cv.addEventListener('pointerleave',()=>{if(LOUPE.p===this)$('loupe').hidden=true;});
+    cv.addEventListener('wheel',e=>{e.preventDefault();
+      if(loupeOn()){LOUPE.k=Math.max(2,Math.min(16,Math.round(LOUPE.k*(e.deltaY<0?1.25:0.8)*4)/4));loupeDraw();return;}   // лупа: колесо — её увеличение
+      const [x,y]=pos(e);const k=e.deltaMode===1?33:e.deltaMode===2?400:1,dy=e.deltaY*k;
       if(this.isPdf&&this.cont&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){ // непрерывный PDF: колесо — прокрутка, Ctrl/Shift+колесо — масштаб
         this.fitted=false;this.cy-=dy/this.s;this.cx+=e.deltaX*k/this.s;this.clampCont();this.draw();this.changed();return;}
       this.zoomAt(x,y,Math.exp(-dy*0.0015));},{passive:false});
@@ -2720,7 +2772,10 @@ function updateBar(){
   $('vPairMenu').hidden=!has;
   $('vPin').hidden=!(has&&cur.rid);
   $('vSide').classList.toggle('on',SET.side);
-  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!dx;
+  const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!(dx||(has&&ap&&ap.isPdf&&ap.doc&&ap.doc.pdf));$('vMir').hidden=!dx;
+  const sug=has&&ap&&ap.isPdf&&ap.sugRot!=null&&ap.sugRot!==(ap.prot||0);$('vPdfRot').hidden=!sug;
+  if(sug)$('vPdfRot').title='Текст на листе лежит боком — повернуть лист на '+(((ap.sugRot-(ap.prot||0))%360+360)%360)+'° по часовой (запомнится для этого файла)';
+  $('vFitW').hidden=!has;
   $('vDims').textContent=has&&ap?ap.dims():'';
   $('vWarn').hidden=!(has&&cur.issues);if(has)$('vWarn').textContent=`⚠ замечаний: ${cur.issues}`;
   if(FOLLOW)followerBar();
@@ -3190,6 +3245,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sPngClip').value=SET.pngClip?'1':'0';$('sPngClip').onchange=e=>{SET.pngClip=e.target.value==='1';saveSet();};
 $('sDims').onchange=e=>{SET.dims=e.target.value==='1';saveSet();panes.forEach(p=>p.draw());};
 $('sCmpGeo').onchange=e=>{SET.cmpGeo=e.target.value==='1';saveSet();};
 $('sBlink').onchange=e=>{SET.blink=e.target.value==='1';saveSet();};
@@ -3616,6 +3672,94 @@ $('tblColBtn').onclick=tblCols;$('tblRules').onclick=rulesOpen;$('tblXlsx').oncl
 $('tblMachine').onchange=e=>{rules().m=e.target.value;saveSet();rulesChanged();};
 $('rulesClose').onclick=()=>{$('rulesPanel').hidden=true;};
 $('vChk').onclick=()=>chkToggle();
+/* ---------- поворот листа PDF: где текст лежит боком — предложить повернуть ---------- */
+const PROT=new Map(Object.entries((()=>{try{return JSON.parse(localStorage.getItem('dxfv.prot')||'{}');}catch(e){return {};}})()));
+function savePROT(){try{localStorage.setItem('dxfv.prot',JSON.stringify(Object.fromEntries(PROT)));}catch(e){}}
+const SUGROT=new Map();
+async function pdfSuggestRot(p,e){ // по направлению текста: если большая часть надписей идёт вертикально — лист повёрнут
+  const key=p.it.key;let v=SUGROT.get(key);
+  if(v===undefined){
+    try{const tc=await e.page.getTextContent(),W={0:0,90:0,180:0,270:0};let all=0;
+      for(const t of tc.items){const L=(t.str||'').trim().length;if(!L)continue;const a=Math.atan2(t.transform[1],t.transform[0])*180/Math.PI,b=((Math.round(a/90)*90)%360+360)%360;W[b]+=L;all+=L;}
+      let best=0;for(const k in W)if(W[k]>W[best])best=+k;
+      v=all>=20&&W[best]>=all*0.6?((best-(e.page.rotate||0))%360+360)%360:null;   // лишний поворот, при котором текст станет горизонтальным
+    }catch(x){v=null;}
+    SUGROT.set(key,v);
+  }
+  if(p.it&&p.it.key===key){p.sugRot=v;if(panes[VW.active]===p)updateBar();}
+}
+$('vPdfRot').onclick=()=>{const p=panes[VW.active];if(p&&p.sugRot!=null)p.pdfRotate(((p.sugRot-(p.prot||0))%360+360)%360);};
+/* ---------- вписать по ширине ---------- */
+function fitWidth(p){
+  if(!p.doc||!p.W)return;
+  if(p.isPdf&&p.pg.length){const e=p.curPage()||p.pg[0],w=p.cont?p.pw:e.w,s=p.W*0.98/w;p.fitted=false;p.s=p.clampS(s);p.cx=p.cont?p.pw/2:e.ox+e.w/2;
+    p.cy=p.ph-e.oy-p.H/2/p.s+8/p.s;if(p.cont)p.clampCont();p.draw();p.changed();return;}
+  const b=p.doc.bbox;if(!b)return;const M=xfMat(p.xf);let x0=Infinity,x1=-Infinity,y0=Infinity,y1=-Infinity;
+  for(const [x,y] of [[b[0],b[1]],[b[2],b[1]],[b[0],b[3]],[b[2],b[3]]]){const q=mApply(M,x,y);x0=Math.min(x0,q[0]);x1=Math.max(x1,q[0]);y0=Math.min(y0,q[1]);y1=Math.max(y1,q[1]);}
+  p.fitted=false;p.s=p.clampS(p.W*0.96/Math.max(x1-x0,1e-6));p.cx=(x0+x1)/2;p.cy=(y0+y1)/2;p.draw();p.changed();
+}
+$('vFitW').onclick=()=>{for(let k=0;k<VW.set.length;k++)fitWidth(panes[k]);};
+/* ---------- лупа: удерживать Z или кнопка 🔍; в режиме лупы — колесо меняет увеличение, левая кнопка с удержанием — ещё ×2 ---------- */
+const LOUPE={on:false,key:false,k:3,boost:false,p:null,x:0,y:0,tm:0,tok:0};
+const loupeOn=()=>LOUPE.on||LOUPE.key;
+function loupeSet(){const on=loupeOn();$('vLoupe').classList.toggle('on',LOUPE.on);$('loupe').hidden=!on||!LOUPE.p;
+  for(const p of panes)p.cv.style.cursor=on?'none':(MEAS.on?'crosshair':'');if(on&&LOUPE.p)loupeDraw();}
+function loupeMove(p,x,y){LOUPE.p=p;LOUPE.x=x;LOUPE.y=y;if(!loupeOn())return;$('loupe').hidden=false;loupeDraw();}
+function loupeDraw(){
+  const p=LOUPE.p;if(!p||!p.doc)return;const L=$('loupe'),R=110,d=devicePixelRatio||1,k=LOUPE.k*(LOUPE.boost?2:1);
+  const r=p.cv.getBoundingClientRect();L.style.left=(r.left+LOUPE.x-R)+'px';L.style.top=(r.top+LOUPE.y-R)+'px';
+  if(L.width!==2*R*d){L.width=L.height=2*R*d;L.style.width=L.style.height=2*R+'px';}
+  const c=L.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,L.width,L.height);c.save();c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.clip();
+  const [wx,wy]=p.s2w(LOUPE.x,LOUPE.y),s=p.s*k;
+  if(!p.isPdf&&p.doc.bbox){c.fillStyle=dxfBg();c.fillRect(0,0,L.width,L.height);
+    renderDoc(c,p.doc,{s,cx:wx,cy:wy,W:2*R,H:2*R,dpr:d,xf:p.xf,hidden:p.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});}
+  else{ // PDF: сразу — увеличенный кусок экрана, через миг — точная отрисовка этого места
+    c.imageSmoothingEnabled=true;const sw=2*R*d/k;c.drawImage(p.cv,LOUPE.x*d-sw/2,LOUPE.y*d-sw/2,sw,sw,0,0,2*R*d,2*R*d);
+    clearTimeout(LOUPE.tm);const tok=++LOUPE.tok;LOUPE.tm=setTimeout(()=>loupePdf(p,wx,wy,s,tok),110);}
+  c.restore();c.lineWidth=2*d;c.strokeStyle='#ffd23f';c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.stroke();
+  c.strokeStyle='rgba(255,210,63,.6)';c.lineWidth=d;c.beginPath();c.moveTo(R*d-8*d,R*d);c.lineTo(R*d+8*d,R*d);c.moveTo(R*d,R*d-8*d);c.lineTo(R*d,R*d+8*d);c.stroke();
+  c.fillStyle='rgba(16,18,22,.8)';c.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);c.fillStyle='#ffd23f';c.font=(12*d)+'px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('×'+k,R*d,2*R*d-17*d);
+}
+async function loupePdf(p,wx,wy,s,tok){
+  const e=p.pg.find(e=>{const y=p.ph-wy;return y>=e.oy-1&&y<=e.oy+e.h+1;});if(!e||!e.page)return;
+  const R=110,d=devicePixelRatio||1,S=s*d,x0=wx-e.ox-R/s,y0=(p.ph-wy)-e.oy-R/s;
+  const c=document.createElement('canvas');c.width=c.height=2*R*d;
+  try{await e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:S,rotation:e.rot,offsetX:-x0*S,offsetY:-y0*S})}).promise;}catch(x){return;}
+  if(tok!==LOUPE.tok||!loupeOn())return;
+  const L=$('loupe').getContext('2d');L.save();L.beginPath();L.arc(R*d,R*d,R*d-1,0,Math.PI*2);L.clip();
+  const px0=(0-x0)*S,py0=(0-y0)*S;L.beginPath();L.rect(px0,py0,e.w*S,e.h*S);L.clip();   // только сам лист — поля вокруг остаются как на экране
+  const f=pdfFilter();if(f)L.filter=f;L.drawImage(c,0,0);L.restore();
+  L.lineWidth=2*d;L.strokeStyle='#ffd23f';L.beginPath();L.arc(R*d,R*d,R*d-1,0,Math.PI*2);L.stroke();
+  L.strokeStyle='rgba(217,130,43,.8)';L.lineWidth=d;L.beginPath();L.moveTo(R*d-8*d,R*d);L.lineTo(R*d+8*d,R*d);L.moveTo(R*d,R*d-8*d);L.lineTo(R*d,R*d+8*d);L.stroke();
+  L.fillStyle='rgba(16,18,22,.8)';L.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);L.fillStyle='#ffd23f';L.font=(12*d)+'px system-ui,sans-serif';L.textAlign='center';L.textBaseline='middle';L.fillText('×'+Math.round(s/p.s),R*d,2*R*d-17*d);
+}
+$('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;loupeSet();if(LOUPE.on)flash('Лупа: водите курсором; колесо — увеличение, левая кнопка с удержанием — ещё ×2. Z — лупа, пока удерживаете');};
+document.addEventListener('keydown',e=>{if((e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я')&&!e.ctrlKey&&!e.metaKey&&!e.repeat&&viewerShown()&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')){LOUPE.key=true;loupeSet();}});
+document.addEventListener('keyup',e=>{if(e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я'){LOUPE.key=false;loupeSet();}});
+window.addEventListener('blur',()=>{LOUPE.key=false;LOUPE.boost=false;loupeSet();});
+document.addEventListener('pointerup',()=>{if(LOUPE.boost){LOUPE.boost=false;if(loupeOn())loupeDraw();}});
+/* ---------- сохранить вид картинкой (PNG): всё, только PDF или только DXF; по желанию — в буфер обмена ---------- */
+function pngOpen(){const M=$('pngMenu');M.hidden=!M.hidden;$('pngClip').checked=!!SET.pngClip;
+  const kinds=new Set(VW.set.map((x,i)=>panes[i]&&panes[i].isPdf?'pdf':'dxf'));$('pngOnlyPdf').disabled=!kinds.has('pdf');$('pngOnlyDxf').disabled=!kinds.has('dxf');}
+async function pngSave(){
+  const what=(document.querySelector('input[name=pngWhat]:checked')||{}).value||'all';$('pngMenu').hidden=true;
+  const ps=panes.slice(0,VW.set.length).filter(p=>p.it&&(what==='all'||(what==='pdf')===!!p.isPdf));if(!ps.length){flash('Нечего сохранять');return;}
+  const d=devicePixelRatio||1,stage=$('stage').getBoundingClientRect();
+  let rects=ps.map(p=>{const r=p.cv.getBoundingClientRect();return {p,x:(r.left-stage.left)*d,y:(r.top-stage.top)*d,w:p.cv.width,h:p.cv.height};});
+  if(what!=='all'){let x=0;rects=rects.map(r=>{const o=Object.assign({},r,{x,y:0});x+=r.w;return o;});}
+  const W=Math.max(...rects.map(r=>r.x+r.w)),H=Math.max(...rects.map(r=>r.y+r.h)),C=document.createElement('canvas');C.width=Math.round(W);C.height=Math.round(H);
+  const c=C.getContext('2d');c.fillStyle=getComputedStyle(document.body).backgroundColor||'#000';c.fillRect(0,0,C.width,C.height);
+  for(const r of rects){c.drawImage(r.p.cv,r.x,r.y);   // в картинку попадает то, что на экране: размеры, проверка, сравнение
+    const t=r.p.it.name+(r.p.dims()?'  ·  '+r.p.dims():'');c.font=(12*d)+'px system-ui,sans-serif';const tw=c.measureText(t).width+12*d;
+    c.fillStyle='rgba(16,18,22,.8)';c.fillRect(r.x+6*d,r.y+6*d,tw,20*d);c.fillStyle='#e6e9ee';c.textBaseline='middle';c.fillText(t,r.x+12*d,r.y+16.5*d);}
+  const blob=await new Promise(res=>C.toBlob(res,'image/png'));if(!blob){flash('Не удалось создать картинку');return;}
+  const name=(ps[0].it.name.replace(/\.(dxf|pdf)$/i,'')+(ps.length>1?' и ещё '+(ps.length-1):'')+'.png').replace(/[\\/:*?"<>|]/g,'_');
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  let clip='';if($('pngClip').checked){try{await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);clip=' и скопирована в буфер — можно вставить Ctrl+V';}catch(e){clip=' (в буфер скопировать не удалось: '+e.message+')';}}
+  flash('Картинка сохранена: '+name+clip);
+}
+$('vPng').onclick=e=>{e.stopPropagation();pngOpen();};$('pngGo').onclick=pngSave;$('pngClip').onchange=e=>{SET.pngClip=e.target.checked;saveSet();};
+document.addEventListener('click',e=>{if(!e.target.closest('#pngMenu')&&e.target.id!=='vPng')$('pngMenu').hidden=true;});
 function cycleLineK(){const n=LINEMODES.length-(anyLw()?0:1);let i=(LINEMODES.indexOf(lineMode())+1)%n;const m=LINEMODES[i];
   SET.lw=m[1];SET.lineK=m[2];saveSet();panes.forEach(p=>p.draw());$('sLineK').value=String(SET.lineK);updateBar();flash('Линии DXF: '+m[0]);}
 $('sScope').onchange=e=>{SET.pairScope=e.target.value;saveSet();if(VW.idx>=0&&viewerShown())showItem(VW.idx);};
@@ -4265,6 +4409,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='0')apDo(p=>p.setXf({rot:0,mirror:false}));
   else if(/^[oOщЩ]$/.test(k))apDo(p=>p.toggleOrig());
   else if((k==='Home'||k==='End')&&docked()&&!VW.full&&view.length)showItem(k==='Home'?0:view.length-1);  // окно рядом: первый / последний файл
+  else if(e.shiftKey&&/^[fFаА]$/.test(k))$('vFitW').click();
   else if(k==='Home'||/^[fFаА]$/.test(k))$('vFit').click();
   else if((k==='+'||k==='=')&&ap)ap.zoomAt(ap.W/2,ap.H/2,1.25);
   else if((k==='-'||k==='_')&&ap)ap.zoomAt(ap.W/2,ap.H/2,0.8);

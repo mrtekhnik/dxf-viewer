@@ -180,6 +180,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 #tblBox{background:var(--panel);border:1px solid var(--line);border-radius:12px;flex:1;display:flex;flex-direction:column;overflow:hidden}
 #tblBox .pp-h{gap:8px;flex-wrap:wrap}#tblScroll{overflow:auto;flex:1}
 .mut{color:var(--mut);font-size:12px}
+#loupe{position:fixed;z-index:30;pointer-events:none;border-radius:50%;box-shadow:0 6px 24px rgba(0,0,0,.55)}#loupe[hidden]{display:none}
+#pngMenu label{display:flex;gap:6px;align-items:center;padding:3px 4px;white-space:nowrap}
+button.warn{border-color:#d9822b;color:#ffb36b}
 #rulesBody input[type=number],#rulesBody textarea{background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font:inherit}
 table.tbl{border-collapse:collapse;width:100%;font-size:13px}
 table.tbl th{position:sticky;top:0;background:var(--panel);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);cursor:pointer;white-space:nowrap}
@@ -262,7 +265,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v3.9.4</small></div>
+  <div class="brand">DXF <small>+PDF · v4.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -344,6 +347,17 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
     <span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span>
     <button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button>
     <button id="vFit" title="Показать всё (F, двойной клик)">Показать всё</button>
+    <button id="vFitW" hidden title="Вписать по ширине окна (Shift+F)">↔ По ширине</button>
+    <button id="vLoupe" title="Лупа (или удерживайте Z): колесо — увеличение, левая кнопка с удержанием — ещё ×2">🔍</button>
+    <button id="vPdfRot" hidden class="warn">⤾ Повернуть лист</button>
+    <span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼 PNG</button>
+      <div id="pngMenu" class="menu" hidden style="right:0;left:auto;min-width:240px">
+        <label><input type="radio" name="pngWhat" value="all" checked> всё, что на экране</label>
+        <label><input type="radio" name="pngWhat" id="pngOnlyPdf" value="pdf"> только чертежи PDF</label>
+        <label><input type="radio" name="pngWhat" id="pngOnlyDxf" value="dxf"> только развёртки DXF</label>
+        <label><input type="checkbox" id="pngClip"> ещё и копировать в буфер обмена</label>
+        <button id="pngGo">Сохранить PNG</button>
+      </div></span>
     <button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒 синхронно</button>
     <button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button>
     <button id="vMon" hidden title="Пара текущего файла — на втором мониторе">🖵 2-й монитор</button>
@@ -394,6 +408,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="pp-s" style="margin:0">Файлы сопоставляются по обозначению (децимальному номеру), проверяется содержимое: = одинаковые, ≈ пересохранён (геометрия DXF та же), ≠ отличается. Если в сетке выделен файл — сразу откроется его сравнение; не нашлась пара по имени — список похожих по габариту.</div>
   <input id="inCmp" type="file" webkitdirectory multiple hidden>
 </div>
+<canvas id="loupe" hidden></canvas>
 <div id="tblPanel" hidden>
  <div id="tblBox">
   <div class="pp-h"><b id="tblTitle">Таблица DXF</b><span id="tblProg" class="mut"></span><span class="sp"></span>
@@ -436,6 +451,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Картинка PNG</span><select id="sPngClip"><option value="0">только сохранять файлом</option><option value="1">сохранять и копировать в буфер обмена</option></select></div>
   <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
   <div class="set-row"><span>Сравнение двух DXF</span><select id="sCmpGeo"><option value="1">сразу сравнивать контуры</option><option value="0">просто рядом</option></select></div>
   <div class="set-row"><span>Мигание в сравнении (пробел)</span><select id="sBlink"><option value="0">выключено</option><option value="1">включено: пробел — по очереди левая, правая, обе</option></select></div>
