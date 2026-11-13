@@ -910,7 +910,7 @@ class Pane{
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
     cv.addEventListener('pointerleave',()=>{if(LOUPE.p===this)$('loupe').hidden=true;});
     cv.addEventListener('wheel',e=>{e.preventDefault();
-      if(loupeOn()){LOUPE.k=Math.max(2,Math.min(16,Math.round(LOUPE.k*(e.deltaY<0?1.25:0.8)*4)/4));loupeDraw();return;}   // лупа: колесо — её увеличение
+      if(loupeOn()||LOUPE.on){loupeK(e.deltaY<0?1.25:0.8);return;}   // лупа включена: колесо меняет её увеличение (заранее — до нажатия кнопки)
       const [x,y]=pos(e);const k=e.deltaMode===1?33:e.deltaMode===2?400:1,dy=e.deltaY*k;
       if(this.isPdf&&this.cont&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){ // непрерывный PDF: колесо — прокрутка, Ctrl/Shift+колесо — масштаб
         this.fitted=false;this.cy-=dy/this.s;this.cx+=e.deltaX*k/this.s;this.clampCont();this.draw();this.changed();return;}
@@ -2021,6 +2021,8 @@ const loupeOn=()=>LOUPE.key||(LOUPE.on&&LOUPE.down);   // лупа видна: �
 function loupeOff(){LOUPE.on=false;LOUPE.key=false;LOUPE.down=false;LOUPE.boost=false;loupeSet();}
 function loupeSet(){const on=loupeOn()&&viewerShown();$('vLoupe').classList.toggle('on',LOUPE.on);$('loupe').hidden=!on||!LOUPE.p;
   for(const p of panes)p.cv.style.cursor=on?'none':LOUPE.on?'zoom-in':(MEAS.on?'crosshair':'');if(on&&LOUPE.p)loupeDraw();}
+function loupeK(f){LOUPE.k=Math.max(2,Math.min(16,Math.round(LOUPE.k*f*4)/4));SET.loupeK=LOUPE.k;saveSet();if(loupeOn())loupeDraw();else flash('Лупа ×'+String(LOUPE.k).replace('.',','));}
+if(SET.loupeK>=2&&SET.loupeK<=16)LOUPE.k=SET.loupeK;
 function loupeMove(p,x,y){LOUPE.p=p;LOUPE.x=x;LOUPE.y=y;if(!loupeOn())return;$('loupe').hidden=false;loupeDraw();}
 function loupeDraw(){
   const p=LOUPE.p;if(!p||!p.doc||!viewerShown()){$('loupe').hidden=true;return;}const L=$('loupe'),R=LR(),d=devicePixelRatio||1,k=LOUPE.k*(LOUPE.boost?2:1);
@@ -2662,6 +2664,7 @@ document.addEventListener('keydown',e=>{
   if(/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName))return;
   if(k==='Escape'&&!$('pickPanel').hidden){pickClose();return;}
   if(k==='Escape'&&(LOUPE.on||LOUPE.key)){loupeOff();return;}
+  if(LOUPE.on&&viewerShown()&&(k==='+'||k==='='||k==='-'||k==='_')){loupeK(k==='-'||k==='_'?0.8:1.25);return;}   // лупа включена: + / − — её увеличение
   if(k==='Escape'&&!$('rulesPanel').hidden){$('rulesPanel').hidden=true;return;}
   if(!$('tblPanel').hidden){if(k==='Escape'){$('tblPanel').hidden=true;TBL.tok++;}return;}
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний
