@@ -1003,7 +1003,7 @@ class Pane{
         if(ptrs.size===0&&e.type==='pointerup'&&!multi){const [x,y]=pos(e),dx=x-downX,dy=y-downY,dt=performance.now()-downT;
           const sc=this.isPdf&&this.cont,fitsW=sc&&this.pw*this.s<=this.W*1.02;
           if(sc&&fitsW&&dt<800&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){muiStep(dx<0?1:-1);return;}
-          if(moved&&(sc||!this.fitted)){muiFling(this);return;}   // прокрутка / сдвиг — с разгоном, как в телефоне       // страницы подряд: ← → — тоже файлы
+          if(moved&&sc){muiFling(this);return;}   // страницы подряд: прокрутка с разгоном, как в телефоне       // страницы подряд: ← → — тоже файлы
           if(this.fitted&&!sc&&dt<800){
             if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){muiStep(dx<0?1:-1);return;}                       // ← → — соседний файл
             if(Math.abs(dy)>45&&Math.abs(dy)>Math.abs(dx)*1.3){if(this.isPdf&&this.doc&&this.doc.pages>1)muiPage(dy<0?1:-1);return;}   // ↑ ↓ — страницы PDF
@@ -2266,14 +2266,9 @@ function muiFling(p){   // инерция после прокрутки паль
     MT.fl=requestAnimationFrame(f);};
   MT.fl=requestAnimationFrame(f);
 }
-function muiSlide(axis,d,act){   // плавный переход: старый лист уезжает, новый въезжает
-  const st=$('stage');if(!st.animate||matchMedia('(prefers-reduced-motion: reduce)').matches){act();return;}
-  const T=axis==='x'?'translateX':'translateY',o=st.animate([{transform:T+'(0)',opacity:1},{transform:T+'('+(-d*28)+'%)',opacity:.15}],{duration:130,easing:'ease-in'});
-  o.onfinish=()=>{act();st.animate([{transform:T+'('+(d*28)+'%)',opacity:.15},{transform:T+'(0)',opacity:1}],{duration:190,easing:'ease-out'});};
-}
-const muiStep=d=>muiSlide('x',d,()=>step(d));
+const muiStep=d=>step(d);   // листание — сразу, без эффектов
 function muiPage(d){const p=panes[VW.active];if(!p||!p.isPdf||!p.doc)return;const n=p.pageNo+d;if(n<1||n>p.doc.pages){flash(d>0?'Последняя страница':'Первая страница');return;}
-  if(p.cont){p.pageGo(d);return;}muiSlide('y',d,()=>p.pageGo(d));}
+  p.pageGo(d);}
 function viewBB(p){   // границы листа / детали в координатах экрана (с учётом поворота)
   if(p.isPdf)return [0,0,p.pw||p.doc.bbox[2],p.ph||p.doc.bbox[3]];
   let b=p.doc&&p.doc.bbox;if(!b)return null;

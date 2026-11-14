@@ -303,7 +303,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.3.2</small></div>
+  <div class="brand">DXF <small>+PDF · v4.3.3</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -735,7 +735,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <li><b>Список</b>: вверху — название, 📂 Открыть и <b>⋯</b> — все остальные команды (ярлыки, история, вид, дерево, таблица, сравнение, настройки, справка). Ниже — фильтр по имени.</li>
 <li><b>Просмотр</b> — на весь экран. Касание <b>в центре</b> — показать или спрятать панели. Сверху — имя, номер файла и страницы, ⇕ (все страницы подряд / по одной), ▲▼ страницы, ✕. Снизу — ‹ ›, ⤢ вписать, ⇄ чертёж ⇄ развёртка, 📏 размеры (для DXF), <b>⋯</b> — все команды просмотра, в том числе 𝐓 текст из PDF.</li>
 <li><b>Листать файлы</b>: свайп влево / вправо или касание <b>левого / правого края</b> экрана (как в Telegram).</li>
-<li><b>Страницы PDF</b>: свайп вверх / вниз или касание <b>верхнего / нижнего края</b> экрана; страница плавно уезжает, следующая въезжает. Файлы при листании так же сдвигаются вбок.</li>
+<li><b>Страницы PDF</b>: свайп вверх / вниз или касание <b>верхнего / нижнего края</b> экрана.</li>
 <li><b>Все страницы подряд</b> (сквозной просмотр): кнопка <b>⇕</b> вверху. Тогда страницы листаются пальцем вверх-вниз как лента — с разгоном: толкнули и отпустили, лента едет дальше и плавно останавливается; свайп влево / вправо — по-прежнему соседний файл. Настройка своя для телефона, на компьютер не влияет.</li>
 <li><b>Масштаб</b>: двумя пальцами или двойное касание (ещё двойное — вписать). Вписанный лист пальцем не сдвигается — только листается; увеличенный двигается, но край листа не уходит дальше края экрана. Если почти вернули к «вписать» — встанет ровно.</li>
 <li><b>Всплывающие подсказки</b>: в ⚙ можно выбрать, сколько их держать (2, 4, 6, 10 с), или не показывать вовсе.</li>
@@ -3084,7 +3084,7 @@ class Pane{
         if(ptrs.size===0&&e.type==='pointerup'&&!multi){const [x,y]=pos(e),dx=x-downX,dy=y-downY,dt=performance.now()-downT;
           const sc=this.isPdf&&this.cont,fitsW=sc&&this.pw*this.s<=this.W*1.02;
           if(sc&&fitsW&&dt<800&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){muiStep(dx<0?1:-1);return;}
-          if(moved&&(sc||!this.fitted)){muiFling(this);return;}   // прокрутка / сдвиг — с разгоном, как в телефоне       // страницы подряд: ← → — тоже файлы
+          if(moved&&sc){muiFling(this);return;}   // страницы подряд: прокрутка с разгоном, как в телефоне       // страницы подряд: ← → — тоже файлы
           if(this.fitted&&!sc&&dt<800){
             if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){muiStep(dx<0?1:-1);return;}                       // ← → — соседний файл
             if(Math.abs(dy)>45&&Math.abs(dy)>Math.abs(dx)*1.3){if(this.isPdf&&this.doc&&this.doc.pages>1)muiPage(dy<0?1:-1);return;}   // ↑ ↓ — страницы PDF
@@ -4347,14 +4347,9 @@ function muiFling(p){   // инерция после прокрутки паль
     MT.fl=requestAnimationFrame(f);};
   MT.fl=requestAnimationFrame(f);
 }
-function muiSlide(axis,d,act){   // плавный переход: старый лист уезжает, новый въезжает
-  const st=$('stage');if(!st.animate||matchMedia('(prefers-reduced-motion: reduce)').matches){act();return;}
-  const T=axis==='x'?'translateX':'translateY',o=st.animate([{transform:T+'(0)',opacity:1},{transform:T+'('+(-d*28)+'%)',opacity:.15}],{duration:130,easing:'ease-in'});
-  o.onfinish=()=>{act();st.animate([{transform:T+'('+(d*28)+'%)',opacity:.15},{transform:T+'(0)',opacity:1}],{duration:190,easing:'ease-out'});};
-}
-const muiStep=d=>muiSlide('x',d,()=>step(d));
+const muiStep=d=>step(d);   // листание — сразу, без эффектов
 function muiPage(d){const p=panes[VW.active];if(!p||!p.isPdf||!p.doc)return;const n=p.pageNo+d;if(n<1||n>p.doc.pages){flash(d>0?'Последняя страница':'Первая страница');return;}
-  if(p.cont){p.pageGo(d);return;}muiSlide('y',d,()=>p.pageGo(d));}
+  p.pageGo(d);}
 function viewBB(p){   // границы листа / детали в координатах экрана (с учётом поворота)
   if(p.isPdf)return [0,0,p.pw||p.doc.bbox[2],p.ph||p.doc.bbox[3]];
   let b=p.doc&&p.doc.bbox;if(!b)return null;
