@@ -18,7 +18,7 @@ async def main():
       await touch([[(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n)] for i in range(n+1)]+[[]]); await pg.wait_for_timeout(700)
     async def tap(x,y): await touch([[(x,y)],[]],dt=30); 
     await pg.goto('file:///home/claude/dxf-viewer.html')
-    fs=sorted(f for f in glob.glob('tree/Изделие 320/**/*.*',recursive=True) if os.path.isfile(f))+['dxf/деталь_01.pdf']
+    fs=sorted(f for f in glob.glob('tree/Изделие 320/**/*.*',recursive=True) if os.path.isfile(f))+['dxf/деталь_01.pdf','blk/many.pdf']
     await pg.set_input_files('#inFiles',fs); await pg.wait_for_timeout(2500)
     print('mui',await pg.evaluate("document.body.classList.contains('mui')"),'header menu',await pg.is_visible('#mHMenu'),'pins hidden',not await pg.is_visible('#btnPins'),'brand',await pg.is_visible('.brand'))
     await pg.tap('#mHMenu'); await pg.wait_for_timeout(300); print('sheet pins visible',await pg.is_visible('#btnPins'),await pg.is_visible('#btnSet'))
@@ -63,11 +63,19 @@ async def main():
     await tap(200,400); await pg.wait_for_timeout(600)
     await pg.tap('#mMore'); await pg.wait_for_timeout(300); print('sheet visible',await pg.is_visible('#vLoupe'),await pg.is_visible('#vTxt'))
     await pg.screenshot(path='m3_sheet.png')
-    await pg.tap('#vCont'); await pg.wait_for_timeout(1500); print('cont on',await pg.evaluate('panes[0].cont'))
+    await pg.evaluate("document.body.classList.remove('mui-sheet')"); await pg.wait_for_timeout(100)
+    print('text in menu, not bottom:', await pg.is_hidden('#mTool'), '| top cont btn', await pg.is_visible('#mCont'))
+    m=await pg.evaluate("view.findIndex(x=>x.name==='many.pdf')"); await pg.evaluate(f'showItem({m})'); await pg.wait_for_timeout(1500); n=m
+    await pg.evaluate('muiUi(true)'); await pg.wait_for_timeout(200)
+    await pg.tap('#mCont'); await pg.wait_for_timeout(1500); print('cont on',await pg.evaluate('panes[0].cont'))
     await pg.evaluate("document.body.classList.remove('mui-sheet','mui-ui')")
-    cy0=await pg.evaluate('panes[0].cy'); await swipe(200,600,200,200); cy1=await pg.evaluate('panes[0].cy'); print('cont scroll moved', cy1!=cy0, 'idx same', await pg.evaluate(f'VW.idx')==n)
+    cy0=await pg.evaluate('panes[0].cy'); await touch([[(200,500-i*15)] for i in range(6)]+[[]],dt=12); cy1=await pg.evaluate('panes[0].cy'); await pg.wait_for_timeout(600); cy2=await pg.evaluate('panes[0].cy')
+    print('dbg', await pg.evaluate('[MT.vx,MT.vy,performance.now()-MT.pt,MT.fl,panes[0].cont,panes[0].fitted]'), cy0,cy1,cy2)
+    print('cont scroll moved', cy1!=cy0, 'fling continued', cy2!=cy1, 'idx same', await pg.evaluate(f'VW.idx')==n)
     await pg.evaluate("muiUi(true)"); await pg.wait_for_timeout(200)
-    await pg.tap('#mMore'); await pg.wait_for_timeout(200); await pg.tap('#vCont'); await pg.wait_for_timeout(1200); print('cont off',not await pg.evaluate('panes[0].cont'))
+    await pg.tap('#mCont'); await pg.wait_for_timeout(1200); print('cont off',not await pg.evaluate('panes[0].cont'))
+    await pg.evaluate("SET.flashT='off';flash('проверка')"); print('flash off -> no toast', not await pg.evaluate("$('status').classList.contains('flash')"))
+    await pg.evaluate("SET.flashT='2';flash('проверка')"); await pg.wait_for_timeout(2300); print('flash 2s gone', not await pg.evaluate("$('status').classList.contains('flash')"))
     await pg.evaluate("document.body.classList.remove('mui-sheet')")
     await pg.tap('#mClose') if await pg.is_visible('#mClose') else None
     await pg.wait_for_timeout(500); print('closed',not await pg.evaluate('VW.full'))

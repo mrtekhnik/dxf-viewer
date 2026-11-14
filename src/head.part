@@ -300,7 +300,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.3.1</small></div>
+  <div class="brand">DXF <small>+PDF · v4.3.2</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -480,6 +480,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Всплывающие подсказки</span><select id="sFlash"><option value="2">2 с</option><option value="4">4 с</option><option value="6">6 с</option><option value="10">10 с</option><option value="off">не показывать</option></select></div>
   <div class="set-row"><span>Интерфейс</span><select id="sUi"><option value="auto">авто (телефон — свой)</option><option value="mob">как на телефоне</option><option value="pc">как на компьютере</option></select></div>
   <div class="set-row"><span>Размер лупы</span><select id="sLoupe"><option value="s">маленькая</option><option value="m">средняя</option><option value="l">большая</option></select></div>
   <div class="set-row"><span>Картинка PNG</span><select id="sPngClip"><option value="0">только сохранять файлом</option><option value="1">сохранять и копировать в буфер обмена</option></select></div>

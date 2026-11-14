@@ -303,7 +303,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.3.1</small></div>
+  <div class="brand">DXF <small>+PDF · v4.3.2</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -483,6 +483,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Всплывающие подсказки</span><select id="sFlash"><option value="2">2 с</option><option value="4">4 с</option><option value="6">6 с</option><option value="10">10 с</option><option value="off">не показывать</option></select></div>
   <div class="set-row"><span>Интерфейс</span><select id="sUi"><option value="auto">авто (телефон — свой)</option><option value="mob">как на телефоне</option><option value="pc">как на компьютере</option></select></div>
   <div class="set-row"><span>Размер лупы</span><select id="sLoupe"><option value="s">маленькая</option><option value="m">средняя</option><option value="l">большая</option></select></div>
   <div class="set-row"><span>Картинка PNG</span><select id="sPngClip"><option value="0">только сохранять файлом</option><option value="1">сохранять и копировать в буфер обмена</option></select></div>
@@ -732,11 +733,12 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <p>На телефоне у программы свой интерфейс — крупные кнопки, жесты. Версия для компьютера от этого не меняется. Включается сама; в ⚙ → «Интерфейс» можно выбрать вручную.</p>
 <ul>
 <li><b>Список</b>: вверху — название, 📂 Открыть и <b>⋯</b> — все остальные команды (ярлыки, история, вид, дерево, таблица, сравнение, настройки, справка). Ниже — фильтр по имени.</li>
-<li><b>Просмотр</b> — на весь экран. Касание <b>в центре</b> — показать или спрятать панели. Сверху — имя, номер файла и страницы, ▲▼ страницы, ✕. Снизу — ‹ ›, ⤢ вписать, ⇄ чертёж ⇄ развёртка, 𝐓 текст (PDF) или 📏 размеры (DXF), <b>⋯</b> — все команды просмотра.</li>
+<li><b>Просмотр</b> — на весь экран. Касание <b>в центре</b> — показать или спрятать панели. Сверху — имя, номер файла и страницы, ⇕ (все страницы подряд / по одной), ▲▼ страницы, ✕. Снизу — ‹ ›, ⤢ вписать, ⇄ чертёж ⇄ развёртка, 📏 размеры (для DXF), <b>⋯</b> — все команды просмотра, в том числе 𝐓 текст из PDF.</li>
 <li><b>Листать файлы</b>: свайп влево / вправо или касание <b>левого / правого края</b> экрана (как в Telegram).</li>
-<li><b>Страницы PDF</b>: свайп вверх / вниз или касание <b>верхнего / нижнего края</b> экрана.</li>
-<li><b>Все страницы подряд</b> (сквозной просмотр): <b>⋯</b> → кнопка ⇕. Тогда страницы листаются пальцем вверх-вниз как лента, свайп влево / вправо — по-прежнему соседний файл. Настройка своя для телефона, на компьютер не влияет.</li>
+<li><b>Страницы PDF</b>: свайп вверх / вниз или касание <b>верхнего / нижнего края</b> экрана; страница плавно уезжает, следующая въезжает. Файлы при листании так же сдвигаются вбок.</li>
+<li><b>Все страницы подряд</b> (сквозной просмотр): кнопка <b>⇕</b> вверху. Тогда страницы листаются пальцем вверх-вниз как лента — с разгоном: толкнули и отпустили, лента едет дальше и плавно останавливается; свайп влево / вправо — по-прежнему соседний файл. Настройка своя для телефона, на компьютер не влияет.</li>
 <li><b>Масштаб</b>: двумя пальцами или двойное касание (ещё двойное — вписать). Вписанный лист пальцем не сдвигается — только листается; увеличенный двигается, но край листа не уходит дальше края экрана. Если почти вернули к «вписать» — встанет ровно.</li>
+<li><b>Всплывающие подсказки</b>: в ⚙ можно выбрать, сколько их держать (2, 4, 6, 10 с), или не показывать вовсе.</li>
 <li>В режимах «Текст» и «Размеры» касания работают на них, а не на листание; выйти — той же кнопкой внизу. Кнопка «Назад» телефона закрывает просмотр.</li>
 </ul>
 </section>
@@ -2620,8 +2622,10 @@ function updateStatus(){
   $('logBadge').hidden=!bad;$('logBadge').textContent=bad;$('btnLog').hidden=!bad;
   if(!$('logPanel').hidden)renderLog();
 }
-function flash(msg){const s=$('status');s.textContent=msg;s.classList.add('flash');clearTimeout(flashT);
-  flashT=setTimeout(()=>{flashT=0;s.classList.remove('flash');updateStatus();},6000);}
+function flash(msg){const s=$('status'),t=SET.flashT||(typeof MUI!=='undefined'&&MUI?'4':'6');clearTimeout(flashT);
+  if(t==='off'){s.classList.remove('flash');s.textContent=msg;flashT=setTimeout(()=>{flashT=0;updateStatus();},4000);return;}   // подсказки выключены — только строка состояния, без всплывающего окошка
+  s.textContent=msg;s.classList.add('flash');
+  flashT=setTimeout(()=>{flashT=0;s.classList.remove('flash');updateStatus();},(+t||6)*1000);}
 let logOnlyPath=null;
 function openLog(path){logOnlyPath=path||null;$('logPanel').hidden=false;renderLog();}
 function renderLog(){
@@ -3044,6 +3048,7 @@ class Pane{
       setActive(this);try{cv.setPointerCapture(e.pointerId);}catch(x){}const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});
       if(ptrs.size===1){downT=performance.now();downX=x;downY=y;moved=false;multi=false;fitDown=this.fitted;sv0={s:this.s,cx:this.cx,cy:this.cy};
         MEAS.drag=null;if(MEAS.on&&e.button===0&&!loupeOn()&&this.doc&&!this.isPdf&&!this.ov)measGrab(this,x,y);
+        if(MUI){cancelAnimationFrame(MT.fl);MT.fl=0;MT.vx=MT.vy=0;MT.pt=0;}
         TXT.drag=null;if(TXT.on&&e.button===0&&this.isPdf&&this.pg.length&&!loupeOn())TXT.drag={p:this,x0:x,y0:y,x1:x,y1:y,add:e.ctrlKey||e.shiftKey};}else{moved=true;multi=true;MEAS.drag=null;TXT.drag=null;}
     });
     cv.addEventListener('pointermove',e=>{
@@ -3058,7 +3063,8 @@ class Pane{
       if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
       else if(ptrs.size===1&&MUI&&multi&&e.pointerType!=='mouse'){this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;muiClamp(this);this.draw();this.changed();}   // после щипка остался один палец
       else if(ptrs.size===1){
-        if(MUI&&e.pointerType!=='mouse'&&!multi){if(this.fitted&&!(this.isPdf&&this.cont))return;   // телефон: лист «вписан» — не ёрзает, палец только листает; страницы подряд — прокрутка
+        if(MUI&&e.pointerType!=='mouse'&&!multi){const tn=performance.now();if(MT.pt){const k=Math.max(1,tn-MT.pt);MT.vx=0.6*MT.vx+0.4*(x-p.x)/k;MT.vy=0.6*MT.vy+0.4*(y-p.y)/k;}MT.pt=tn;
+          if(this.fitted&&!(this.isPdf&&this.cont))return;   // телефон: лист «вписан» — не ёрзает, палец только листает; страницы подряд — прокрутка
           if(this.isPdf&&this.cont)this.fitted=false;
           this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;muiClamp(this);this.draw();this.changed();return;}
         this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
@@ -3077,10 +3083,11 @@ class Pane{
         if(ptrs.size===0&&multi){if(this.s<=this.fitView().s*1.06)this.fit();return;}   // после щипка почти «вписан» — вписать точно
         if(ptrs.size===0&&e.type==='pointerup'&&!multi){const [x,y]=pos(e),dx=x-downX,dy=y-downY,dt=performance.now()-downT;
           const sc=this.isPdf&&this.cont,fitsW=sc&&this.pw*this.s<=this.W*1.02;
-          if(sc&&fitsW&&dt<800&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){step(dx<0?1:-1);return;}       // страницы подряд: ← → — тоже файлы
+          if(sc&&fitsW&&dt<800&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){muiStep(dx<0?1:-1);return;}
+          if(moved&&(sc||!this.fitted)){muiFling(this);return;}   // прокрутка / сдвиг — с разгоном, как в телефоне       // страницы подряд: ← → — тоже файлы
           if(this.fitted&&!sc&&dt<800){
-            if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){step(dx<0?1:-1);return;}                       // ← → — соседний файл
-            if(Math.abs(dy)>45&&Math.abs(dy)>Math.abs(dx)*1.3){if(this.isPdf&&this.doc&&this.doc.pages>1)this.pageGo(dy<0?1:-1);return;}   // ↑ ↓ — страницы PDF
+            if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){muiStep(dx<0?1:-1);return;}                       // ← → — соседний файл
+            if(Math.abs(dy)>45&&Math.abs(dy)>Math.abs(dx)*1.3){if(this.isPdf&&this.doc&&this.doc.pages>1)muiPage(dy<0?1:-1);return;}   // ↑ ↓ — страницы PDF
           }
           if(!moved&&dt<400){muiTap(this,x,y);return;}
           return;}
@@ -3724,6 +3731,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sFlash').value=SET.flashT||(MUI?'4':'6');$('sFlash').onchange=e=>{SET.flashT=e.target.value;saveSet();if(SET.flashT!=='off')flash('Так подсказка будет держаться '+SET.flashT+' с');};
 $('sUi').value=['mob','pc'].includes(SET.ui)?SET.ui:'auto';$('sUi').onchange=e=>{SET.ui=e.target.value;saveSet();if(confirm('Интерфейс поменяется после перезапуска. Перезапустить сейчас?'))location.reload();};
 $('sLoupe').value=['s','m','l'].includes(SET.loupe)?SET.loupe:'m';$('sLoupe').onchange=e=>{SET.loupe=e.target.value;saveSet();};
 $('sPngClip').value=SET.pngClip?'1':'0';$('sPngClip').onchange=e=>{SET.pngClip=e.target.value==='1';saveSet();};
@@ -4329,6 +4337,24 @@ $('txtCopy').onclick=()=>txtCopy();
 $('txtX').onclick=()=>txtClear();
 
 /* ---------- Профиль «телефон»: панели поверх листа, касание в центре — показать/спрятать ---------- */
+function muiFling(p){   // инерция после прокрутки пальцем
+  let vx=MT.vx,vy=MT.vy,t0=performance.now();if(performance.now()-MT.pt>90||Math.hypot(vx,vy)<0.15)return;
+  cancelAnimationFrame(MT.fl);
+  const f=()=>{const t=performance.now(),dt=Math.min(40,t-t0);t0=t;const ox=p.cx,oy=p.cy;
+    p.cx-=vx*dt/p.s;p.cy+=vy*dt/p.s;muiClamp(p);p.fitted=false;p.draw();
+    const k=Math.pow(0.94,dt/16);vx*=k;vy*=k;
+    if(Math.hypot(vx,vy)<0.03||(Math.abs(p.cx-ox)<1e-9&&Math.abs(p.cy-oy)<1e-9)){MT.fl=0;p.changed();return;}
+    MT.fl=requestAnimationFrame(f);};
+  MT.fl=requestAnimationFrame(f);
+}
+function muiSlide(axis,d,act){   // плавный переход: старый лист уезжает, новый въезжает
+  const st=$('stage');if(!st.animate||matchMedia('(prefers-reduced-motion: reduce)').matches){act();return;}
+  const T=axis==='x'?'translateX':'translateY',o=st.animate([{transform:T+'(0)',opacity:1},{transform:T+'('+(-d*28)+'%)',opacity:.15}],{duration:130,easing:'ease-in'});
+  o.onfinish=()=>{act();st.animate([{transform:T+'('+(d*28)+'%)',opacity:.15},{transform:T+'(0)',opacity:1}],{duration:190,easing:'ease-out'});};
+}
+const muiStep=d=>muiSlide('x',d,()=>step(d));
+function muiPage(d){const p=panes[VW.active];if(!p||!p.isPdf||!p.doc)return;const n=p.pageNo+d;if(n<1||n>p.doc.pages){flash(d>0?'Последняя страница':'Первая страница');return;}
+  if(p.cont){p.pageGo(d);return;}muiSlide('y',d,()=>p.pageGo(d));}
 function viewBB(p){   // границы листа / детали в координатах экрана (с учётом поворота)
   if(p.isPdf)return [0,0,p.pw||p.doc.bbox[2],p.ph||p.doc.bbox[3]];
   let b=p.doc&&p.doc.bbox;if(!b)return null;
@@ -4350,9 +4376,9 @@ function muiTap(p,x,y){
   MT.t=now;MT.x=x;MT.y=y;
   const sc=p.isPdf&&p.cont,flat=VW.set.length===1&&(sc?p.pw*p.s<=p.W*1.02:p.fitted);
   const edge=flat?(x<p.W*0.22?-1:x>p.W*0.78?1:0):0;
-  if(edge){MT.t=0;step(edge);return;}                                          // край слева / справа — соседний файл (как в Telegram)
+  if(edge){MT.t=0;muiStep(edge);return;}                                          // край слева / справа — соседний файл (как в Telegram)
   const multiPg=p.isPdf&&p.doc&&p.doc.pages>1,ey=flat&&multiPg?(y<p.H*0.15?-1:y>p.H*0.85?1:0):0;
-  if(ey){MT.t=0;p.pageGo(ey);return;}                                          // край сверху / снизу — страница PDF
+  if(ey){MT.t=0;muiPage(ey);return;}                                          // край сверху / снизу — страница PDF
   clearTimeout(MT.tm);MT.tm=setTimeout(()=>muiUi(),300);                      // центр — показать / спрятать панели
 }
 function muiUi(on){const b=document.body;on=on===undefined?!b.classList.contains('mui-ui'):on;b.classList.toggle('mui-ui',on);if(!on)b.classList.remove('mui-sheet');muiSync();}
@@ -4364,8 +4390,9 @@ function muiSync(){
   if(p&&p.isPdf&&p.doc&&p.doc.pages>1)sub+=(sub?' · ':'')+'стр. '+p.pageNo+' / '+p.doc.pages;
   const dm=$('vDims').textContent;if(dm)sub+=(sub?' · ':'')+dm;
   $('mSub').textContent=sub;
-  const pdf=!!(p&&p.isPdf);$('mTool').textContent=pdf?'𝐓':'📏';$('mTool').title=pdf?'Текст из PDF':'Размеры';
-  $('mTool').classList.toggle('on',pdf?TXT.on:MEAS.on);$('mTool').hidden=pdf?$('vTxt').hidden:$('vMeas').hidden;
+  const pdf=!!(p&&p.isPdf);$('mTool').textContent='📏';$('mTool').title='Размеры';   // текст из PDF — в «⋯»: нужен реже
+  $('mTool').classList.toggle('on',MEAS.on);$('mTool').hidden=pdf||$('vMeas').hidden;
+  $('mCont').hidden=!(pdf&&p.doc&&p.doc.pages>1);$('mCont').classList.toggle('on',!!SET.mCont);
   const vp=$('vPair');$('mPair').hidden=!vp||vp.offsetParent===null&&vp.hidden;$('mPair').textContent=vp?vp.textContent.trim():'';
   $('mPgU').hidden=$('mPgD').hidden=!(pdf&&p.doc&&p.doc.pages>1);
   if(it&&MT.last!==it){if(MT.last&&!document.body.classList.contains('mui-ui'))flash(it.name);MT.last=it;}   // листаем со спрятанными панелями — имя на миг
@@ -4373,15 +4400,16 @@ function muiSync(){
 function muiInit(){
   const V=$('viewer');
   const top=document.createElement('div');top.id='mTop';
-  top.innerHTML='<div class="mt"><div id="mName"></div><div id="mSub"></div></div><button id="mPgU" title="Предыдущая страница">▲</button><button id="mPgD" title="Следующая страница">▼</button><button id="mClose" title="Закрыть">✕</button>';
+  top.innerHTML='<div class="mt"><div id="mName"></div><div id="mSub"></div></div><button id="mCont" title="Все страницы подряд / по одной">⇕</button><button id="mPgU" title="Предыдущая страница">▲</button><button id="mPgD" title="Следующая страница">▼</button><button id="mClose" title="Закрыть">✕</button>';
   const bot=document.createElement('div');bot.id='mBot';
   bot.innerHTML='<button id="mPrev" title="Предыдущий файл">‹</button><button id="mFit" title="Вписать">⤢</button><button id="mPair" title="Чертёж ⇄ развёртка"></button><button id="mTool"></button><button id="mMore" title="Все команды">⋯</button><button id="mNext" title="Следующий файл">›</button>';
   V.appendChild(top);V.appendChild(bot);
   for(const b of [top,bot])b.addEventListener('pointerdown',()=>clearTimeout(MT.auto));
   $('mClose').onclick=()=>$('vClose').click();$('mPrev').onclick=()=>step(-1);$('mNext').onclick=()=>step(1);
-  $('mPgU').onclick=()=>$('vPgPrev').click();$('mPgD').onclick=()=>$('vPgNext').click();
+  $('mCont').onclick=()=>{$('vCont').click();setTimeout(muiSync,50);};
+  $('mPgU').onclick=()=>muiPage(-1);$('mPgD').onclick=()=>muiPage(1);
   $('mFit').onclick=()=>apDo(p=>p.fit());$('mPair').onclick=()=>$('vPair').click();
-  $('mTool').onclick=()=>{const p=panes[VW.active];(p&&p.isPdf?$('vTxt'):$('vMeas')).click();muiSync();};
+  $('mTool').onclick=()=>{$('vMeas').click();muiSync();};
   $('mMore').onclick=e=>{e.stopPropagation();const vb=V.querySelector('.vbar');document.body.classList.toggle('mui-sheet');vb.scrollLeft=0;vb.scrollTop=0;};
   $('stage').addEventListener('pointerdown',()=>document.body.classList.remove('mui-sheet'),true);
   // шапка списка: на виду — название, «Открыть», фильтр; остальное — в «⋯»
