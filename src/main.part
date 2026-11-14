@@ -300,7 +300,7 @@ function openSel(how,d){ // открыть выделенный файл: обы
   showItem(i);if(!docked())setFull(true);
   if(how==='pair')setTimeout(()=>cyclePair(d||1),0);
 }
-$('btnSideG').onclick=()=>openSel('side');
+$('btnSideG').onclick=()=>{if(docked()&&!VW.full&&VW.idx>=0)$('vSide').click();else openSel('side');};   // просмотр в окне — включает/выключает «Рядом»
 const dirPath=p=>p.includes('/')?p.slice(0,p.lastIndexOf('/')):'';
 const folderMode=()=>SET.browse==='folders'&&HASSUB&&!!TREE_ROOT;
 const effDir=()=>curDir||(TREE_ROOT?TREE_ROOT.path:'');
@@ -1134,6 +1134,7 @@ function updateBar(){
   $('vPairMenu').hidden=!has;
   $('vPin').hidden=!(has&&cur.rid);
   $('vSide').classList.toggle('on',SET.side);
+  $('btnSideG').classList.toggle('on',!FOLLOW&&docked()&&!VW.full&&!!SET.side);
   const dx=has&&ap&&ap.doc&&!ap.isPdf&&ap.doc.bbox;$('vXf').hidden=!(dx||(has&&ap&&ap.isPdf&&ap.doc&&ap.doc.pdf));$('vMir').hidden=$('vMirV').hidden=!dx;$('vXfSave').parentNode.hidden=!dx;if(!dx)$('xfMenu').hidden=true;else if(!$('xfMenu').hidden)xfMenuFill();
   const sug=has&&ap&&ap.isPdf&&ap.sugRot!=null&&ap.sugRot!==(ap.prot||0);$('vPdfRot').hidden=!sug;
   if(sug)$('vPdfRot').title='Текст на листе лежит боком — повернуть лист на '+(((ap.sugRot-(ap.prot||0))%360+360)%360)+'° по часовой (запомнится для этого файла)';
@@ -1157,6 +1158,8 @@ function placeViewer(){
   else{if(v.parentNode!==document.body)document.body.insertBefore(v,$('pairPanel'));v.hidden=!VW.full&&!FOLLOW;}
   v.classList.toggle('full',VW.full||!d);
   $('vClose').hidden=d;
+  if(!FOLLOW)$('vSide').hidden=d&&!VW.full;   // просмотр в окне: «Рядом» уже есть в верхней панели — без дубля
+  $('btnSideG').classList.toggle('on',d&&!VW.full&&!!SET.side);
   $('vFull').hidden=!d;$('vFull').textContent=VW.full?'🗗':'⛶';$('vFull').title=VW.full?'Вернуть в окно (Esc)':'На весь экран (Enter, двойной клик по файлу)';
   $('btnGrid').classList.toggle('on',SET.layout!=='list');$('btnList').classList.toggle('on',SET.layout==='list');$('btnPreview').classList.toggle('on',SET.preview);
   layoutStage();

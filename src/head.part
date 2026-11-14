@@ -270,7 +270,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.1.1</small></div>
+  <div class="brand">DXF <small>+PDF · v4.1.2</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
