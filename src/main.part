@@ -2133,21 +2133,26 @@ $('vPdfRot').onclick=()=>{const p=panes[VW.active];if(p&&p.sugRot!=null)p.pdfRot
 /* ---------- Текст из PDF: обвести рамкой или щёлкнуть по надписи — текст копируется в буфер ---------- */
 const TXT={on:false,drag:null};
 const WINANSI='€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008DŽ\u008F\u0090‘’“”•–—˜™š›œ\u009DžŸ';
-function txtFix(s){   // «Ïëèòà» → «Плита»: русские буквы записаны однобайтовой кодировкой без таблицы шрифта
+/* «Ïëèòà» → «Плита», «Ðîçì³ðè» → «Розміри»: русские и украинские буквы записаны однобайтовой кодировкой (cp1251)
+   без таблицы шрифта. Кодировка cp1251 общая для обоих языков (і ї є ґ — тоже в ней).
+   Знаки чертежа не трогаем: Ø × ÷ ° ± ² ³ µ сами по себе — это не «иероглифы» (иначе Ø20 стало бы Ш20). */
+const txtScore=s=>(s.match(/[\u00C0-\u00D6\u00D9-\u00F6\u00F9-\u00FF]/g)||[]).length;   // буквы À…ÿ без × ÷ Ø ø
+function txtFix(s,page){
   if(/[\u0400-\u04FF]/.test(s))return s;
-  const lat=(s.match(/[\u00C0-\u00FF]/g)||[]).length,let_=(s.match(/[A-Za-z\u00C0-\u00FF]/g)||[]).length;
-  if(!lat||lat<let_*0.3)return s;
+  const n=txtScore(s),let_=(s.match(/[A-Za-z\u00C0-\u00FF]/g)||[]).length;
+  if(!(n>=3||(n>=1&&page))||n<let_*0.3)return s;   // 1–2 «буквы» вне такой страницы — скорее настоящая латиница (Größe)
   try{return new TextDecoder('windows-1251').decode(Uint8Array.from(s,ch=>{const c=ch.charCodeAt(0);if(c<256)return c;const i=WINANSI.indexOf(ch);return i>=0?128+i:63;}));}catch(e){return s;}
 }
 const txtBad=s=>{const n=s.replace(/\s/g,'').length;if(!n)return false;const b=(s.match(/[\uE000-\uF8FF\uFFFD\u3400-\u9FFF\u0000-\u0008]/g)||[]).length;return b>=n*0.3;};
 function txtItems(p,e){   // надписи страницы в координатах листа (как на экране, ось Y вниз)
   if(e.txt)return e.txt;
   e.txt=(async()=>{const tc=await e.page.getTextContent(),vp=e.page.getViewport({scale:1,rotation:e.rot}),out=[];
+    const garb=tc.items.reduce((q,t)=>q+(t.str&&!/[\u0400-\u04FF]/.test(t.str)?txtScore(t.str):0),0)>=6;   // на странице много «иероглифов»
     for(const t of tc.items){const str=t.str;if(!str||!str.trim())continue;
       const [a,b,c,d,x,y]=t.transform,fs=Math.hypot(c,d)||Math.hypot(a,b)||1,ul=Math.hypot(a,b)||1,ux=a/ul,uy=b/ul,vx=-uy,vy=ux,w=t.width>0?t.width:str.length*fs*0.5;
       const Q=[[0,-0.22],[w,-0.22],[0,0.95],[w,0.95]].map(([k,m])=>vp.convertToViewportPoint(x+ux*k+vx*fs*m,y+uy*k+vy*fs*m));
       const xs=Q.map(q=>q[0]),ys=Q.map(q=>q[1]),dx=Q[1][0]-Q[0][0],dy=Q[1][1]-Q[0][1],dl=Math.hypot(dx,dy)||1;
-      out.push({s:txtFix(str),x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),ux:dx/dl,uy:dy/dl,cx:(Q[0][0]+Q[3][0])/2,cy:(Q[0][1]+Q[3][1])/2,h:fs});}
+      out.push({s:txtFix(str,garb),x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),ux:dx/dl,uy:dy/dl,cx:(Q[0][0]+Q[3][0])/2,cy:(Q[0][1]+Q[3][1])/2,h:fs});}
     p.draw();return out;})().then(r=>(e.tx=r,r),()=>(e.tx=[],[]));
   return e.txt;
 }
