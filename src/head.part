@@ -129,7 +129,7 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 .vbar{display:flex;gap:6px;align-items:center;padding:6px;background:var(--panel);border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:thin}
 .vbar>*{flex:none}
 .vgrp{display:flex;gap:3px;align-items:center;flex:none}.vbar{gap:10px}
-#vClose{position:sticky;right:0;margin-left:auto;z-index:2;box-shadow:-8px 0 8px var(--panel)}
+#vClose{position:sticky;right:0;margin-left:auto;z-index:2;box-shadow:0 0 0 6px var(--panel),-16px 0 10px var(--panel)}
 #vClose:hover{background:#c42b1c;color:#fff;border-color:#c42b1c}
 @media (max-width:1250px){.vbar .lbl{display:none}}
 #vPgNum{white-space:nowrap}
@@ -270,7 +270,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.1.2</small></div>
+  <div class="brand">DXF <small>+PDF · v4.1.3</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>

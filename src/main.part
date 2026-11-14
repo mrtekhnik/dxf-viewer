@@ -955,7 +955,8 @@ class Pane{
     const pos=e=>{const r=cv.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
     cv.addEventListener('pointerdown',e=>{
       setActive(this);try{cv.setPointerCapture(e.pointerId);}catch(x){}const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});
-      if(ptrs.size===1){downT=performance.now();downX=x;downY=y;moved=false;multi=false;fitDown=this.fitted;sv0={s:this.s,cx:this.cx,cy:this.cy};}else{moved=true;multi=true;}
+      if(ptrs.size===1){downT=performance.now();downX=x;downY=y;moved=false;multi=false;fitDown=this.fitted;sv0={s:this.s,cx:this.cx,cy:this.cy};
+        MEAS.drag=null;if(MEAS.on&&e.button===0&&!loupeOn()&&this.doc&&!this.isPdf&&!this.ov)measGrab(this,x,y);}else{moved=true;multi=true;MEAS.drag=null;}
     });
     cv.addEventListener('pointermove',e=>{
       const [x,y]=pos(e);
@@ -964,6 +965,7 @@ class Pane{
       if(MEAS.on&&!ptrs.size&&e.pointerType==='mouse'&&!loupeOn())measHover(this,x,y);
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
+      if(ptrs.size===1&&MEAS.drag&&MEAS.drag.p===this){if(MEAS.drag.h.drag){if(moved)measDragTo(this,x,y);return;}if(moved)MEAS.drag=null;}   // размеры: тянем размерную линию / надпись
       if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
       else if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
       else if(ptrs.size===2){
@@ -982,6 +984,8 @@ class Pane{
         if(Math.abs(dx)>70&&Math.abs(dy)<60){Object.assign(this,sv0);this.fitted=true;this.draw();step(dx<0?1:-1);return;}
       }
       if(LOUPE.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&e.pointerType==='mouse'&&e.button===0){const [x,y]=pos(e);LOUPE.p=this;LOUPE.x=x;LOUPE.y=y;LOUPE.down=!LOUPE.down;loupeSet();return;}   // лупа с кнопки: клик — показать, ещё клик — убрать
+      if(MEAS.drag&&MEAS.drag.p===this&&ptrs.size===0){const D=MEAS.drag;MEAS.drag=null;msOf(this).sel=D.h.it;MEAS.last=null;this.draw();
+        if(e.type==='pointerup'&&!moved)flash('Размер выбран: Delete — удалить, перетащите — передвинуть'+(D.h.drag?'':' (этот размер не двигается)'));return;}
       if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&!(e.pointerType==='mouse'&&e.button!==0)&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
       if(ptrs.size===0&&!moved&&performance.now()-downT<300){
         const t=performance.now();
@@ -1157,7 +1161,7 @@ function placeViewer(){
   if(d){if(v.parentNode!==$('dock'))$('dock').appendChild(v);v.hidden=false;}
   else{if(v.parentNode!==document.body)document.body.insertBefore(v,$('pairPanel'));v.hidden=!VW.full&&!FOLLOW;}
   v.classList.toggle('full',VW.full||!d);
-  $('vClose').hidden=d;
+  $('vClose').hidden=false;$('vClose').title=d&&!VW.full?'Закрыть просмотр (включить снова — «◫ Просмотр»)':'Закрыть просмотр — назад к миниатюрам (Esc)';
   if(!FOLLOW)$('vSide').hidden=d&&!VW.full;   // просмотр в окне: «Рядом» уже есть в верхней панели — без дубля
   $('btnSideG').classList.toggle('on',d&&!VW.full&&!!SET.side);
   $('vFull').hidden=!d;$('vFull').textContent=VW.full?'🗗':'⛶';$('vFull').title=VW.full?'Вернуть в окно (Esc)':'На весь экран (Enter, двойной клик по файлу)';
@@ -1195,7 +1199,7 @@ $('btnPreview').onclick=()=>{
   sp.addEventListener('pointerup',()=>{sp.classList.remove('drag');saveSet();});
 })();
 
-$('vClose').onclick=()=>setFull(false);
+$('vClose').onclick=()=>{if(docked()&&!VW.full)$('btnPreview').click();else setFull(false);};
 $('vFull').onclick=()=>setFull(!VW.full);
 $('vPrev').onclick=()=>step(-1);
 $('vNext').onclick=()=>step(1);
@@ -1628,7 +1632,7 @@ function anyLw(){return panes.some(p=>p.doc&&!p.isPdf&&p.doc.hasLw);}
    Клик по линии без привязки — длина; по окружности — Ø и длина; по дуге — R, угол и длина дуги.
    Esc — убрать измерения, ещё раз Esc — выйти. Всё в координатах файла, с учётом поворота детали на экране.
    ===================================================================== */
-const MEAS={on:false};
+const MEAS={drag:null,on:false};
 function measEnt(doc){ // элементы и точки привязки детали (один раз на документ)
   if(doc._meas)return doc._meas;const E=[],S=[];
   const arcE=(cx,cy,r,a0,a1,ccw)=>{E.push({t:'A',cx,cy,r,a0,a1,ccw});S.push([cx,cy,'центр']);S.push([cx+r*Math.cos(a0),cy+r*Math.sin(a0),'конец'],[cx+r*Math.cos(a1),cy+r*Math.sin(a1),'конец']);
@@ -1691,7 +1695,35 @@ function dimGeom(p,it){ // экранная геометрия размера: �
 }
 function measInfo(it){ // все величины для подсказки
   const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]);return 'по X '+fmm(dx)+' · по Y '+fmm(dy)+' · по прямой '+fmm(Math.hypot(dx,dy));}
-function measHover(p,x,y){if(!p.doc||p.isPdf||p.ov)return;const M=msOf(p);M.hover=measPick(p,x,y);M.mouse=s2m(p,x,y);M.mw=p.s2w(x,y);p.draw();}
+function measHover(p,x,y){if(!p.doc||p.isPdf||p.ov)return;const M=msOf(p);M.hover=measPick(p,x,y);M.mouse=s2m(p,x,y);M.mw=p.s2w(x,y);
+  const h=measHit(p,x,y);p.cv.style.cursor=h?(h.drag?'move':'pointer'):'crosshair';M.hit=h&&h.it;p.draw();}
+/* поставленные размеры: выбрать (клик), передвинуть (перетащить), удалить (Delete) */
+function segD(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;let t=L?((x-a[0])*dx+(y-a[1])*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);}
+const boxD=(x,y,cx,cy,hw,hh)=>Math.hypot(Math.max(0,Math.abs(x-cx)-hw),Math.max(0,Math.abs(y-cy)-hh));
+function measHit(p,x,y){
+  const M=msOf(p);if(M.pts.length||M.ang||M.rad||M.gap)return null;   // идёт новый размер — не мешаем
+  const snap=M.hover&&M.hover.snap,tw=t=>String(t).length*4.3+4;let best=null,bd=7;
+  const chk=(it,d,drag,weak)=>{if(weak&&snap)return;if(d<bd){bd=d;best={it,drag};}};
+  for(let i=M.items.length-1;i>=0;i--){const it=M.items[i];
+    if(it.t==='lin'){const G=dimGeom(p,it),mx=(G.a2[0]+G.b2[0])/2,my=(G.a2[1]+G.b2[1])/2,t=fmm(G.val);
+      chk(it,segD(x,y,G.a2,G.b2),true);chk(it,boxD(x,y,mx,it.dir==='v'?my:my-11,tw(t),9),true);}
+    else if(it.t==='dist'){const a=m2s(p,...it.a),b=m2s(p,...it.b);chk(it,segD(x,y,a,b),false,true);chk(it,boxD(x,y,(a[0]+b[0])/2-14,(a[1]+b[1])/2-12,tw(fmm(Math.hypot(it.b[0]-it.a[0],it.b[1]-it.a[1]))),9),false);}
+    else if(it.t==='gap'){const a=m2s(p,...it.a),b=m2s(p,...it.b);chk(it,segD(x,y,a,b),false,true);}
+    else if(it.t==='ang'){const V=m2s(p,...it.A.V),R=Math.max(24,it.A.r*p.s);chk(it,Math.abs(Math.hypot(x-V[0],y-V[1])-R),false,true);}
+    else if(it.t==='ent'){const e=it.e;
+      if(e.t==='L'){const a=m2s(p,e.x1,e.y1),b=m2s(p,e.x2,e.y2);chk(it,boxD(x,y,(a[0]+b[0])/2,(a[1]+b[1])/2-14,tw(entText(e).main),9),false);chk(it,segD(x,y,a,b),false,true);}
+      else{const o=it.o||[e.cx+e.r*1.3,e.cy+e.r*0.3],O=m2s(p,...o),C=m2s(p,e.cx,e.cy),w=tw(entText(e).main)*2,dir=O[0]>=C[0]?1:-1;
+        chk(it,segD(x,y,O,[O[0]+dir*w,O[1]]),true);chk(it,boxD(x,y,O[0]+dir*w/2,O[1]-10,w/2,9),true);
+        const a=Math.atan2(o[1]-e.cy,o[0]-e.cx),P=m2s(p,e.cx+e.r*Math.cos(a),e.cy+e.r*Math.sin(a));chk(it,segD(x,y,P,O),true);}}
+  }
+  return best;
+}
+function measGrab(p,x,y){const M=msOf(p);if(!M.hover)M.hover=measPick(p,x,y);const h=measHit(p,x,y);
+  if(!h){if(M.sel){M.sel=null;p.draw();}return;}
+  const it=h.it;if(it.t==='ent'&&!it.o&&it.e.t!=='L')it.o=[it.e.cx+it.e.r*1.3,it.e.cy+it.e.r*0.3];
+  MEAS.drag={p,h,g0:s2m(p,x,y),o0:it.o?it.o.slice():null};}
+function measDragTo(p,x,y){const D=MEAS.drag,it=D.h.it;if(!D.o0)return;const g=s2m(p,x,y);it.o=[D.o0[0]+g[0]-D.g0[0],D.o0[1]+g[1]-D.g0[1]];msOf(p).sel=it;p.draw();}
+function measDelSel(){let n=0;for(const p of panes){const M=p.ms;if(!M||!M.sel)continue;const i=M.items.indexOf(M.sel);if(i>=0){M.items.splice(i,1);n++;}M.sel=null;M.hit=null;p.draw();}return n;}
 /* ближайшая точка элемента к точке (x,y) */
 function closestOn(e,x,y){
   if(e.t==='L'){const dx=e.x2-e.x1,dy=e.y2-e.y1,l=dx*dx+dy*dy;let t=l?((x-e.x1)*dx+(y-e.y1)*dy)/l:0;t=Math.max(0,Math.min(1,t));return [e.x1+t*dx,e.y1+t*dy];}
@@ -1760,7 +1792,7 @@ function measText(it){if(it.t==='ent')return entText(it.e);const dx=Math.abs(it.
   return {main:fmm(d)+' мм',sub:measInfo(it)};}
 function measPaint(p,c,d){
   const M=msOf(p);c.save();c.setTransform(d,0,0,d,0,0);
-  const col='#ffd23f',bg='rgba(16,18,22,.92)';
+  const COL='#ffd23f',SEL='#4fc3ff';let col=COL;const bg='rgba(16,18,22,.92)';
   const halo=lum(dxfBg())>150?'rgba(255,255,255,.95)':'rgba(16,18,22,.95)';
   const tag=(x,y,t,ang,small,clr)=>{ // надпись всегда горизонтально, без рамки; тёмный «ореол» вокруг букв — чтобы не сливалась с контуром
     c.save();c.font=(small?'':'bold ')+(small?11:14)+'px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';
@@ -1816,6 +1848,7 @@ function measPaint(p,c,d){
     const w=c.measureText(t).width+8,lx=x+r*0.72+2,ly=y-r*0.72-10;if(lx>p.W||ly<-10||lx+w<0||ly>p.H)continue;
     c.fillStyle='rgba(16,18,22,.8)';c.fillRect(lx,ly,w,16);c.fillStyle='#8fd3ff';c.textAlign='left';c.textBaseline='middle';c.fillText(t,lx+4,ly+8.5);}
   for(const it of M.items){
+    col=it===M.sel?SEL:it===M.hit?'#ffe680':COL;
     if(it.t==='lin')drawDim(it,false);
     else if(it.t==='dist')drawDist(it,false);
     else if(it.t==='gap'){const a=m2s(p,...it.a),b=m2s(p,...it.b),vx=b[0]-a[0],vy=b[1]-a[1],L=Math.hypot(vx,vy);
@@ -1831,6 +1864,7 @@ function measPaint(p,c,d){
     else{const e=it.e,t=entText(e);if(e.t==='L'){hl(e);const a=m2s(p,e.x1,e.y1),b=m2s(p,e.x2,e.y2);tag((a[0]+b[0])/2,(a[1]+b[1])/2-14,t.main);}
       else radLeader(e,it.o||[e.cx+e.r*1.3,e.cy+e.r*0.3],t.main,false);}
   }
+  col=COL;
   // начатый размер
   const H=M.hover;
   if(M.pts.length){c.fillStyle=col;for(const q of M.pts){const s=m2s(p,...q);c.beginPath();c.arc(s[0],s[1],4,0,Math.PI*2);c.fill();}
@@ -1851,9 +1885,9 @@ function measToggle(on){
   $('vMeas').classList.toggle('on',MEAS.on);$('measBox').hidden=!MEAS.on;
   if(!MEAS.on&&SET.mkeep==='mode')MEAS.store.clear();
   for(const p of panes){p.ms=null;p.cv.style.cursor=MEAS.on?'crosshair':'';p.draw();}
-  if(MEAS.on)flash('Размеры: две точки (с привязкой) и третий клик — где положить размер. Клик по линии / отверстию — длина / Ø. Esc — отменить начатый, Backspace — убрать последний');
+  if(MEAS.on)flash('Размеры: две точки (с привязкой) и третий клик — где положить размер. Клик по линии / отверстию — длина / Ø. Поставленный размер можно перетащить, клик — выбрать, Delete — удалить. Esc — отменить начатый, Backspace — убрать последний');
 }
-function measUndo(all){for(const p of panes){const M=p.ms;if(!M)continue;if((M.pts.length||M.ang||M.rad||M.gap)&&!all){M.pts=[];M.ang=null;M.rad=null;M.gap=null;}else if(all)M.items.length=0;else M.items.pop();p.draw();}}
+function measUndo(all){for(const p of panes){const M=p.ms;if(!M)continue;if((M.pts.length||M.ang||M.rad||M.gap)&&!all){M.pts=[];M.ang=null;M.rad=null;M.gap=null;}else if(all)M.items.length=0;else M.items.pop();M.sel=null;M.hit=null;p.draw();}}
 $('measMode').value=['dist','ang','gap'].includes(SET.mmode)?SET.mmode:'dim';$('measMode').onchange=e=>{SET.mmode=e.target.value;saveSet();for(const p of panes)if(p.ms){p.ms.pts=[];p.ms.ang=null;p.draw();}};
 $('measHoles').classList.toggle('on',SET.mholes!==false);$('measHoles').onclick=()=>{SET.mholes=SET.mholes===false;saveSet();$('measHoles').classList.toggle('on',SET.mholes!==false);panes.forEach(p=>p.draw());};
 $('sMkeep').value=['view','proj'].includes(SET.mkeep)?SET.mkeep:'mode';$('sMkeep').onchange=e=>{SET.mkeep=e.target.value;saveSet();};
@@ -2755,7 +2789,9 @@ document.addEventListener('keydown',e=>{
   if(!$('tblPanel').hidden){if(k==='Escape'){$('tblPanel').hidden=true;TBL.tok++;}return;}
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний
     if(k==='Escape'&&panes.some(p=>p.ms&&(p.ms.pts.length||p.ms.ang||p.ms.rad||p.ms.gap))){for(const p of panes)if(p.ms){p.ms.pts=[];p.ms.ang=null;p.ms.rad=null;p.ms.gap=null;p.draw();}return;}
+    if(k==='Escape'&&panes.some(p=>p.ms&&p.ms.sel)){for(const p of panes)if(p.ms){p.ms.sel=null;p.draw();}return;}
     if(k==='Escape'){measToggle(false);return;}
+    if((k==='Delete'||k==='Backspace')&&panes.some(p=>p.ms&&p.ms.sel)){e.preventDefault();measDelSel();return;}
     if(k==='Backspace'||(e.ctrlKey&&/^[zZяЯ]$/.test(k))){e.preventDefault();measUndo(false);return;}
   }
   if(k==='Escape'&&SEL.size&&!VW.full){clearSel();return;}
