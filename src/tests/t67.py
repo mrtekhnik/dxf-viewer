@@ -53,6 +53,9 @@ async def main():
       ok=(r[2]-r[0]<=r[4]+1 or (r[0]<=11 and r[2]>=r[4]-11)) and (r[3]-r[1]<=r[5]+1 or (r[1]<=11 and r[3]>=r[5]-11))
       if not ok: errs.append('page left screen: '+str([round(v) for v in r]))
     print('clamped to page edges', not any('page left' in e for e in errs))
+    await pg.evaluate('(()=>{const p=panes[0];const f=p.fitView();p.cx=f.cx;p.cy=f.cy;p.draw();})()'); await pg.wait_for_timeout(100)
+    c0=await pg.evaluate('panes[0].cx'); await touch([[(200+i*12,400)] for i in range(6)]+[[]],dt=12); c1=await pg.evaluate('panes[0].cx'); await pg.wait_for_timeout(500); c2=await pg.evaluate('panes[0].cx')
+    print('zoomed fling', c1!=c0 and c2!=c1)
     await tap(200,400); await pg.wait_for_timeout(80); await tap(200,400); await pg.wait_for_timeout(500); print('double tap fit',await pg.evaluate('panes[0].fitted'))
     # щипок
     await touch([[(150,400),(250,400)],[(130,400),(270,400)],[(100,400),(300,400)],[(60,400),(340,400)],[]]); await pg.wait_for_timeout(400)
