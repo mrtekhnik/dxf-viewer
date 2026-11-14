@@ -273,7 +273,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.1.3</small></div>
+  <div class="brand">DXF <small>+PDF · v4.1.4</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -283,7 +283,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
       </div></span>
     <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ <span class="lbl a">Ярлыки</span></button>
     <button id="btnHist" title="История просмотров">🕘 <span class="lbl a">История</span></button>
-    <button id="btnClose" hidden title="Закрыть все файлы">✕ <span class="lbl a">Закрыть</span></button>
+    <button id="btnClose" hidden title="Закрыть папку (все файлы) — с подтверждением">✕ <span class="lbl a">Закрыть</span></button>
   </span>
   <!-- найти -->
   <span class="grp grow">
@@ -548,7 +548,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <li><b>★ Ярлыки</b> — закреплённые папки и файлы: открываются одним кликом. Добавить — кнопкой ★ в просмотре или в окне ярлыков.</li>
 <li><b>🕘 История</b> — что и когда смотрели, «подряд» или «группой» по изделиям и папкам; можно открыть снова или очистить.</li>
 <li>При запуске открывается последняя папка (если Chrome сохранил разрешение; иначе — кнопка «▶ Открыть …» на пустом экране). Отключается в ⚙ «При запуске».</li>
-<li><b>✕ Закрыть</b> — закрыть все файлы.</li>
+<li><b>✕ Закрыть</b> — закрыть папку (все файлы); программа сначала спросит. Открыть её снова — 🕘 История или ★ Ярлыки.</li>
 </ul>
 <p class="note">Chrome спрашивает разрешение на чтение папки — ответьте «Просмотреть файлы». Окно выбора папки Windows показывает только подпапки, файлов в нём не видно — это нормально.</p>
 </section>
@@ -2394,7 +2394,10 @@ function applyFilter(){
 }
 const EMPTY_HTML=$('empty').innerHTML;
 function closeAll(){LS.set('lastRoot',null);if(VW.full)setFull(false);closePairPanel();$('filter').value='';$('typeSel').value='';clearTimeout(histT);setFiles([],{});}
-$('btnClose').onclick=closeAll;
+$('btnClose').onclick=()=>{   // закрыть всё — только после подтверждения
+  const r=items[0]&&items[0].rootName,what=r?'папку «'+r+'»':'открытые файлы ('+items.length+')';
+  if(!confirm('Закрыть '+what+'?\n\nСписок файлов очистится. Открыть снова — 🕘 История или ★ Ярлыки.'))return;
+  closeAll();};
 /* ---------- Запись поворота / зеркала в файл DXF ---------- */
 function xfMenuFill(){
   const p=panes[VW.active];if(!p||!p.doc||p.isPdf)return;

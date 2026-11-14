@@ -373,7 +373,10 @@ function applyFilter(){
 }
 const EMPTY_HTML=$('empty').innerHTML;
 function closeAll(){LS.set('lastRoot',null);if(VW.full)setFull(false);closePairPanel();$('filter').value='';$('typeSel').value='';clearTimeout(histT);setFiles([],{});}
-$('btnClose').onclick=closeAll;
+$('btnClose').onclick=()=>{   // закрыть всё — только после подтверждения
+  const r=items[0]&&items[0].rootName,what=r?'папку «'+r+'»':'открытые файлы ('+items.length+')';
+  if(!confirm('Закрыть '+what+'?\n\nСписок файлов очистится. Открыть снова — 🕘 История или ★ Ярлыки.'))return;
+  closeAll();};
 /* ---------- Запись поворота / зеркала в файл DXF ---------- */
 function xfMenuFill(){
   const p=panes[VW.active];if(!p||!p.doc||p.isPdf)return;
