@@ -20,7 +20,7 @@ async def main():
     print('synced s:', await pg.evaluate('[panes[0].s.toFixed(3),panes[1].s.toFixed(3),panes[0].cx.toFixed(1),panes[1].cx.toFixed(1)]'))
     await pg.screenshot(path='cmp_view.png')
     await pg.keyboard.press('ArrowRight'); await pg.wait_for_timeout(1000); print('next cmp:', await pg.inner_text('#vName'))
-    await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)
+    await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300); await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)   # 1-й Esc — выйти из наложения, 2-й — закрыть
     # only there
     await pg.click('#cmpOnlyBtn'); await pg.wait_for_timeout(200); print('only:', (await pg.inner_text('#onlyList')).replace('\n',' | ')); await pg.click('#onlyClose')
     # ctrl+click manual

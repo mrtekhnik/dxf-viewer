@@ -18,7 +18,7 @@ async def main():
     pg2=await b.new_page(viewport={'width':390,'height':800},is_mobile=True,has_touch=True)
     await pg2.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     await pg2.goto('file:///home/claude/dxf-viewer.html'); await pg2.set_input_files('#inFolder','tree/Изделие 320'); await pg2.wait_for_timeout(1000)
-    print('mobile tree visible before:', await pg2.is_visible('#tree')); await pg2.tap('#btnTree'); await pg2.wait_for_timeout(300)
+    print('mobile tree visible before:', await pg2.is_visible('#tree')); await pg2.tap('#mHMenu'); await pg2.wait_for_timeout(300); await pg2.tap('#btnTree'); await pg2.wait_for_timeout(300)
     print('after tap:', await pg2.is_visible('#tree')); await pg2.screenshot(path='s_tree_m.png')
     await pg2.locator('.tr', has_text='03 Крышка').tap(); await pg2.wait_for_timeout(500)
     print('after choose:', await pg2.is_visible('#tree'), await pg2.locator('#grid .tile').count())

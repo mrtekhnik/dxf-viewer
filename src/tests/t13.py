@@ -20,6 +20,6 @@ async def main():
     await pg2.add_init_script("try{const s=JSON.parse(localStorage.getItem('dxfv.set')||'{}');if(s.click===undefined){s.click='1';localStorage.setItem('dxfv.set',JSON.stringify(s))}}catch(e){}")
     await pg2.goto('file:///home/claude/dxf-viewer.html'); await pg2.set_input_files('#inFiles',[f'kit/Заказ/{n}' for n in ['АБВГ.123456.002 Корпус.pdf']]+[f'kit/Заказ/DXF/{n}' for n in ['АБВГ.123456.002-08пс-2-k1.dxf','АБВГ.123456.002-01-08пс-2-k1.dxf']])
     await pg2.wait_for_timeout(1500); await pg2.locator('.tile').first.tap(); await pg2.wait_for_timeout(1200)
-    await pg2.tap('#vSide'); await pg2.wait_for_timeout(2500); await pg2.screenshot(path='s_phone_side.png')
+    await pg2.tap('#mMore'); await pg2.wait_for_timeout(300); await pg2.tap('#vSide'); await pg2.wait_for_timeout(2500); await pg2.screenshot(path='s_phone_side.png')
     await b.close()
 asyncio.run(main())

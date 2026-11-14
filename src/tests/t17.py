@@ -30,7 +30,7 @@ async def main():
     print('meta sample:', await pg.locator('.tile .meta').first.inner_text())
     # 8 size plus
     w0=(await pg.locator('.tile').first.bounding_box())['width']
-    for i in range(3): await pg.click('#szPlus')
+    await pg.evaluate("(()=>{const r=$('tileSize');r.value=+r.value+90;r.dispatchEvent(new Event('input',{bubbles:true}))})()")
     await pg.wait_for_timeout(200); w1=(await pg.locator('.tile').first.bounding_box())['width']; print('tile width', round(w0),'->',round(w1))
     await pg.screenshot(path='v_grid.png')
     # 6/7 tree splitter + expand selected

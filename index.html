@@ -272,11 +272,38 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   input[type=range]{width:80px}
   .hide-m{display:none}
 }
+/* сообщения поверх просмотра на весь экран */
+body:has(#viewer.full:not([hidden])) #status.flash{pointer-events:none;position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:60;max-width:min(720px,92vw);background:rgba(20,22,26,.94);color:#fff;border-radius:10px;padding:9px 14px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
+/* ===== профиль «телефон» (body.mui) — только для телефона, компьютер не затрагивает ===== */
+#mTop,#mBot,#mHMenu,#mHead{display:none}
+body.mui #viewer .vbar,body.mui #viewer .vinfo{display:none}
+body.mui #stage .pcap{display:none!important}
+body.mui.mui-ui #mTop,body.mui.mui-ui #mBot{display:flex}
+body.mui #mTop{position:fixed;left:0;right:0;top:0;z-index:25;align-items:center;gap:6px;padding:6px 8px;padding-top:calc(6px + env(safe-area-inset-top));background:rgba(22,24,28,.9);backdrop-filter:blur(6px);color:#eee}
+body.mui #mTop .mt{flex:1;min-width:0}#mName{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#mSub{font-size:12px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.mui #mBot{position:fixed;left:0;right:0;bottom:0;z-index:25;justify-content:space-around;align-items:center;gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:rgba(22,24,28,.9);backdrop-filter:blur(6px)}
+body.mui #mTop button,body.mui #mBot button{min-width:46px;min-height:46px;font-size:20px;border-radius:12px;padding:4px 10px;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.12)}
+body.mui #mBot #mPair{font-size:15px;max-width:34vw;overflow:hidden;text-overflow:ellipsis}
+body.mui #mTop button.on,body.mui #mBot button.on{background:var(--acc);border-color:var(--acc)}
+body.mui.mui-sheet #viewer .vbar{display:flex;flex-wrap:wrap;position:fixed;left:0;right:0;bottom:0;z-index:30;max-height:62vh;overflow-y:auto;overflow-x:hidden;gap:10px;padding:14px 10px calc(14px + env(safe-area-inset-bottom));border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.5)}
+body.mui.mui-sheet #viewer .vbar>#vPrev,body.mui.mui-sheet #viewer .vbar>#vNext,body.mui.mui-sheet #viewer .vbar>#vName,body.mui.mui-sheet #viewer .vbar>#vClose{display:none}
+body.mui #viewer .vbar .vgrp{flex-wrap:wrap;gap:8px}
+body.mui #viewer .vbar button,body.mui #viewer .vbar select{min-height:44px;min-width:44px;font-size:16px}
+body.mui #viewer .vbar .lbl{display:inline!important}
+body.mui #vCont,body.mui.mui-sheet #vPages{display:none!important}
+body.mui #mHMenu{display:inline-block;font-size:20px;min-width:46px}
+body.mui header{flex-wrap:wrap}
+body.mui header>.grp.grow{flex:1 1 100%;order:5}
+body.mui.mui-hsheet #mHead{display:flex;flex-wrap:wrap;gap:10px;position:fixed;left:0;right:0;top:0;z-index:40;max-height:75vh;overflow:auto;background:var(--panel);padding:12px 10px;border-bottom:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+body.mui #mHead .grp{display:flex;flex-wrap:wrap;gap:8px;border:0;padding:0;margin:0}
+body.mui #mHead button{min-height:44px;min-width:44px;font-size:16px}
+body.mui #mHead .lbl,body.mui header .lbl.a{display:inline!important}
+body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:translateX(-50%);bottom:76px;z-index:60;width:max-content;max-width:92vw;background:rgba(20,22,26,.94);color:#fff;border-radius:10px;padding:10px 14px;font-size:14px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
 </style>
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.2.1</small></div>
+  <div class="brand">DXF <small>+PDF · v4.3.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -456,6 +483,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Интерфейс</span><select id="sUi"><option value="auto">авто (телефон — свой)</option><option value="mob">как на телефоне</option><option value="pc">как на компьютере</option></select></div>
   <div class="set-row"><span>Размер лупы</span><select id="sLoupe"><option value="s">маленькая</option><option value="m">средняя</option><option value="l">большая</option></select></div>
   <div class="set-row"><span>Картинка PNG</span><select id="sPngClip"><option value="0">только сохранять файлом</option><option value="1">сохранять и копировать в буфер обмена</option></select></div>
   <div class="set-row"><span>Размеры в DXF</span><select id="sDims"><option value="1">показывать</option><option value="0">скрыть</option></select></div>
@@ -696,6 +724,19 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 <li>Выделенный текст <b>сразу копируется в буфер</b> и показывается в окошке внизу: там его можно поправить и скопировать заново (⧉ Копировать или <kbd>Ctrl</kbd>+<kbd>C</kbd>). Порядок — по строкам, сверху вниз; вертикальные надписи читаются снизу вверх.</li>
 <li>Сдвинуть лист в этом режиме — колесом (масштаб) и правой или средней кнопкой мыши. <kbd>Esc</kbd> — снять выделение, ещё <kbd>Esc</kbd> — выйти из режима.</li>
 <li>Русские и украинские буквы, записанные в PDF «иероглифами» вида <i>Ïëèòà</i>, <i>Ðîçì³ðè</i> (частый случай у старых шрифтов), программа сама превращает в нормальный текст — с і, ї, є, ґ. Знаки чертежа (Ø, ×, °, ±) при этом не портятся. Если вместо текста всё равно непонятные знаки — шрифт в файле записан без расшифровки букв; пришлите такой файл. Если надпись не выделяется вовсе — в PDF она нарисована линиями, текста там нет.</li>
+</ul>
+</section>
+
+<section data-t="На телефоне">
+<h2>На телефоне</h2>
+<p>На телефоне у программы свой интерфейс — крупные кнопки, жесты. Версия для компьютера от этого не меняется. Включается сама; в ⚙ → «Интерфейс» можно выбрать вручную.</p>
+<ul>
+<li><b>Список</b>: вверху — название, 📂 Открыть и <b>⋯</b> — все остальные команды (ярлыки, история, вид, дерево, таблица, сравнение, настройки, справка). Ниже — фильтр по имени.</li>
+<li><b>Просмотр</b> — на весь экран. Касание <b>в центре</b> — показать или спрятать панели. Сверху — имя, номер файла и страницы, ▲▼ страницы, ✕. Снизу — ‹ ›, ⤢ вписать, ⇄ чертёж ⇄ развёртка, 𝐓 текст (PDF) или 📏 размеры (DXF), <b>⋯</b> — все команды просмотра.</li>
+<li><b>Листать файлы</b>: свайп влево / вправо или касание <b>левого / правого края</b> экрана (как в Telegram).</li>
+<li><b>Страницы PDF</b>: свайп вверх / вниз.</li>
+<li><b>Масштаб</b>: двумя пальцами или двойное касание (ещё двойное — вписать). Вписанный лист пальцем не сдвигается — только листается; увеличенный двигается, но за край не уезжает. Если почти вернули к «вписать» — встанет ровно.</li>
+<li>В режимах «Текст» и «Размеры» касания работают на них, а не на листание; выйти — той же кнопкой внизу. Кнопка «Назад» телефона закрывает просмотр.</li>
 </ul>
 </section>
 
@@ -2425,6 +2466,7 @@ function xfMenuFill(){
 }
 /* меню кнопок панели просмотра: панель прокручивается и обрезает выпадающее — ставим меню поверх, под кнопкой */
 function menuFix(M,btn){const r=btn.getBoundingClientRect();M.style.position='fixed';M.style.top=(r.bottom+4)+'px';M.style.right='auto';
+  if(r.bottom+4+M.offsetHeight>innerHeight-8)M.style.top=Math.max(4,r.top-4-M.offsetHeight)+'px';
   const w=M.offsetWidth||290;M.style.left=Math.max(4,Math.min(r.left,innerWidth-w-8))+'px';}
 $('vXfSave').onclick=e=>{e.stopPropagation();const M=$('xfMenu');M.hidden=!M.hidden;if(!M.hidden){xfMenuFill();menuFix(M,$('vXfSave'));}};
 document.addEventListener('click',e=>{if(!e.target.closest('#xfMenu')&&e.target.id!=='vXfSave')$('xfMenu').hidden=true;});
@@ -2503,6 +2545,10 @@ function markCurrent(it){
 /* ---------- Ленивые миниатюры ---------- */
 /* телефон/планшет: меньше параллельной работы, чтобы открытый файл не ждал миниатюр */
 const MOB=matchMedia('(pointer:coarse)').matches&&Math.min(screen.width,screen.height)<900;
+/* Профиль «телефон» (MUI): отдельный интерфейс для узкого сенсорного экрана — версия для компьютера не меняется.
+   Авто: телефон (сенсорный экран, узкая сторона < 600). В ⚙ можно выбрать вручную. */
+const MUI=SET.ui==='mob'||(SET.ui!=='pc'&&MOB&&Math.min(screen.width,screen.height)<600);
+if(MUI)document.body.classList.add('mui');
 const tq=[];let running=0;const MAXRUN=MOB?2:4,BGRUN=MOB?0:2;
 const thumbKey=it=>it.key+'|t'+THUMB_VER+'|'+(it.type==='pdf'?pdfBg()+(SET.pdfDark?'i':''):dxfBg()+(SET.texts?'':'|nt'));
 const io=new IntersectionObserver(es=>{for(const e of es){const it=e.target._it;it.visible=e.isIntersecting;if(it.visible&&it.state===0)enqueue(it);}pumpThumbs();},{root:$('gridWrap'),rootMargin:'1200px'});
@@ -2702,7 +2748,7 @@ document.addEventListener('drop',async e=>{
    ===================================================================== */
 const VW={idx:-1,full:false,active:0,set:[]};
 const SAVED=new Map(),panes=[];
-const docked=()=>SET.preview&&innerWidth>=760;
+const docked=()=>SET.preview&&innerWidth>=760&&!MUI;
 const viewerShown=()=>VW.full||docked();
 
 /* растр листа PDF «во весь экран» + небольшой кэш отрисованных листов */
@@ -2892,7 +2938,7 @@ class Pane{
     for(const k of ['timer','t2','midTimer','rbTimer'])clearTimeout(P[k]);this.pg=[];this.page=null;this.cont=false;}
   async pdfShow(n,sv){
     const doc=this.doc,tok=++this.tok;this.pdfReset();this.loading=true;this.sugRot=null;this.draw();
-    const cont=!!SET.pdfCont&&doc.pages>1,nums=cont?Array.from({length:Math.min(doc.pages,300)},(_,i)=>i+1):[n];
+    const cont=!!SET.pdfCont&&!MUI&&doc.pages>1,nums=cont?Array.from({length:Math.min(doc.pages,300)},(_,i)=>i+1):[n];
     let pages;try{pages=await Promise.all(nums.map(k=>doc.pdf.getPage(k)));}catch(e){if(tok===this.tok){this.loading=false;this.draw();this.onUpdate();}return;}
     if(tok!==this.tok)return;
     const G=cont?14:0;let y=0,maxW=0;
@@ -3009,18 +3055,31 @@ class Pane{
       if(ptrs.size===1&&TXT.drag&&TXT.drag.p===this){TXT.drag.x1=x;TXT.drag.y1=y;this.draw();return;}   // текст PDF: рамка выделения
       if(ptrs.size===1&&MEAS.drag&&MEAS.drag.p===this){if(MEAS.drag.h.drag){if(moved)measDragTo(this,x,y);return;}if(moved)MEAS.drag=null;}   // размеры: тянем размерную линию / надпись
       if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
-      else if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
+      else if(ptrs.size===1){
+        if(MUI&&e.pointerType!=='mouse'&&!multi){if(this.fitted)return;   // телефон: лист «вписан» — не ёрзает, палец только листает
+          this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;muiClamp(this);this.draw();this.changed();return;}
+        this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
       else if(ptrs.size===2){
         const [a,b]=[...ptrs.values()];
         const m0=[(a.x+b.x)/2,(a.y+b.y)/2],d0=Math.hypot(a.x-b.x,a.y-b.y);
         p.x=x;p.y=y;
         const m1=[(a.x+b.x)/2,(a.y+b.y)/2],d1=Math.hypot(a.x-b.x,a.y-b.y);
         if(d0>0){this.fitted=false;if(this.isPdf)this.cancelHi();const [wx,wy]=this.s2w(m0[0],m0[1]);this.s=this.clampS(this.s*d1/d0);
-          this.cx=wx-(m1[0]-this.W/2)/this.s;this.cy=wy+(m1[1]-this.H/2)/this.s;this.draw();this.changed();}
+          this.cx=wx-(m1[0]-this.W/2)/this.s;this.cy=wy+(m1[1]-this.H/2)/this.s;if(MUI)muiClamp(this);this.draw();this.changed();}
       }
     });
     const end=e=>{
       if(!ptrs.has(e.pointerId))return;ptrs.delete(e.pointerId);
+      if(MUI&&e.pointerType!=='mouse'&&!TXT.on&&!MEAS.on&&!LOUPE.on&&!this.ov){   // телефон: свайпы, края экрана, двойное касание
+        if(ptrs.size===0&&multi){if(this.s<=this.fitView().s*1.06)this.fit();return;}   // после щипка почти «вписан» — вписать точно
+        if(ptrs.size===0&&e.type==='pointerup'&&!multi){const [x,y]=pos(e),dx=x-downX,dy=y-downY,dt=performance.now()-downT;
+          if(this.fitted&&dt<800){
+            if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){step(dx<0?1:-1);return;}                       // ← → — соседний файл
+            if(Math.abs(dy)>45&&Math.abs(dy)>Math.abs(dx)*1.3){if(this.isPdf&&this.doc&&this.doc.pages>1)this.pageGo(dy<0?1:-1);return;}   // ↑ ↓ — страницы PDF
+          }
+          if(!moved&&dt<400){muiTap(this,x,y);return;}
+          return;}
+      }
       if(e.type==='pointerup'&&e.pointerType!=='mouse'&&ptrs.size===0&&!multi&&fitDown&&VW.set.length===1&&performance.now()-downT<500){ // свайп по листу — соседний файл
         const [x,y]=pos(e),dx=x-downX,dy=y-downY;
         if(Math.abs(dx)>70&&Math.abs(dy)<60){Object.assign(this,sv0);this.fitted=true;this.draw();step(dx<0?1:-1);return;}
@@ -3161,7 +3220,7 @@ function jumpTo(t){
   if(i<0){$('filter').value='';$('typeSel').value='';curDir='';renderTree();applyFilter();i=view.indexOf(t);}
   closePairPanel();showItem(i);
 }
-function updateBar(){
+function updateBar(){if(MUI)setTimeout(muiSync,0);
   const cur=curItem(),ap=panes[VW.active],has=!!cur&&VW.set.length>0;
   const cmp=!!VW.cmp&&VW.set.length===2;
   $('vSync').hidden=!(cmp&&VW.set[0].type===VW.set[1].type);$('vSync').classList.toggle('on',SET.sync);
@@ -3211,7 +3270,7 @@ function placeViewer(){
   $('btnGrid').classList.toggle('on',SET.layout!=='list');$('btnList').classList.toggle('on',SET.layout==='list');$('btnPreview').classList.toggle('on',SET.preview);
   layoutStage();
 }
-function setFull(on,fromPop){
+function setFull(on,fromPop){if(MUI&&on&&!VW.full)setTimeout(()=>{muiUi(true);clearTimeout(MT.auto);MT.auto=setTimeout(()=>{if(!document.body.classList.contains('mui-sheet'))muiUi(false);},2500);},0);
   if(FOLLOW||on===VW.full)return;
   if(!on&&!docked())loupeOff();
   if(!on&&!docked()&&SET.mkeep!=='proj'){MEAS.store.clear();for(const p of panes)p.ms=null;}   // вышли из просмотра — размеры забываются (кроме «пока открыт проект»)
@@ -3659,6 +3718,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sUi').value=['mob','pc'].includes(SET.ui)?SET.ui:'auto';$('sUi').onchange=e=>{SET.ui=e.target.value;saveSet();if(confirm('Интерфейс поменяется после перезапуска. Перезапустить сейчас?'))location.reload();};
 $('sLoupe').value=['s','m','l'].includes(SET.loupe)?SET.loupe:'m';$('sLoupe').onchange=e=>{SET.loupe=e.target.value;saveSet();};
 $('sPngClip').value=SET.pngClip?'1':'0';$('sPngClip').onchange=e=>{SET.pngClip=e.target.value==='1';saveSet();};
 $('sDims').onchange=e=>{SET.dims=e.target.value==='1';saveSet();panes.forEach(p=>p.draw());};
@@ -4261,6 +4321,64 @@ function txtToggle(on){
 $('vTxt').onclick=()=>txtToggle();
 $('txtCopy').onclick=()=>txtCopy();
 $('txtX').onclick=()=>txtClear();
+
+/* ---------- Профиль «телефон»: панели поверх листа, касание в центре — показать/спрятать ---------- */
+function muiClamp(p){   // увеличенный лист не уезжает за край
+  const f=p.fitView(),hw=p.W/2/f.s,hh=p.H/2/f.s,vw=p.W/2/p.s,vh=p.H/2/p.s;
+  p.cx=vw>=hw?f.cx:Math.min(f.cx+hw-vw,Math.max(f.cx-hw+vw,p.cx));
+  p.cy=vh>=hh?f.cy:Math.min(f.cy+hh-vh,Math.max(f.cy-hh+vh,p.cy));
+}
+const MT={t:0,x:0,y:0,tm:0};
+function muiTap(p,x,y){
+  const now=performance.now();
+  if(now-MT.t<320&&Math.hypot(x-MT.x,y-MT.y)<40){clearTimeout(MT.tm);MT.t=0;   // двойное касание: приблизить / вписать
+    if(p.fitted)p.zoomAt(x,y,2.5);else p.fit();if(MUI)muiClamp(p);p.draw();return;}
+  MT.t=now;MT.x=x;MT.y=y;
+  const edge=p.fitted&&VW.set.length===1?(x<p.W*0.22?-1:x>p.W*0.78?1:0):0;
+  if(edge){MT.t=0;step(edge);return;}                                          // край экрана — соседний файл (как в Telegram)
+  clearTimeout(MT.tm);MT.tm=setTimeout(()=>muiUi(),300);                      // центр — показать / спрятать панели
+}
+function muiUi(on){const b=document.body;on=on===undefined?!b.classList.contains('mui-ui'):on;b.classList.toggle('mui-ui',on);if(!on)b.classList.remove('mui-sheet');muiSync();}
+function muiSync(){
+  if(!MUI||!$('mTop'))return;
+  const p=panes[VW.active],it=view[VW.idx]||(p&&p.it);
+  $('mName').textContent=it?it.name:'';
+  let sub=view.length&&VW.idx>=0?(VW.idx+1)+' / '+view.length:'';
+  if(p&&p.isPdf&&p.doc&&p.doc.pages>1)sub+=(sub?' · ':'')+'стр. '+p.pageNo+' / '+p.doc.pages;
+  const dm=$('vDims').textContent;if(dm)sub+=(sub?' · ':'')+dm;
+  $('mSub').textContent=sub;
+  const pdf=!!(p&&p.isPdf);$('mTool').textContent=pdf?'𝐓':'📏';$('mTool').title=pdf?'Текст из PDF':'Размеры';
+  $('mTool').classList.toggle('on',pdf?TXT.on:MEAS.on);$('mTool').hidden=pdf?$('vTxt').hidden:$('vMeas').hidden;
+  const vp=$('vPair');$('mPair').hidden=!vp||vp.offsetParent===null&&vp.hidden;$('mPair').textContent=vp?vp.textContent.trim():'';
+  $('mPgU').hidden=$('mPgD').hidden=!(pdf&&p.doc&&p.doc.pages>1);
+  if(it&&MT.last!==it){if(MT.last&&!document.body.classList.contains('mui-ui'))flash(it.name);MT.last=it;}   // листаем со спрятанными панелями — имя на миг
+}
+function muiInit(){
+  const V=$('viewer');
+  const top=document.createElement('div');top.id='mTop';
+  top.innerHTML='<div class="mt"><div id="mName"></div><div id="mSub"></div></div><button id="mPgU" title="Предыдущая страница">▲</button><button id="mPgD" title="Следующая страница">▼</button><button id="mClose" title="Закрыть">✕</button>';
+  const bot=document.createElement('div');bot.id='mBot';
+  bot.innerHTML='<button id="mPrev" title="Предыдущий файл">‹</button><button id="mFit" title="Вписать">⤢</button><button id="mPair" title="Чертёж ⇄ развёртка"></button><button id="mTool"></button><button id="mMore" title="Все команды">⋯</button><button id="mNext" title="Следующий файл">›</button>';
+  V.appendChild(top);V.appendChild(bot);
+  for(const b of [top,bot])b.addEventListener('pointerdown',()=>clearTimeout(MT.auto));
+  $('mClose').onclick=()=>$('vClose').click();$('mPrev').onclick=()=>step(-1);$('mNext').onclick=()=>step(1);
+  $('mPgU').onclick=()=>$('vPgPrev').click();$('mPgD').onclick=()=>$('vPgNext').click();
+  $('mFit').onclick=()=>apDo(p=>p.fit());$('mPair').onclick=()=>$('vPair').click();
+  $('mTool').onclick=()=>{const p=panes[VW.active];(p&&p.isPdf?$('vTxt'):$('vMeas')).click();muiSync();};
+  $('mMore').onclick=e=>{e.stopPropagation();const vb=V.querySelector('.vbar');document.body.classList.toggle('mui-sheet');vb.scrollLeft=0;vb.scrollTop=0;};
+  $('stage').addEventListener('pointerdown',()=>document.body.classList.remove('mui-sheet'),true);
+  // шапка списка: на виду — название, «Открыть», фильтр; остальное — в «⋯»
+  const H=document.querySelector('header'),hs=document.createElement('div');hs.id='mHead';
+  const mb=document.createElement('button');mb.id='mHMenu';mb.textContent='⋯';mb.title='Все команды';
+  $('btnOpen').closest('.grp').appendChild(mb);
+  for(const id of ['btnPins','btnHist','btnClose'])hs.appendChild($(id));
+  for(const g of [...H.querySelectorAll(':scope>.grp')])if(!g.contains($('btnOpen'))&&!g.contains($('filter')))hs.appendChild(g);
+  H.appendChild(hs);
+  mb.onclick=e=>{e.stopPropagation();hs.style.top=Math.round(H.getBoundingClientRect().bottom)+'px';document.body.classList.toggle('mui-hsheet');};   // выпадает под шапкой — название остаётся на виду
+  document.addEventListener('pointerdown',e=>{if(!e.target.closest('#mHead,#mHMenu,.menu,#pinPanel,#histPanel,#setPanel'))document.body.classList.remove('mui-hsheet');},true);
+  hs.addEventListener('click',e=>{if(e.target.closest('button')&&!e.target.closest('.seg,.szbox'))setTimeout(()=>document.body.classList.remove('mui-hsheet'),50);});
+}
+if(MUI){muiInit();SET.side=false;}
 
 /* ---------- вписать по ширине ---------- */
 function fitWidth(p){

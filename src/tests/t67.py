@@ -1,0 +1,63 @@
+# телефон: панели, свайпы ← → файлы, ↑ ↓ страницы, края экрана, лист не ёрзает, щипок, шапка «⋯»
+import asyncio,glob,os
+from playwright.async_api import async_playwright
+async def main():
+  async with async_playwright() as p:
+    b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); ctx=await b.new_context(**p.devices['Pixel 5']); pg=await ctx.new_page()
+    errs=[]; pg.on('pageerror',lambda e: errs.append(str(e)))
+    cdp=await ctx.new_cdp_session(pg)
+    async def touch(pts_seq,dt=16):
+      # pts_seq: список кадров; кадр — список точек (x,y)
+      prev=0
+      for i,fr in enumerate(pts_seq):
+        typ='touchStart' if i==0 else ('touchEnd' if i==len(pts_seq)-1 else 'touchMove')
+        if typ=='touchEnd': await cdp.send('Input.dispatchTouchEvent',{'type':'touchEnd','touchPoints':[]})
+        else: await cdp.send('Input.dispatchTouchEvent',{'type':typ,'touchPoints':[{'x':x,'y':y,'id':k} for k,(x,y) in enumerate(fr)]})
+        await asyncio.sleep(dt/1000)
+    async def swipe(x0,y0,x1,y1,n=8):
+      await touch([[(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n)] for i in range(n+1)]+[[]]); await pg.wait_for_timeout(700)
+    async def tap(x,y): await touch([[(x,y)],[]],dt=30); 
+    await pg.goto('file:///home/claude/dxf-viewer.html')
+    fs=sorted(f for f in glob.glob('tree/Изделие 320/**/*.*',recursive=True) if os.path.isfile(f))+['dxf/деталь_01.pdf']
+    await pg.set_input_files('#inFiles',fs); await pg.wait_for_timeout(2500)
+    print('mui',await pg.evaluate("document.body.classList.contains('mui')"),'header menu',await pg.is_visible('#mHMenu'),'pins hidden',not await pg.is_visible('#btnPins'),'brand',await pg.is_visible('.brand'))
+    await pg.tap('#mHMenu'); await pg.wait_for_timeout(300); print('sheet pins visible',await pg.is_visible('#btnPins'),await pg.is_visible('#btnSet'))
+    await pg.screenshot(path='m1_head.png'); await pg.tap('.brand'); await pg.wait_for_timeout(300); print('sheet closed', not await pg.is_visible('#btnSet'))
+    await pg.locator('.tile').first.tap(); await pg.wait_for_timeout(2000)
+    print('viewer full',await pg.evaluate('VW.full'),'ui shown',await pg.evaluate("document.body.classList.contains('mui-ui')"),'cont off',await pg.evaluate('!panes[0].cont'))
+    await pg.screenshot(path='m2_ui.png')
+    await pg.wait_for_timeout(2700); print('auto-hidden',not await pg.evaluate("document.body.classList.contains('mui-ui')"))
+    W,H=393,727
+    s0=await pg.evaluate('[panes[0].cx,panes[0].cy,panes[0].s]')
+    await touch([[(200,400)],[(215,415)],[(230,430)],[(240,440)],[]]); await pg.wait_for_timeout(300)
+    print('no drift when fitted', s0==await pg.evaluate('[panes[0].cx,panes[0].cy,panes[0].s]'))
+    i0=await pg.evaluate('VW.idx'); await swipe(330,400,80,410); print('swipe left -> idx',i0,'->',await pg.evaluate('VW.idx'))
+    await swipe(80,400,330,410); print('swipe right -> idx',await pg.evaluate('VW.idx'))
+    await tap(370,400); await pg.wait_for_timeout(900); print('tap right edge ->',await pg.evaluate('VW.idx'))
+    await tap(20,400); await pg.wait_for_timeout(900); print('tap left edge ->',await pg.evaluate('VW.idx'))
+    await tap(200,400); await pg.wait_for_timeout(600); print('tap center -> ui',await pg.evaluate("document.body.classList.contains('mui-ui')"))
+    await tap(200,400); await pg.wait_for_timeout(600); print('tap center -> ui',await pg.evaluate("document.body.classList.contains('mui-ui')"))
+    # многостраничный PDF
+    n=await pg.evaluate("view.findIndex(x=>x.name==='деталь_01.pdf')"); await pg.evaluate(f'showItem({n})'); await pg.wait_for_timeout(1500)
+    print('pages',await pg.evaluate('panes[0].doc.pages'),'page',await pg.evaluate('panes[0].pageNo'))
+    await swipe(200,600,205,250); print('swipe up -> page',await pg.evaluate('panes[0].pageNo'),'idx same',await pg.evaluate('VW.idx')==n)
+    await swipe(200,250,205,600); print('swipe down -> page',await pg.evaluate('panes[0].pageNo'))
+    # двойное касание — приблизить, перетаскивание с ограничением, двойное — вписать
+    await tap(200,400); await pg.wait_for_timeout(80); await tap(200,400); await pg.wait_for_timeout(500)
+    z=await pg.evaluate('[panes[0].fitted,panes[0].s/panes[0].fitView().s]'); print('double tap zoom',z)
+    await swipe(200,400,-600,-600,n=12); f=await pg.evaluate('(()=>{const p=panes[0],v=p.fitView();return [p.cx,p.cy,v.cx,v.cy,p.W/2/v.s,p.W/2/p.s]})()')
+    print('clamped x', abs(f[0]-f[2])<=f[4]-f[5]+1e-6)
+    await tap(200,400); await pg.wait_for_timeout(80); await tap(200,400); await pg.wait_for_timeout(500); print('double tap fit',await pg.evaluate('panes[0].fitted'))
+    # щипок
+    await touch([[(150,400),(250,400)],[(130,400),(270,400)],[(100,400),(300,400)],[(60,400),(340,400)],[]]); await pg.wait_for_timeout(400)
+    print('pinch zoom',await pg.evaluate('panes[0].fitted'),round(await pg.evaluate('panes[0].s/panes[0].fitView().s'),2))
+    await touch([[(60,400),(340,400)],[(150,400),(250,400)],[(190,400),(210,400)],[]]); await pg.wait_for_timeout(400)
+    print('pinch back -> fitted',await pg.evaluate('panes[0].fitted'))
+    # нижняя панель и «⋯»
+    await tap(200,400); await pg.wait_for_timeout(600)
+    await pg.tap('#mMore'); await pg.wait_for_timeout(300); print('sheet visible',await pg.is_visible('#vLoupe'),await pg.is_visible('#vTxt'))
+    await pg.screenshot(path='m3_sheet.png')
+    await pg.tap('#mClose') if await pg.is_visible('#mClose') else None
+    await pg.wait_for_timeout(500); print('closed',not await pg.evaluate('VW.full'))
+    print('errors',errs); await b.close()
+asyncio.run(main())
