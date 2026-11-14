@@ -860,7 +860,7 @@ class Pane{
     for(const k of ['timer','t2','midTimer','rbTimer'])clearTimeout(P[k]);this.pg=[];this.page=null;this.cont=false;}
   async pdfShow(n,sv){
     const doc=this.doc,tok=++this.tok;this.pdfReset();this.loading=true;this.sugRot=null;this.draw();
-    const cont=!!SET.pdfCont&&!MUI&&doc.pages>1,nums=cont?Array.from({length:Math.min(doc.pages,300)},(_,i)=>i+1):[n];
+    const cont=(MUI?!!SET.mCont:!!SET.pdfCont)&&doc.pages>1,nums=cont?Array.from({length:Math.min(doc.pages,300)},(_,i)=>i+1):[n];
     let pages;try{pages=await Promise.all(nums.map(k=>doc.pdf.getPage(k)));}catch(e){if(tok===this.tok){this.loading=false;this.draw();this.onUpdate();}return;}
     if(tok!==this.tok)return;
     const G=cont?14:0;let y=0,maxW=0;
@@ -977,8 +977,10 @@ class Pane{
       if(ptrs.size===1&&TXT.drag&&TXT.drag.p===this){TXT.drag.x1=x;TXT.drag.y1=y;this.draw();return;}   // текст PDF: рамка выделения
       if(ptrs.size===1&&MEAS.drag&&MEAS.drag.p===this){if(MEAS.drag.h.drag){if(moved)measDragTo(this,x,y);return;}if(moved)MEAS.drag=null;}   // размеры: тянем размерную линию / надпись
       if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
+      else if(ptrs.size===1&&MUI&&multi&&e.pointerType!=='mouse'){this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;muiClamp(this);this.draw();this.changed();}   // после щипка остался один палец
       else if(ptrs.size===1){
-        if(MUI&&e.pointerType!=='mouse'&&!multi){if(this.fitted)return;   // телефон: лист «вписан» — не ёрзает, палец только листает
+        if(MUI&&e.pointerType!=='mouse'&&!multi){if(this.fitted&&!(this.isPdf&&this.cont))return;   // телефон: лист «вписан» — не ёрзает, палец только листает; страницы подряд — прокрутка
+          if(this.isPdf&&this.cont)this.fitted=false;
           this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;muiClamp(this);this.draw();this.changed();return;}
         this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
       else if(ptrs.size===2){
@@ -995,7 +997,9 @@ class Pane{
       if(MUI&&e.pointerType!=='mouse'&&!TXT.on&&!MEAS.on&&!LOUPE.on&&!this.ov){   // телефон: свайпы, края экрана, двойное касание
         if(ptrs.size===0&&multi){if(this.s<=this.fitView().s*1.06)this.fit();return;}   // после щипка почти «вписан» — вписать точно
         if(ptrs.size===0&&e.type==='pointerup'&&!multi){const [x,y]=pos(e),dx=x-downX,dy=y-downY,dt=performance.now()-downT;
-          if(this.fitted&&dt<800){
+          const sc=this.isPdf&&this.cont,fitsW=sc&&this.pw*this.s<=this.W*1.02;
+          if(sc&&fitsW&&dt<800&&Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){step(dx<0?1:-1);return;}       // страницы подряд: ← → — тоже файлы
+          if(this.fitted&&!sc&&dt<800){
             if(Math.abs(dx)>45&&Math.abs(dx)>Math.abs(dy)*1.3){step(dx<0?1:-1);return;}                       // ← → — соседний файл
             if(Math.abs(dy)>45&&Math.abs(dy)>Math.abs(dx)*1.3){if(this.isPdf&&this.doc&&this.doc.pages>1)this.pageGo(dy<0?1:-1);return;}   // ↑ ↓ — страницы PDF
           }
@@ -1154,7 +1158,7 @@ function updateBar(){if(MUI)setTimeout(muiSync,0);
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
   $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vTxt').hidden=!anyPdf;$('vTxt').classList.toggle('on',TXT.on);if(!anyPdf&&TXT.on)txtToggle(false);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
-  $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
+  $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',MUI?!!SET.mCont:!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
   $('vPages').hidden=!pg;if(pg)$('vPgNum').textContent=` ${ap.pageNo} / ${ap.doc.pages} `;
   if(!has||VW.set.length>1)$('vPair').hidden=true;else updatePairBtn(cur);
@@ -1240,7 +1244,8 @@ $('vRotR').onclick=()=>apDo(p=>p.rotate(-90));
 $('vMir').onclick=()=>apDo(p=>p.mirror());$('vMirV').onclick=()=>apDo(p=>p.mirrorV());
 $('vLw').onclick=()=>cycleLineK();
 $('vCtM').onclick=()=>setContrast(SET.pdfLv-1);$('vCtP').onclick=()=>setContrast(SET.pdfLv+1);
-$('vCont').onclick=()=>{$('sPdfCont').value=SET.pdfCont?'0':'1';$('sPdfCont').onchange({target:$('sPdfCont')});updateBar();flash(SET.pdfCont?'PDF: все страницы подряд':'PDF: по одной странице');};
+$('vCont').onclick=()=>{if(MUI){SET.mCont=!SET.mCont;saveSet();panes.forEach(p=>p.reloadPdf());updateBar();flash(SET.mCont?'PDF: все страницы подряд — листайте вверх / вниз':'PDF: по одной странице');return;}   // на телефоне — своя настройка
+  $('sPdfCont').value=SET.pdfCont?'0':'1';$('sPdfCont').onchange({target:$('sPdfCont')});updateBar();flash(SET.pdfCont?'PDF: все страницы подряд':'PDF: по одной странице');};
 $('vWarn').onclick=()=>{const it=curItem();if(it)openLog(it.path);};
 
 /* =====================================================================
@@ -2245,10 +2250,18 @@ $('txtCopy').onclick=()=>txtCopy();
 $('txtX').onclick=()=>txtClear();
 
 /* ---------- Профиль «телефон»: панели поверх листа, касание в центре — показать/спрятать ---------- */
-function muiClamp(p){   // увеличенный лист не уезжает за край
-  const f=p.fitView(),hw=p.W/2/f.s,hh=p.H/2/f.s,vw=p.W/2/p.s,vh=p.H/2/p.s;
-  p.cx=vw>=hw?f.cx:Math.min(f.cx+hw-vw,Math.max(f.cx-hw+vw,p.cx));
-  p.cy=vh>=hh?f.cy:Math.min(f.cy+hh-vh,Math.max(f.cy-hh+vh,p.cy));
+function viewBB(p){   // границы листа / детали в координатах экрана (с учётом поворота)
+  if(p.isPdf)return [0,0,p.pw||p.doc.bbox[2],p.ph||p.doc.bbox[3]];
+  let b=p.doc&&p.doc.bbox;if(!b)return null;
+  if(!isId(p.xf)){const m=xfMat(p.xf),B=[Infinity,Infinity,-Infinity,-Infinity];
+    for(const [x,y] of [[b[0],b[1]],[b[2],b[1]],[b[0],b[3]],[b[2],b[3]]]){const X=m[0]*x+m[2]*y+m[4],Y=m[1]*x+m[3]*y+m[5];B[0]=Math.min(B[0],X);B[1]=Math.min(B[1],Y);B[2]=Math.max(B[2],X);B[3]=Math.max(B[3],Y);}b=B;}
+  return b;
+}
+function muiClamp(p){   // увеличенный лист не уезжает за край экрана: край листа — не дальше края экрана
+  const b=viewBB(p);if(!b)return;const vw=p.W/2/p.s,vh=p.H/2/p.s,m=10/p.s;
+  const cl=(c,a,z,v)=>z-a<=2*v?(a+z)/2:Math.min(z-v+m,Math.max(a+v-m,c));
+  p.cx=cl(p.cx,b[0],b[2],vw);
+  if(p.isPdf&&p.cont)p.clampCont();else p.cy=cl(p.cy,b[1],b[3],vh);
 }
 const MT={t:0,x:0,y:0,tm:0};
 function muiTap(p,x,y){
@@ -2256,8 +2269,11 @@ function muiTap(p,x,y){
   if(now-MT.t<320&&Math.hypot(x-MT.x,y-MT.y)<40){clearTimeout(MT.tm);MT.t=0;   // двойное касание: приблизить / вписать
     if(p.fitted)p.zoomAt(x,y,2.5);else p.fit();if(MUI)muiClamp(p);p.draw();return;}
   MT.t=now;MT.x=x;MT.y=y;
-  const edge=p.fitted&&VW.set.length===1?(x<p.W*0.22?-1:x>p.W*0.78?1:0):0;
-  if(edge){MT.t=0;step(edge);return;}                                          // край экрана — соседний файл (как в Telegram)
+  const sc=p.isPdf&&p.cont,flat=VW.set.length===1&&(sc?p.pw*p.s<=p.W*1.02:p.fitted);
+  const edge=flat?(x<p.W*0.22?-1:x>p.W*0.78?1:0):0;
+  if(edge){MT.t=0;step(edge);return;}                                          // край слева / справа — соседний файл (как в Telegram)
+  const multiPg=p.isPdf&&p.doc&&p.doc.pages>1,ey=flat&&multiPg?(y<p.H*0.15?-1:y>p.H*0.85?1:0):0;
+  if(ey){MT.t=0;p.pageGo(ey);return;}                                          // край сверху / снизу — страница PDF
   clearTimeout(MT.tm);MT.tm=setTimeout(()=>muiUi(),300);                      // центр — показать / спрятать панели
 }
 function muiUi(on){const b=document.body;on=on===undefined?!b.classList.contains('mui-ui'):on;b.classList.toggle('mui-ui',on);if(!on)b.classList.remove('mui-sheet');muiSync();}

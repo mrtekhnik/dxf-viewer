@@ -42,11 +42,17 @@ async def main():
     print('pages',await pg.evaluate('panes[0].doc.pages'),'page',await pg.evaluate('panes[0].pageNo'))
     await swipe(200,600,205,250); print('swipe up -> page',await pg.evaluate('panes[0].pageNo'),'idx same',await pg.evaluate('VW.idx')==n)
     await swipe(200,250,205,600); print('swipe down -> page',await pg.evaluate('panes[0].pageNo'))
+    await tap(200,700); await pg.wait_for_timeout(500); print('tap bottom -> page',await pg.evaluate('panes[0].pageNo'))
+    await tap(200,30); await pg.wait_for_timeout(500); print('tap top -> page',await pg.evaluate('panes[0].pageNo'))
     # двойное касание — приблизить, перетаскивание с ограничением, двойное — вписать
     await tap(200,400); await pg.wait_for_timeout(80); await tap(200,400); await pg.wait_for_timeout(500)
     z=await pg.evaluate('[panes[0].fitted,panes[0].s/panes[0].fitView().s]'); print('double tap zoom',z)
-    await swipe(200,400,-600,-600,n=12); f=await pg.evaluate('(()=>{const p=panes[0],v=p.fitView();return [p.cx,p.cy,v.cx,v.cy,p.W/2/v.s,p.W/2/p.s]})()')
-    print('clamped x', abs(f[0]-f[2])<=f[4]-f[5]+1e-6)
+    R="(()=>{const p=panes[0],e=p.pg[0],s=p.s,L=p.W/2+(e.ox-p.cx)*s,T=p.H/2-((p.ph-e.oy)-p.cy)*s;return [L,T,L+e.w*s,T+e.h*s,p.W,p.H]})()"
+    for (a,b_,c,d) in [(200,400,-600,-600),(200,400,900,1200),(200,300,200,-900),(200,300,200,1500)]:
+      await swipe(a,b_,c,d,n=12); r=await pg.evaluate(R)
+      ok=(r[2]-r[0]<=r[4]+1 or (r[0]<=11 and r[2]>=r[4]-11)) and (r[3]-r[1]<=r[5]+1 or (r[1]<=11 and r[3]>=r[5]-11))
+      if not ok: errs.append('page left screen: '+str([round(v) for v in r]))
+    print('clamped to page edges', not any('page left' in e for e in errs))
     await tap(200,400); await pg.wait_for_timeout(80); await tap(200,400); await pg.wait_for_timeout(500); print('double tap fit',await pg.evaluate('panes[0].fitted'))
     # щипок
     await touch([[(150,400),(250,400)],[(130,400),(270,400)],[(100,400),(300,400)],[(60,400),(340,400)],[]]); await pg.wait_for_timeout(400)
@@ -57,6 +63,12 @@ async def main():
     await tap(200,400); await pg.wait_for_timeout(600)
     await pg.tap('#mMore'); await pg.wait_for_timeout(300); print('sheet visible',await pg.is_visible('#vLoupe'),await pg.is_visible('#vTxt'))
     await pg.screenshot(path='m3_sheet.png')
+    await pg.tap('#vCont'); await pg.wait_for_timeout(1500); print('cont on',await pg.evaluate('panes[0].cont'))
+    await pg.evaluate("document.body.classList.remove('mui-sheet','mui-ui')")
+    cy0=await pg.evaluate('panes[0].cy'); await swipe(200,600,200,200); cy1=await pg.evaluate('panes[0].cy'); print('cont scroll moved', cy1!=cy0, 'idx same', await pg.evaluate(f'VW.idx')==n)
+    await pg.evaluate("muiUi(true)"); await pg.wait_for_timeout(200)
+    await pg.tap('#mMore'); await pg.wait_for_timeout(200); await pg.tap('#vCont'); await pg.wait_for_timeout(1200); print('cont off',not await pg.evaluate('panes[0].cont'))
+    await pg.evaluate("document.body.classList.remove('mui-sheet')")
     await pg.tap('#mClose') if await pg.is_visible('#mClose') else None
     await pg.wait_for_timeout(500); print('closed',not await pg.evaluate('VW.full'))
     print('errors',errs); await b.close()

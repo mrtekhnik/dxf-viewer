@@ -287,7 +287,7 @@ body.mui.mui-sheet #viewer .vbar>#vPrev,body.mui.mui-sheet #viewer .vbar>#vNext,
 body.mui #viewer .vbar .vgrp{flex-wrap:wrap;gap:8px}
 body.mui #viewer .vbar button,body.mui #viewer .vbar select{min-height:44px;min-width:44px;font-size:16px}
 body.mui #viewer .vbar .lbl{display:inline!important}
-body.mui #vCont,body.mui.mui-sheet #vPages{display:none!important}
+body.mui.mui-sheet #vPages{display:none!important}
 body.mui #mHMenu{display:inline-block;font-size:20px;min-width:46px}
 body.mui header{flex-wrap:wrap}
 body.mui header>.grp.grow{flex:1 1 100%;order:5}
@@ -300,7 +300,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.3.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.3.1</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
