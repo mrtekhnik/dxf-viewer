@@ -22,6 +22,9 @@ header .grp.grow{flex:1 1 150px}header .grp.grow #filter{flex:1;min-width:80px;w
 header .grp.end{margin-left:auto;padding-right:0}
 header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg button:first-child{border-radius:8px 0 0 8px}header .seg button:last-child{border-radius:0 8px 8px 0;border-left:0}
 .mwrap{position:relative}
+#txtBox{position:fixed;left:50%;bottom:40px;transform:translateX(-50%);width:min(760px,92vw);z-index:40;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#txtBox .txt-h{display:flex;gap:8px;align-items:center;margin-bottom:6px}#txtInfo{opacity:.7;font-size:12px}
+#txtArea{width:100%;box-sizing:border-box;resize:vertical;font:13px/1.4 Consolas,monospace;background:var(--bg);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px}
 .xfm-t{font-weight:600;padding:2px 4px}.xfm-r{display:flex;align-items:center;gap:4px;flex-wrap:wrap;padding:2px 4px}.xfm-n{font-size:12px;opacity:.75;padding:2px 4px;max-width:300px}#xfTxt{max-width:250px}
 .menu{position:absolute;top:calc(100% + 4px);left:0;z-index:20;display:flex;flex-direction:column;gap:4px;padding:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.35);min-width:170px}
 .menu[hidden]{display:none}.menu button{text-align:left}
@@ -270,7 +273,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.1.4</small></div>
+  <div class="brand">DXF <small>+PDF · v4.2.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -349,7 +352,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
         <button id="xfGo">💾 Записать в файл</button>
         <div id="xfNote" class="xfm-n"></div>
       </div></span></span><button id="vPdfRot" hidden class="warn">⤾<span class="lbl"> Лист</span></button></span>
-    <span class="vgrp"><button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏<span class="lbl"> Размеры</span></button><span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option><option value="ang">Угол</option><option value="gap">Зазор</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span><button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓<span class="lbl"> Проверка</span></button></span>
+    <span class="vgrp"><button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏<span class="lbl"> Размеры</span></button><span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option><option value="ang">Угол</option><option value="gap">Зазор</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span><button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓<span class="lbl"> Проверка</span></button><button id="vTxt" hidden title="Текст из PDF (T): обведите рамкой или щёлкните по надписи — текст скопируется">𝐓<span class="lbl"> Текст</span></button></span>
     <span class="vgrp"><button id="vSide" title="Чертёж и все его развёртки одновременно (R)">⧉<span class="lbl"> Рядом</span></button><button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆<span class="lbl"> Сравнить</span></button><button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button><button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒</button></span>
     <span class="vgrp"><span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼</button>
       <div id="pngMenu" class="menu" hidden style="right:0;left:auto;min-width:240px">
@@ -375,6 +378,7 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
   </div>
   <div id="ovList" class="pop" hidden></div>
   <div id="stageWrap"><div id="stage"></div><div id="stageMsg" hidden></div></div>
+  <div id="txtBox" hidden><div class="txt-h"><b>Текст из PDF</b> <span id="txtInfo"></span><span style="flex:1"></span><button id="txtCopy">⧉ Копировать</button><button id="txtX" title="Закрыть (Esc)">✕</button></div><textarea id="txtArea" rows="4" spellcheck="false"></textarea></div>
   <div class="vinfo"><span id="vDims"></span><span id="vCoord"></span><span class="sp"></span><button id="vWarn" hidden></button></div>
 </div>
 

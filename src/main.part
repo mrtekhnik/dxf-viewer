@@ -744,7 +744,7 @@ class Pane{
     const c=this.ctx,d=this.dpr;
     const bg=this.it&&this.it.type==='pdf'?pdfBg():dxfBg();
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
-    if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();return;}
+    if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();if(TXT.on||(this.tsel&&this.tsel.length))txtPaint(this);return;}
     if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);return;}
     if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});if(this.chk)chkPaint(this,c,d);if(MEAS.on&&this.it)measPaint(this,c,d);return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
@@ -851,7 +851,7 @@ class Pane{
         const old=e.base;e.base=null;e.mid=null;this.ensureBase(e);if(!this.cont&&e.bp)e.base=old;}  // в обычном режиме старый виден до готовности
       if(!this.cont)this.scheduleMid();this.draw();},200);
   }
-  pdfReset(){const P=this.P;for(const e of this.pg||[]){for(const k of ['task','mtask'])if(e[k]){try{e[k].cancel();}catch(x){}}}
+  pdfReset(){this.tsel=null;const P=this.P;for(const e of this.pg||[]){for(const k of ['task','mtask'])if(e[k]){try{e[k].cancel();}catch(x){}}}
     for(const k of ['timer','t2','midTimer','rbTimer'])clearTimeout(P[k]);this.pg=[];this.page=null;this.cont=false;}
   async pdfShow(n,sv){
     const doc=this.doc,tok=++this.tok;this.pdfReset();this.loading=true;this.sugRot=null;this.draw();
@@ -959,7 +959,8 @@ class Pane{
     cv.addEventListener('pointerdown',e=>{
       setActive(this);try{cv.setPointerCapture(e.pointerId);}catch(x){}const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});
       if(ptrs.size===1){downT=performance.now();downX=x;downY=y;moved=false;multi=false;fitDown=this.fitted;sv0={s:this.s,cx:this.cx,cy:this.cy};
-        MEAS.drag=null;if(MEAS.on&&e.button===0&&!loupeOn()&&this.doc&&!this.isPdf&&!this.ov)measGrab(this,x,y);}else{moved=true;multi=true;MEAS.drag=null;}
+        MEAS.drag=null;if(MEAS.on&&e.button===0&&!loupeOn()&&this.doc&&!this.isPdf&&!this.ov)measGrab(this,x,y);
+        TXT.drag=null;if(TXT.on&&e.button===0&&this.isPdf&&this.pg.length&&!loupeOn())TXT.drag={p:this,x0:x,y0:y,x1:x,y1:y,add:e.ctrlKey||e.shiftKey};}else{moved=true;multi=true;MEAS.drag=null;TXT.drag=null;}
     });
     cv.addEventListener('pointermove',e=>{
       const [x,y]=pos(e);
@@ -968,6 +969,7 @@ class Pane{
       if(MEAS.on&&!ptrs.size&&e.pointerType==='mouse'&&!loupeOn())measHover(this,x,y);
       const p=ptrs.get(e.pointerId);if(!p)return;
       if(Math.hypot(x-downX,y-downY)>6)moved=true;
+      if(ptrs.size===1&&TXT.drag&&TXT.drag.p===this){TXT.drag.x1=x;TXT.drag.y1=y;this.draw();return;}   // текст PDF: рамка выделения
       if(ptrs.size===1&&MEAS.drag&&MEAS.drag.p===this){if(MEAS.drag.h.drag){if(moved)measDragTo(this,x,y);return;}if(moved)MEAS.drag=null;}   // размеры: тянем размерную линию / надпись
       if(ptrs.size===1&&this.ov&&this.ov.res&&e.shiftKey){ovNudge(this,(x-p.x)/this.s,-(y-p.y)/this.s);p.x=x;p.y=y;}  // наложение: Shift — двигать вторую деталь
       else if(ptrs.size===1){this.fitted=false;this.cx-=(x-p.x)/this.s;this.cy+=(y-p.y)/this.s;p.x=x;p.y=y;this.draw();this.changed();}
@@ -987,6 +989,7 @@ class Pane{
         if(Math.abs(dx)>70&&Math.abs(dy)<60){Object.assign(this,sv0);this.fitted=true;this.draw();step(dx<0?1:-1);return;}
       }
       if(LOUPE.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&e.pointerType==='mouse'&&e.button===0){const [x,y]=pos(e);LOUPE.p=this;LOUPE.x=x;LOUPE.y=y;LOUPE.down=!LOUPE.down;loupeSet();return;}   // лупа с кнопки: клик — показать, ещё клик — убрать
+      if(TXT.drag&&TXT.drag.p===this&&ptrs.size===0){const D=TXT.drag;TXT.drag=null;if(e.type==='pointerup')txtSelect(this,D);else this.draw();return;}
       if(MEAS.drag&&MEAS.drag.p===this&&ptrs.size===0){const D=MEAS.drag;MEAS.drag=null;msOf(this).sel=D.h.it;MEAS.last=null;this.draw();
         if(e.type==='pointerup'&&!moved)flash('Размер выбран: Delete — удалить, перетащите — передвинуть'+(D.h.drag?'':' (этот размер не двигается)'));return;}
       if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&!(e.pointerType==='mouse'&&e.button!==0)&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
@@ -1132,7 +1135,7 @@ function updateBar(){
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
   $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
-  const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
+  const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vTxt').hidden=!anyPdf;$('vTxt').classList.toggle('on',TXT.on);if(!anyPdf&&TXT.on)txtToggle(false);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
   $('vPages').hidden=!pg;if(pg)$('vPgNum').textContent=` ${ap.pageNo} / ${ap.doc.pages} `;
@@ -2127,6 +2130,96 @@ async function pdfSuggestRot(p,e){ // по направлению текста: 
   if(p.it&&p.it.key===key){p.sugRot=v;if(panes[VW.active]===p)updateBar();}
 }
 $('vPdfRot').onclick=()=>{const p=panes[VW.active];if(p&&p.sugRot!=null)p.pdfRotate(((p.sugRot-(p.prot||0))%360+360)%360);};
+/* ---------- Текст из PDF: обвести рамкой или щёлкнуть по надписи — текст копируется в буфер ---------- */
+const TXT={on:false,drag:null};
+const WINANSI='€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008DŽ\u008F\u0090‘’“”•–—˜™š›œ\u009DžŸ';
+function txtFix(s){   // «Ïëèòà» → «Плита»: русские буквы записаны однобайтовой кодировкой без таблицы шрифта
+  if(/[\u0400-\u04FF]/.test(s))return s;
+  const lat=(s.match(/[\u00C0-\u00FF]/g)||[]).length,let_=(s.match(/[A-Za-z\u00C0-\u00FF]/g)||[]).length;
+  if(!lat||lat<let_*0.3)return s;
+  try{return new TextDecoder('windows-1251').decode(Uint8Array.from(s,ch=>{const c=ch.charCodeAt(0);if(c<256)return c;const i=WINANSI.indexOf(ch);return i>=0?128+i:63;}));}catch(e){return s;}
+}
+const txtBad=s=>{const n=s.replace(/\s/g,'').length;if(!n)return false;const b=(s.match(/[\uE000-\uF8FF\uFFFD\u3400-\u9FFF\u0000-\u0008]/g)||[]).length;return b>=n*0.3;};
+function txtItems(p,e){   // надписи страницы в координатах листа (как на экране, ось Y вниз)
+  if(e.txt)return e.txt;
+  e.txt=(async()=>{const tc=await e.page.getTextContent(),vp=e.page.getViewport({scale:1,rotation:e.rot}),out=[];
+    for(const t of tc.items){const str=t.str;if(!str||!str.trim())continue;
+      const [a,b,c,d,x,y]=t.transform,fs=Math.hypot(c,d)||Math.hypot(a,b)||1,ul=Math.hypot(a,b)||1,ux=a/ul,uy=b/ul,vx=-uy,vy=ux,w=t.width>0?t.width:str.length*fs*0.5;
+      const Q=[[0,-0.22],[w,-0.22],[0,0.95],[w,0.95]].map(([k,m])=>vp.convertToViewportPoint(x+ux*k+vx*fs*m,y+uy*k+vy*fs*m));
+      const xs=Q.map(q=>q[0]),ys=Q.map(q=>q[1]),dx=Q[1][0]-Q[0][0],dy=Q[1][1]-Q[0][1],dl=Math.hypot(dx,dy)||1;
+      out.push({s:txtFix(str),x0:Math.min(...xs),x1:Math.max(...xs),y0:Math.min(...ys),y1:Math.max(...ys),ux:dx/dl,uy:dy/dl,cx:(Q[0][0]+Q[3][0])/2,cy:(Q[0][1]+Q[3][1])/2,h:fs});}
+    p.draw();return out;})().then(r=>(e.tx=r,r),()=>(e.tx=[],[]));
+  return e.txt;
+}
+function txtCompose(sel){   // по строкам: сверху вниз, в строке — по направлению текста
+  const groups=new Map();
+  for(const it of sel){const a=((Math.round(Math.atan2(it.uy,it.ux)/(Math.PI/2))%4)+4)%4;(groups.get(a)||groups.set(a,[]).get(a)).push(it);}
+  const out=[];
+  for(const [,G] of [...groups].sort((x,y)=>y[1].length-x[1].length)){
+    const ux=G[0].ux,uy=G[0].uy,al=it=>it.cx*ux+it.cy*uy,ac=it=>-it.cx*uy+it.cy*ux;
+    G.sort((p,q)=>ac(p)-ac(q));const lines=[];
+    for(const it of G){const L=lines[lines.length-1];if(L&&Math.abs(ac(it)-L.ac)<Math.max(it.h,L.h)*0.5){L.items.push(it);}else lines.push({ac:ac(it),h:it.h,items:[it]});}
+    for(const L of lines){L.items.sort((p,q)=>al(p)-al(q));let s='',prev=null;
+      for(const it of L.items){if(prev){const gap=al(it)-al(prev)-(Math.abs(ux)>0.5?(prev.x1-prev.x0):(prev.y1-prev.y0))/2-(Math.abs(ux)>0.5?(it.x1-it.x0):(it.y1-it.y0))/2;
+          if(gap>it.h*0.12&&!/\s$/.test(s)&&!/^\s/.test(it.s))s+=' ';}
+        s+=it.s;prev=it;}
+      out.push(s.replace(/\s+$/,''));}
+  }
+  return out.join('\n');
+}
+function txtPageAt(p,y){for(const e of p.pg){const T=p.H/2-((p.ph-e.oy)-p.cy)*p.s;if(y>=T-6&&y<=T+e.h*p.s+6)return e;}return null;}
+async function txtSelect(p,D){
+  const s=p.s,rx0=Math.min(D.x0,D.x1),rx1=Math.max(D.x0,D.x1),ry0=Math.min(D.y0,D.y1),ry1=Math.max(D.y0,D.y1),click=rx1-rx0<4&&ry1-ry0<4;
+  let sel=D.add&&p.tsel?p.tsel.slice():[];
+  for(const e of p.pg){
+    const L=p.W/2+(e.ox-p.cx)*s,T=p.H/2-((p.ph-e.oy)-p.cy)*s;
+    if(ry1<T||ry0>T+e.h*s||rx1<L||rx0>L+e.w*s)continue;
+    const its=await txtItems(p,e);
+    const X0=(rx0-L)/s,X1=(rx1-L)/s,Y0=(ry0-T)/s,Y1=(ry1-T)/s,pad=3/s;
+    if(click){let best=null,ba=1e18;for(const it of its)if(X0>=it.x0-pad&&X0<=it.x1+pad&&Y0>=it.y0-pad&&Y0<=it.y1+pad){const ar=(it.x1-it.x0)*(it.y1-it.y0);if(ar<ba){ba=ar;best=it;}}
+      if(best){const i=sel.findIndex(q=>q.it===best);if(i>=0&&D.add)sel.splice(i,1);else if(i<0)sel.push({e,it:best});}}
+    else for(const it of its){const ix=Math.min(X1,it.x1)-Math.max(X0,it.x0),iy=Math.min(Y1,it.y1)-Math.max(Y0,it.y0);
+      if(ix>0&&iy>0&&(ix*iy>=(it.x1-it.x0)*(it.y1-it.y0)*0.4||(it.cx>=X0&&it.cx<=X1&&it.cy>=Y0&&it.cy<=Y1))&&!sel.some(q=>q.it===it))sel.push({e,it});}
+  }
+  p.tsel=sel;p.draw();txtShow(p,true);
+}
+async function txtAll(){const p=panes[VW.active];if(!p||!p.isPdf)return;const e=p.curPage();if(!e)return;const its=await txtItems(p,e);p.tsel=its.map(it=>({e,it}));p.draw();txtShow(p,true);}
+function txtClear(){for(const p of panes)if(p.tsel){p.tsel=null;p.draw();}$('txtBox').hidden=true;}
+function txtShow(p,copy){
+  const sel=p.tsel||[];if(!sel.length){$('txtBox').hidden=true;if(copy)flash('Здесь нет текста. Если надписи видны, но не выделяются — в PDF они нарисованы линиями, текста как такового нет');return;}
+  const pages=[...new Set(sel.map(q=>q.e.n))].sort((a,b)=>a-b);
+  const t=pages.map(n=>txtCompose(sel.filter(q=>q.e.n===n).map(q=>q.it))).join('\n\n');
+  $('txtArea').value=t;$('txtBox').hidden=false;$('txtInfo').textContent=sel.length+' надп. · '+t.length+' зн.';
+  if(txtBad(t))flash('Похоже на «иероглифы»: шрифт в этом PDF записан без расшифровки букв. Пришлите такой файл — попробую разобрать',7000);
+  else if(copy)txtCopy(true);
+}
+async function txtCopy(auto){const t=$('txtArea').value;if(!t)return;
+  let ok=false;try{await navigator.clipboard.writeText(t);ok=true;}catch(e){const a=$('txtArea');a.focus();a.select();try{ok=document.execCommand('copy');}catch(x){}a.blur();}
+  flash(ok?'Скопировано: '+(t.length>60?t.slice(0,60).replace(/\n/g,' ')+'…':t.replace(/\n/g,' ')):'Не удалось скопировать — выделите текст в окошке и нажмите Ctrl+C');}
+function txtPaint(p){
+  const c=p.ctx,d=p.dpr,s=p.s;c.save();c.setTransform(d,0,0,d,0,0);
+  for(const e of p.pg){const L=p.W/2+(e.ox-p.cx)*s,T=p.H/2-((p.ph-e.oy)-p.cy)*s;
+    if(T>p.H||T+e.h*s<0)continue;
+    if(TXT.on){if(!e.tx){txtItems(p,e);continue;}
+      c.fillStyle='rgba(255,196,0,.13)';for(const it of e.tx)c.fillRect(L+it.x0*s,T+it.y0*s,(it.x1-it.x0)*s,(it.y1-it.y0)*s);}
+  }
+  if(p.tsel){c.fillStyle='rgba(40,140,255,.35)';c.strokeStyle='rgba(40,140,255,.9)';c.lineWidth=1;
+    for(const q of p.tsel){const e=q.e,it=q.it,L=p.W/2+(e.ox-p.cx)*s,T=p.H/2-((p.ph-e.oy)-p.cy)*s;c.fillRect(L+it.x0*s,T+it.y0*s,(it.x1-it.x0)*s,(it.y1-it.y0)*s);}}
+  const D=TXT.drag;if(D&&D.p===p&&(Math.abs(D.x1-D.x0)>3||Math.abs(D.y1-D.y0)>3)){c.setLineDash([5,4]);c.strokeStyle='#2b8cff';c.lineWidth=1.2;c.fillStyle='rgba(43,140,255,.08)';
+    const x=Math.min(D.x0,D.x1),y=Math.min(D.y0,D.y1),w=Math.abs(D.x1-D.x0),h=Math.abs(D.y1-D.y0);c.fillRect(x,y,w,h);c.strokeRect(x+.5,y+.5,w,h);c.setLineDash([]);}
+  c.restore();
+}
+function txtToggle(on){
+  TXT.on=on===undefined?!TXT.on:on;TXT.drag=null;
+  if(TXT.on){if(LOUPE.on)loupeOff();flash('Текст: обведите рамкой или щёлкните по надписи — текст скопируется. Ctrl/Shift — добавить, Ctrl+A — вся страница, Esc — выйти. Сдвиг листа — колесом или правой кнопкой',6000);}
+  else txtClear();
+  for(const p of panes)if(p.cv){p.cv.style.cursor=TXT.on&&p.isPdf?'text':'';p.draw();}
+  $('vTxt').classList.toggle('on',TXT.on);
+}
+$('vTxt').onclick=()=>txtToggle();
+$('txtCopy').onclick=()=>txtCopy();
+$('txtX').onclick=()=>txtClear();
+
 /* ---------- вписать по ширине ---------- */
 function fitWidth(p){
   if(!p.doc||!p.W)return;
@@ -2177,7 +2270,7 @@ async function loupePdf(p,wx,wy,s,tok){
   L.strokeStyle='rgba(217,130,43,.8)';L.lineWidth=d;L.beginPath();L.moveTo(R*d-8*d,R*d);L.lineTo(R*d+8*d,R*d);L.moveTo(R*d,R*d-8*d);L.lineTo(R*d,R*d+8*d);L.stroke();
   L.fillStyle='rgba(16,18,22,.8)';L.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);L.fillStyle='#ffd23f';L.font=(12*d)+'px system-ui,sans-serif';L.textAlign='center';L.textBaseline='middle';L.fillText('×'+Math.round(s/p.s),R*d,2*R*d-17*d);
 }
-$('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;LOUPE.down=false;if(LOUPE.on&&MEAS.on)measToggle(false);loupeSet();if(LOUPE.on)flash('Лупа: клик — показать лупу, водите курсором, колесо — сильнее/слабее; ещё клик — убрать. Перетаскивание и колесо без лупы — как обычно. Esc — выключить');};
+$('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;LOUPE.down=false;if(LOUPE.on&&MEAS.on)measToggle(false);if(LOUPE.on&&TXT.on)txtToggle(false);loupeSet();if(LOUPE.on)flash('Лупа: клик — показать лупу, водите курсором, колесо — сильнее/слабее; ещё клик — убрать. Перетаскивание и колесо без лупы — как обычно. Esc — выключить');};
 document.addEventListener('keydown',e=>{if((e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я')&&!e.ctrlKey&&!e.metaKey&&!e.repeat&&viewerShown()&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')){LOUPE.key=true;loupeSet();}});
 document.addEventListener('keyup',e=>{if(e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я'){LOUPE.key=false;loupeSet();}});
 window.addEventListener('blur',()=>{LOUPE.key=false;LOUPE.boost=false;loupeSet();});
@@ -2778,6 +2871,9 @@ function pageRows(){const t=$('grid').children[0];return t?Math.max(1,Math.floor
 document.addEventListener('keydown',e=>{
   const k=e.key;
   if(MEAS.on&&viewerShown()&&e.ctrlKey&&/^[zZяЯ]$/.test(k)){e.preventDefault();measUndo(false);return;}
+  if(TXT.on&&viewerShown()&&e.ctrlKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){   // текст PDF: Ctrl+C — копировать, Ctrl+A — вся страница
+    if(/^[cCсС]$/.test(k)&&panes.some(p=>p.tsel&&p.tsel.length)){e.preventDefault();txtCopy();return;}
+    if(/^[aAфФ]$/.test(k)){e.preventDefault();txtAll();return;}}
   if(e.ctrlKey||e.altKey||e.metaKey)return;   // Ctrl+R, Ctrl+F, Ctrl+L, Ctrl+0, Ctrl+Shift+B … — браузеру
   for(const id of ['logPanel','histPanel'])if(!$(id).hidden){if(k==='Escape')$(id).hidden=true;return;}
   if(k==='Escape'&&!$('setPanel').hidden){$('setPanel').hidden=true;return;}
@@ -2790,6 +2886,10 @@ document.addEventListener('keydown',e=>{
   if(loupeOn()&&viewerShown()&&(k==='+'||k==='='||k==='-'||k==='_')){loupeK(k==='-'||k==='_'?0.8:1.25);return;}   // лупа на экране: + / − — её увеличение
   if(k==='Escape'&&!$('rulesPanel').hidden){$('rulesPanel').hidden=true;return;}
   if(!$('tblPanel').hidden){if(k==='Escape'){$('tblPanel').hidden=true;TBL.tok++;}return;}
+  if(TXT.on&&viewerShown()){   // текст PDF: Esc — снять выделение, ещё Esc — выйти; Ctrl+C — копировать, Ctrl+A — весь текст страницы
+    if(document.activeElement===$('txtArea')&&k!=='Escape')return;
+    if(k==='Escape'){if(panes.some(p=>p.tsel&&p.tsel.length))txtClear();else txtToggle(false);return;}
+  }
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний
     if(k==='Escape'&&panes.some(p=>p.ms&&(p.ms.pts.length||p.ms.ang||p.ms.rad||p.ms.gap))){for(const p of panes)if(p.ms){p.ms.pts=[];p.ms.ang=null;p.ms.rad=null;p.ms.gap=null;p.draw();}return;}
     if(k==='Escape'&&panes.some(p=>p.ms&&p.ms.sel)){for(const p of panes)if(p.ms){p.ms.sel=null;p.draw();}return;}
@@ -2848,6 +2948,7 @@ document.addEventListener('keydown',e=>{
   else if(/^[rRкК]$/.test(k))$('vSide').click();
   else if(/^[wWцЦ]$/.test(k))cycleLineK();
   else if(/^[dDвВ]$/.test(k)&&!$('vMeas').hidden)measToggle();
+  else if(/^[tTеЕ]$/.test(k)&&!$('vTxt').hidden)txtToggle();
   else if(/^[cCсС]$/.test(k)&&!$('vChk').hidden)chkToggle();
   else if(k==='['||k==='х'||k==='Х')setContrast(SET.pdfLv-1);
   else if(k===']'||k==='ъ'||k==='Ъ')setContrast(SET.pdfLv+1);
