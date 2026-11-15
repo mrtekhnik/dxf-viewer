@@ -1,5 +1,5 @@
 /* Офлайн-кэш «Просмотр DXF». Версия меняется автоматически при каждом изменении index.html. */
-const VER='2e53161051';
+const VER='648490e55c';
 const CORE=['./','index.html','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png'];
 const LIBS=['lib/pdf.min.js','lib/pdf.worker.min.js'];
 const C_APP='dxfv-app-'+VER, C_LIB='dxfv-lib-3.11.174';
@@ -8,7 +8,7 @@ self.addEventListener('install',e=>{e.waitUntil((async()=>{
   const l=await caches.open(C_LIB);for(const u of LIBS)if(!(await l.match(u)))await l.add(u);
 })());});
 self.addEventListener('activate',e=>{e.waitUntil((async()=>{
-  for(const k of await caches.keys())if(k!==C_APP&&k!==C_LIB)await caches.delete(k);
+  for(const k of await caches.keys())if(k.startsWith('dxfv-')&&k!==C_APP&&k!==C_LIB)await caches.delete(k);   // только свои старые кэши — чужие приложения на домене не трогаем
   await self.clients.claim();
 })());});
 self.addEventListener('message',e=>{if(e.data==='skip')self.skipWaiting();});
