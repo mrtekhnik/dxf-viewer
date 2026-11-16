@@ -264,7 +264,7 @@ function setFiles(arr,src={}){
     .sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}))
     .map(x=>{const it=makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:''));it.h=x.h||null;it.dh=x.dh||null;return it;});
   $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;$('btnCmp').hidden=!items.length||FOLLOW;
-  if(CMP&&!src.keepCmp){CMP=null;}MTF="";if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;
+  if(CMP&&!src.keepCmp){CMP=null;}MTF="";if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;document.body.classList.remove('selmode');
   if(!arr.length)$('empty').innerHTML=EMPTY_HTML;
   if(!items.length&&arr.length)$('empty').innerHTML='DXF и PDF не найдены среди выбранных ('+arr.length+' файл.).<br>Выберите другую папку.';
   if(src.folder)histAddFolder(src.rid||null,src.rootName||'',items.length);
@@ -335,13 +335,21 @@ let MTF='';   // выбранная группа «материал|толщин
 function mtInfo(it){if(it.type!=='dxf')return null;if(it._mt!==undefined)return it._mt;const p=nameParts(it);
   return it._mt=(p.mat||p.thk)?{mat:p.mat||'?',thk:p.thk||'',qty:+p.qty||0}:null;}
 const mtKey=it=>{const m=mtInfo(it);return m?(m.mat.toLowerCase()+'|'+m.thk):'';};
+/* PDF своего материала не знает — берёт его у своих развёрток DXF (чертёж детали → её DXF) */
+function mtKeys(it){if(it.type==='dxf'){const k=mtKey(it);return k?[k]:[];}if(it.type!=='pdf')return [];
+  return [...new Set(targets(it).map(mtKey).filter(Boolean))];}
+function mtInfoAny(it){if(it.type==='dxf')return mtInfo(it);if(it.type!=='pdf')return null;const d=targets(it).find(x=>mtInfo(x));return d?mtInfo(d):null;}
+const mtShow=()=>['pdf','all'].includes(SET.mtShow)?SET.mtShow:'dxf';
+const mtPass=it=>{const m=mtShow();return m==='all'?(it.type==='dxf'||it.type==='pdf'):it.type===m;};
 const mtNum=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?1e9:n;};
-function mtCmp(a,b){const x=mtInfo(a),y=mtInfo(b);
+function mtCmp(a,b){const any=mtShow()!=='dxf',x=any?mtInfoAny(a):mtInfo(a),y=any?mtInfoAny(b):mtInfo(b);   // PDF — рядом со своей развёрткой
   if(!x||!y)return (x?0:1)-(y?0:1)||a.name.localeCompare(b.name,'ru',{numeric:true});
   return x.mat.localeCompare(y.mat,'ru')||mtNum(x.thk)-mtNum(y.thk)||a.name.localeCompare(b.name,'ru',{numeric:true});}
 const mtLabel=m=>m.mat+(m.thk?' · '+String(m.thk).replace('.',',')+' мм':'');
 function mtBar(list){
-  const G=new Map();for(const it of list){const m=mtInfo(it);if(!m)continue;const k=mtKey(it);const g=G.get(k)||{m,n:0,q:0};g.n++;g.q+=m.qty||0;G.set(k,g);}
+  const G=new Map(),md=mtShow();
+  for(const it of list){const m=mtInfo(it);if(!m)continue;const k=mtKey(it);const g=G.get(k)||{m,n:0,q:0,p:new Set()};g.n++;g.q+=m.qty||0;G.set(k,g);}
+  if(md!=='dxf')for(const it of list)if(it.type==='pdf')for(const k of mtKeys(it)){const g=G.get(k);if(g)g.p.add(it);}
   const B=$('mtBar');B.textContent='';
   if(G.size<1){B.hidden=true;if(MTF){MTF='';}return;}
   B.hidden=false;if(MTF&&!G.has(MTF))MTF='';
@@ -349,7 +357,10 @@ function mtBar(list){
   const chip=(k,t,tip)=>{const c=document.createElement('button');c.className='mt-c'+(MTF===k?' on':'');c.textContent=t;c.title=tip;c.onclick=()=>{MTF=MTF===k&&k?'':k;VW.idx=-1;applyFilter();};B.appendChild(c);};
   chip('','все','Показать все файлы');
   for(const [k,g] of [...G].sort((a,b)=>a[1].m.mat.localeCompare(b[1].m.mat,'ru')||mtNum(a[1].m.thk)-mtNum(b[1].m.thk)))
-    chip(k,mtLabel(g.m)+'  ('+g.n+')',g.n+' DXF'+(g.q?', деталей по количеству в имени: '+g.q:'')+' — клик: показать только их (PDF скрываются)');
+    chip(k,mtLabel(g.m)+'  ('+(md==='dxf'?g.n:md==='pdf'?g.p.size:g.n+' + '+g.p.size)+')',g.n+' DXF'+(g.p.size?', '+g.p.size+' PDF':'')+(g.q?', деталей по количеству в имени: '+g.q:'')+' — клик: показать только их');
+  const sw=document.createElement('span');sw.className='seg mt-w';sw.title='Что показывать по выбранной толщине: только развёртки DXF, только чертежи PDF (материал — от их развёрток) или всё вместе';
+  for(const [v,t] of [['dxf','DXF'],['pdf','PDF'],['all','вместе']]){const b=document.createElement('button');b.textContent=t;b.className=md===v?'on':'';b.onclick=()=>{SET.mtShow=v;saveSet();applyFilter();};sw.appendChild(b);}
+  B.appendChild(sw);
   const so=document.createElement('label');so.className='mt-s';so.innerHTML='<input type="checkbox"> сортировать по материалу и толщине';
   so.querySelector('input').checked=!!SET.sortMt;so.querySelector('input').onchange=e=>{SET.sortMt=e.target.checked;saveSet();applyFilter();};B.appendChild(so);
 }
@@ -361,14 +372,16 @@ function applyFilter(){
   const inDir=it=>fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/'));
   view=items.filter(it=>(!cf||cmpMatch(it,cf))&&inDir(it)&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
   mtBar(view);                                       // строка «материал · толщина» — по файлам, видимым до этого фильтра
-  if(MTF)view=view.filter(it=>mtKey(it)===MTF);
+  if(MTF)view=view.filter(it=>mtPass(it)&&mtKeys(it).includes(MTF));   // DXF, PDF (по их развёрткам) или всё вместе
   if(SET.sortMt)view=view.slice().sort((a,b)=>mtCmp(a,b));
   VW.idx=cur?view.indexOf(cur):-1;
   const g=$('grid');io.disconnect();g.textContent='';
   const fr=document.createDocumentFragment();
   if(fm)for(const t of folderTiles())fr.appendChild(t);
-  for(const it of view){it.visible=false;it.tile.classList.toggle('cur',it===cur&&VW.idx>=0);fr.appendChild(it.tile);}g.appendChild(fr);
-  for(const it of view)io.observe(it.tile);
+  const two=!!(CMP&&!cf&&SET.cmp2!==false);g.classList.toggle('cmp2',two);
+  if(two){cmpRows(fr,cur);g.appendChild(fr);}   // сравнение папок, «показать все»: пары в строку — здесь | значок | там
+  else{for(const it of view){it.visible=false;it.tile.classList.toggle('cur',it===cur&&VW.idx>=0);fr.appendChild(it.tile);}g.appendChild(fr);
+  for(const it of view)io.observe(it.tile);}
   scheduleStatus();updateBar();
 }
 const EMPTY_HTML=$('empty').innerHTML;
@@ -940,7 +953,6 @@ class Pane{
   renderCap(){ // имя файла и отдельные плашки: габарит, материал/толщина/кол-во, подпапка, дата, размер
     const c=SET.capV,it=this.it,C=this.cap;C.textContent='';if(!it)return;
     const add=(t,cls,title)=>{const e=document.createElement('span');e.className=cls;e.textContent=t;if(title)e.title=title;C.appendChild(e);return e;};
-    if(it.cmpB)add('⇆ «'+it.rootName+'»','ch');
     if(c.name||!(c.dims||c.spec||c.dir||c.date||c.size))add(it.name,'cn',it.path);
     const d=this.doc;
     if(c.dims&&d){if(d.kind==='pdf'){const e=this.curPage();if(e)add(sheetText(e.w,e.h).replace('Лист ',''),'ch dim');}else if(d.size)add(sizeText(d.size),'ch dim','Габарит, мм (длинная сторона первой)');}
@@ -1022,7 +1034,7 @@ class Pane{
       if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&!(e.pointerType==='mouse'&&e.button!==0)&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
       if(ptrs.size===0&&!moved&&performance.now()-downT<300){
         const t=performance.now();
-        if(t-tapT<350&&Math.hypot(downX-tapX,downY-tapY)<30){this.fit();tapT=0;}else{tapT=t;tapX=downX;tapY=downY;}
+        if(t-tapT<350&&Math.hypot(downX-tapX,downY-tapY)<30){if(VW.set.length>1&&(SET.sync||this.ov))$('vFit').click();else this.fit();tapT=0;}else{tapT=t;tapX=downX;tapY=downY;}   // окна связаны — вписать все разом, как кнопкой ⤢
       }
     };
     cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
@@ -1167,7 +1179,7 @@ function updateBar(){if(MUI)setTimeout(muiSync,0);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
   $('vPages').hidden=!pg;if(pg)$('vPgNum').textContent=` ${ap.pageNo} / ${ap.doc.pages} `;
   if(!has||VW.set.length>1)$('vPair').hidden=true;else updatePairBtn(cur);
-  if(cmp)$('vName').textContent='Сравнение: '+VW.set[0].name+'  ⇆  '+(VW.set[1].cmpB?'«'+VW.set[1].rootName+'» ':'')+VW.set[1].name;
+  if(cmp)$('vName').textContent='Сравнение: '+VW.set[0].name+'  ⇆  '+VW.set[1].name;
   $('vPairMenu').hidden=!has;
   $('vPin').hidden=!(has&&cur.rid);
   $('vSide').classList.toggle('on',SET.side);
@@ -1943,8 +1955,11 @@ const RULE_DEF={
 const CHK_DEF={open:true,gap:true,dup:true,small:true,hole:true,web:true,text:false,out:true};
 const CHK_N={open:'незамкнутые контуры',gap:'разрывы контура (до «макс. разрыв»)',dup:'двойные линии',small:'очень мелкие элементы',hole:'малые отверстия и вырезы',web:'узкие перемычки',text:'надписи в файле',out:'элементы вне детали'};
 const DENS_DEF='нерж, aisi, 12х18, 08х18, inox = 7.9\nамг, ад1, ад31, al, д16, алюм = 2.7\nлатунь, л63 = 8.5\nмедь, м1, cu = 8.9\nостальное (сталь) = 7.85';
-function rules(){const r=SET.rules||(SET.rules={});r.m=r.m||'laser';r.P=r.P||{};for(const k in RULE_DEF)r.P[k]=Object.assign({},RULE_DEF[k],r.P[k]||{});
-  r.chk=Object.assign({},CHK_DEF,r.chk||{});if(typeof r.dens!=='string')r.dens=DENS_DEF;return r;}
+function rules(){   // дополняет недостающее стандартными значениями НА МЕСТЕ — объекты не подменяются, правки из окна «Правила» не теряются
+  const r=SET.rules||(SET.rules={});r.m=r.m||'laser';r.P=r.P||{};
+  for(const k in RULE_DEF){const P=r.P[k]||(r.P[k]={});for(const d in RULE_DEF[k])if(!(d in P))P[d]=RULE_DEF[k][d];}
+  const C=r.chk||(r.chk={});for(const d in CHK_DEF)if(!(d in C))C[d]=CHK_DEF[d];
+  if(typeof r.dens!=='string')r.dens=DENS_DEF;return r;}
 function density(mat){const m=(mat||'').toLowerCase();let def=7.85;
   for(const line of rules().dens.split('\n')){const i=line.lastIndexOf('=');if(i<0)continue;const v=parseFloat(line.slice(i+1).replace(',','.'));if(!(v>0))continue;
     const keys=line.slice(0,i).split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
@@ -2084,7 +2099,7 @@ function rulesOpen(){
   const sel=document.createElement('select');for(const k in RULE_DEF){const o=document.createElement('option');o.value=k;o.textContent=RULE_DEF[k].name;sel.appendChild(o);}sel.value=r.m;
   sel.onchange=()=>{r.m=sel.value;saveSet();rulesOpen();rulesChanged();};row('Станок',sel,'Для каждого станка свои числа');
   const P=r.P[r.m],num=(k,t,tip,step)=>{const i=document.createElement('input');i.type='number';i.step=step||'0.1';i.min='0';i.value=P[k];i.style.width='80px';
-    i.onchange=()=>{const v=parseFloat(i.value);if(v>=0){P[k]=v;saveSet();rulesChanged();}};row(t,i,tip);};
+    i.oninput=i.onchange=()=>{const v=parseFloat(String(i.value).replace(',','.'));if(v>=0&&rules().P[r.m][k]!==v){rules().P[r.m][k]=v;saveSet();rulesChanged();}};row(t,i,tip);};   // сразу при вводе
   const sec=t=>{const d=document.createElement('div');d.className='set-sec';d.textContent=t;B.appendChild(d);};
   sec('Отверстия и перемычки — от толщины s (из имени файла)');
   num('holeK','Отверстие не меньше, × s','Минимальный диаметр отверстия (ширина выреза) = коэффициент × толщина');
@@ -2097,19 +2112,19 @@ function rulesOpen(){
   num('minLen','Мелкий элемент — короче, мм','');
   sec('Что проверять');
   for(const k in CHK_N){const l=document.createElement('label');l.className='set-row';l.innerHTML='<span></span><input type="checkbox">';l.firstChild.textContent=CHK_N[k];
-    const cb=l.querySelector('input');cb.checked=!!r.chk[k];cb.onchange=()=>{r.chk[k]=cb.checked;saveSet();rulesChanged();};B.appendChild(l);}
+    const cb=l.querySelector('input');cb.checked=!!r.chk[k];cb.onchange=()=>{rules().chk[k]=cb.checked;saveSet();rulesChanged();};B.appendChild(l);}
   sec('Плотность материала, г/см³ (для массы)');
   const ta=document.createElement('textarea');ta.rows=6;ta.style.width='100%';ta.value=r.dens;ta.title='Слова из названия материала через запятую = плотность. «остальное» — для всех прочих';
-  ta.onchange=()=>{r.dens=ta.value;saveSet();if(!$('tblPanel').hidden)tblRender();};B.appendChild(ta);
+  ta.oninput=()=>{rules().dens=ta.value;saveSet();clearTimeout(ta.t);ta.t=setTimeout(()=>{if(!$('tblPanel').hidden)tblRender();},400);};B.appendChild(ta);
   const rs=document.createElement('button');rs.textContent='Вернуть стандартные значения для «'+RULE_DEF[r.m].name+'»';rs.onclick=()=>{r.P[r.m]=Object.assign({},RULE_DEF[r.m]);r.chk=Object.assign({},CHK_DEF);r.dens=DENS_DEF;saveSet();rulesOpen();rulesChanged();};
   const d=document.createElement('div');d.style.margin='10px 0';d.appendChild(rs);B.appendChild(d);
 }
 let rulesT=0;
-function rulesChanged(){clearTimeout(rulesT);rulesT=setTimeout(()=>{$('tblMachine').value=rules().m;for(const p of panes)if(p.chk)chkRun(p);if(!$('tblPanel').hidden)tblOpen();},400);}
+function rulesChanged(){clearTimeout(rulesT);rulesT=setTimeout(()=>{$('tblMachine').value=rules().m;for(const p of panes)if(p.chk&&p.it&&p.it.type==='dxf')chkRun(p);if(!$('tblPanel').hidden)tblOpen();},300);}
 /* ---------- проверка на детали (кнопка «✓ Проверка» в просмотре) ---------- */
 async function chkRun(p){
-  if(!p.it||p.it.type!=='dxf'||!p.doc)return;const it=p.it;p.chk={busy:true};
-  try{const r=await anaGet(it);if(p.it!==it)return;p.chk={r,cur:-1};}catch(e){p.chk=null;flash('Проверка не удалась: '+e.message);return;}
+  if(!p.it||p.it.type!=='dxf'||!p.doc)return;const it=p.it,tok=p.chkTok=(p.chkTok||0)+1;p.chk={busy:true};   // tok: правила меняли быстро — берём только последний результат
+  try{const r=await anaGet(it);if(p.it!==it||p.chkTok!==tok)return;p.chk={r,cur:-1};}catch(e){p.chk=null;flash('Проверка не удалась: '+e.message);return;}
   p.draw();chkList(p);
   const n=p.chk.r.issues.length;flash(n?'Проверка ('+rules().P[rules().m].name+'): замечаний '+n+' — список справа, клик приближает':'Проверка ('+rules().P[rules().m].name+'): замечаний нет ✓');
 }
@@ -2650,8 +2665,10 @@ function cmpSet(arr,name,rid){
   }
   CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:'',scope:curDir};
   $('cmpFilter').value='';updCmp();applyFilter();
-  cmpDeep(CMP);
-  if(focus&&map.has(focus))cmpOpenFor(focus);
+  const C=CMP;
+  if(focus&&map.has(focus)&&!map.get(focus).b){C.focus=focus;flash('Ищу «'+focus.name+'» в «'+name+'» — возможно, под другим номером…');}   // пары по обозначению нет — сначала поиск переименованного (cmpDeep), потом откроем
+  cmpDeep(C);
+  if(focus&&map.has(focus)&&map.get(focus).b)cmpOpenFor(focus);
 }
 function cmpMatch(it,cf){const st=(CMP.map.get(it)||{}).st;return cf==='chg'?(st==='diff'||st==='geo'||st==='name'||st==='ren'):st===cf;}
 /* точная проверка в фоне: побайтно; DXF с разным содержимым — по геометрии; непарные — поиск переименованных */
@@ -2661,7 +2678,14 @@ async function cmpDeep(C){
   C.deep={n:pairs.length+lone.length,done:0};updCmp();
   const eqBytes=async(f1,f2)=>{if(f1.size!==f2.size)return false;const [x,y]=await Promise.all([f1.arrayBuffer(),f2.arrayBuffer()]);
     const A=new Uint8Array(x),B=new Uint8Array(y);for(let i=0;i<A.length;i++)if(A[i]!==B[i])return false;return true;};
-  const tick=a=>{C.deep.done++;if(C.deep.done%5===0||C.deep.done===C.deep.n){updCmp();if(CMP&&CMP.filter)applyFilter();}else updBadge(a);};
+  const tick=a=>{C.deep.done++;if(C.deep.done%5===0||C.deep.done===C.deep.n){updCmp();if(CMP&&CMP.filter)applyFilter();else if(CMP&&SET.cmp2!==false)scheduleCmpRows();}else updBadge(a);};
+  const findRen=async(a,c,pool)=>{for(const b of pool){if(b.type!==a.type||b.file.size!==a.file.size)continue;
+      if(await eqBytes(a.file,b.file)){c.st='ren';c.b=b;c.ch=nameChanges(a,b);c.why=chText(c.ch);pool.splice(pool.indexOf(b),1);const i=C.onlyB.indexOf(b);if(i>=0)C.onlyB.splice(i,1);return true;}}return false;};
+  if(C.focus){const a=C.focus,c=C.map.get(a);   // выделенный перед «Сравнить» файл без пары по номеру — сначала ищем его, потом открываем
+    try{await findRen(a,c,C.onlyB.slice());}catch(e){}
+    if(CMP!==C)return;C.focus=null;c.done=true;updBadge(a);updCmp();
+    if(c.b)cmpOpenFor(a);else cmpOpenFor(a);
+  }
   for(const [a,c] of pairs){
     if(CMP!==C)return;
     try{
@@ -2681,13 +2705,40 @@ async function cmpDeep(C){
   const pool=C.onlyB.slice();
   for(const [a,c] of lone){
     if(CMP!==C)return;
-    try{for(const b of pool){if(b.type!==a.type||b.file.size!==a.file.size)continue;
-      if(await eqBytes(a.file,b.file)){c.st='ren';c.b=b;c.ch=nameChanges(a,b);c.why=chText(c.ch);pool.splice(pool.indexOf(b),1);C.onlyB.splice(C.onlyB.indexOf(b),1);break;}}}catch(e){}
+    if(c.done){const i=pool.indexOf(c.b);if(i>=0)pool.splice(i,1);tick(a);continue;}
+    try{await findRen(a,c,pool);}catch(e){}
     tick(a);
   }
-  C.deep=null;updCmp();if(CMP&&CMP.filter)applyFilter();
+  C.deep=null;updCmp();if(CMP&&CMP.filter)applyFilter();else if(CMP)scheduleCmpRows();
 }
 const CMP_TXT={same:'=',name:'имя',geo:'≈',diff:'≠',ren:'⇢',new:'нов'};
+const CMP_WORD={same:'одинаковые',name:'имя изменено',geo:'пересохранён',diff:'отличается',ren:'переименован',new:'только здесь',only:'только там'};
+/* две панели: строка = файл здесь | значок отличия | его версия там; внизу — то, что есть только там */
+function cmpRows(fr,cur){
+  const placed=new Set(),W='«'+CMP.name+'»';
+  const ph=t=>{const d=document.createElement('div');d.className='cmpph';d.textContent=t;return d;};
+  const mid=(st,tip,fn,pend)=>{const m=document.createElement('div');m.className='cmpmid';const b=document.createElement('span');b.className='cmpb2 '+st+(pend?' pend':'');
+    b.innerHTML='<b></b><i></i>';b.querySelector('b').textContent=st==='only'?'там':CMP_TXT[st];b.querySelector('i').textContent=pend?'проверяю…':CMP_WORD[st];
+    m.title=tip||'';m.appendChild(b);if(fn){m.classList.add('go');m.onclick=fn;}return m;};
+  const bTile=b=>{if(placed.has(b))return ph('та же версия — выше');placed.add(b);b.visible=false;if(b.state===2&&!b.img.src)b.state=0;
+    b.tile.classList.remove('cur');io.observe(b.tile);
+    if(!b._cmpClick){b._cmpClick=true;const open=()=>{if(!CMP)return;const a=[...CMP.map].find(([x,c])=>c.b===b);if(a)cmpOpenFor(a[0]);else{showSet([b],0);VW.cmp={a:b,b:b,manual:true};VW.set=[b];updateBar();if(!docked())setFull(true);}};
+      b.tile.addEventListener('click',e=>{if(!e.ctrlKey&&!e.metaKey)open();});}   // клик по файлу «там» — сравнение пары (или сам файл, если пары нет)
+    return b.tile;};
+  const head=document.createElement('div');head.className='cmprow cmphead';head.innerHTML='<div>здесь</div><div></div><div></div>';head.lastChild.textContent='там: '+(CMP.path||CMP.name);fr.appendChild(head);
+  for(const it of view){
+    const c=CMP.map.get(it)||{st:'new'},row=document.createElement('div');row.className='cmprow';
+    it.visible=false;it.tile.classList.toggle('cur',it===cur&&VW.idx>=0);row.appendChild(it.tile);io.observe(it.tile);
+    const tip=it.cmpb&&it.cmpb.title||'';
+    row.appendChild(mid(c.st,tip,c.b||it.type==='dxf'?()=>cmpOpenFor(it):null,c.pend&&CMP.deep));
+    row.appendChild(c.b?bTile(c.b):ph('нет в '+W));fr.appendChild(row);
+  }
+  const only=CMP.onlyB.filter(b=>!CMP.scope||true);
+  if(only.length){const h=document.createElement('div');h.className='cmpsec';h.textContent='Есть только в '+W+': '+only.length;fr.appendChild(h);
+    for(const b of only){const row=document.createElement('div');row.className='cmprow';row.appendChild(ph('нет здесь'));
+      row.appendChild(mid('only','Есть только в '+W+' — клик: открыть',()=>{showSet([b],0);VW.cmp={a:b,b:b,manual:true};VW.set=[b];updateBar();if(!docked())setFull(true);}));
+      row.appendChild(bTile(b));fr.appendChild(row);}}
+}
 function updBadge(it){const c=CMP&&CMP.map.get(it),b=it.cmpb;
     if(!c){b.hidden=true;return;}
     b.hidden=false;b.className='cmpb '+c.st+(c.pend&&CMP.deep?' pend':'');b.textContent=CMP_TXT[c.st];
@@ -2706,12 +2757,24 @@ function updCmp(){
   const n={same:0,name:0,geo:0,diff:0,ren:0,new:0};for(const c of CMP.map.values())n[c.st]++;
   $('cmpInfo').innerHTML='';const s=document.createElement('span');
   const part=(k,t)=>n[k]?' · <b>'+CMP_TXT[k]+' '+n[k]+'</b> '+t:'';
-  s.innerHTML='<b></b> ⇆ <b></b>: '+(part('same','одинаковые')+part('name','имя изменено')+part('geo','пересохранены')+part('diff','отличаются')+part('ren','переименованы')+part('new','новые')).slice(3)+
+  s.innerHTML=(part('same','одинаковые')+part('name','имя изменено')+part('geo','пересохранены')+part('diff','отличаются')+part('ren','переименованы')+part('new','новые')).slice(3)+
     (CMP.deep?' · <i>проверка '+CMP.deep.done+' / '+CMP.deep.n+'…</i>':'');
-  const bs=s.querySelectorAll('b');bs[0].textContent=CMP.scope?CMP.scope.split('/').pop():(items[0]?items[0].path.split('/')[0]:'');bs[1].textContent=CMP.name;$('cmpInfo').appendChild(s);
+  const here=CMP.here||(CMP.scope?CMP.scope.split('/').join(' / '):(items[0]?items[0].path.split('/')[0]:''));
+  const P=document.createElement('div');P.id='cmpPaths';P.innerHTML='<div><span class="cpk">здесь:</span> <b></b></div><div><span class="cpk">там:</span> <b></b></div>';
+  const bb=P.querySelectorAll('b');bb[0].textContent=here;bb[1].textContent=CMP.path||CMP.name;
+  $('cmpInfo').appendChild(P);$('cmpInfo').appendChild(s);
+  const tot=document.createElement('span');tot.className='cmptot';tot.textContent='сравнивается: здесь '+CMP.map.size+', там '+CMP.items.length;$('cmpInfo').insertBefore(tot,s);
   $('cmpOnlyBtn').textContent='Только там: '+CMP.onlyB.length;$('cmpOnlyBtn').disabled=!CMP.onlyB.length;
+  if(document.querySelector('#grid.cmp2')&&!CMP.deep)scheduleCmpRows();
 }
-function cmpEnd(){CMP=null;if(VW.cmp&&!VW.cmp.manual){VW.cmp=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);}updCmp();applyFilter();}
+function dirOfP(x){   // папка файла: полный путь, если известен (сравнение папок), иначе от открытой папки
+  const parts=x.path.split('/').slice(0,-1);
+  if(CMP&&x.cmpB&&CMP.path)return [CMP.path,...parts.slice(1)].join(' / ');
+  if(CMP&&!x.cmpB&&CMP.here){const sc=(CMP.scope||parts[0]||'').split('/');if(parts.slice(0,sc.length).join('/')===sc.join('/'))return [CMP.here,...parts.slice(sc.length)].join(' / ');}
+  return parts.join(' / ')||x.rootName||'';
+}
+let cmpRowsT=0;function scheduleCmpRows(){clearTimeout(cmpRowsT);cmpRowsT=setTimeout(()=>{if(CMP&&!CMP.filter)applyFilter();},120);}   // статусы уточнились — перерисовать строки
+function cmpEnd(){document.querySelectorAll('.tile').forEach(t=>{if(t._it&&t._it.cmpB)t.remove();});CMP=null;if(VW.cmp&&!VW.cmp.manual){VW.cmp=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);}updCmp();applyFilter();}
 function cmpOpen(a,b,manual){
   const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}
   closePairPanel();showSet([a,b],0);VW.cmp={a,b,manual:!!manual};updateBar();
@@ -2728,7 +2791,7 @@ function cmpOpen(a,b,manual){
 let OV=null;
 if(!(SET.tol>0))SET.tol=0.1;
 if(SET.cmpView!=='over')SET.cmpView='two';
-function ovClear(){OV=null;for(const p of panes)if(p.ov){p.ov=null;}$('ovBar').hidden=true;$('ovList').hidden=true;}
+function ovClear(){OV=null;for(const p of panes){if(p.ov){p.ov=null;}const L=p.el&&p.el.querySelector('.ovdl');if(L)L.hidden=true;}$('ovBar').hidden=true;$('ovList').hidden=true;}
 function ovPanes(){return panes.filter(p=>p.ov);}
 async function ovStart(M,keepView){
   const c=VW.cmp||(OV&&{a:OV.a,b:OV.b,manual:true});if(!c)return;const a=c.a,b=c.b;
@@ -2742,9 +2805,9 @@ async function ovStart(M,keepView){
   OV.keep=false;VW.cmp=c;
   if(!again)for(const p of panes.slice(0,VW.set.length))p.ov={busy:true};
   $('ovBar').hidden=false;
-  const top=x=>x.path.split('/')[0],same=a.name===b.name;
-  $('ovNa').textContent=(OV.mode==='over'?'только в ':'слева: ')+(same?top(a):a.name);$('ovNa').parentNode.title='Красным — есть только в «'+a.path+'»';
-  $('ovNb').textContent=(OV.mode==='over'?'только в ':'справа: ')+(same?(b.cmpB&&CMP?CMP.name:top(b)):b.name);$('ovNb').parentNode.title='Зелёным — есть только в «'+b.path+'»';
+  const over=OV.mode==='over';   // путь к папке файла (полный, если известен); имена — на самих окнах
+  $('ovNa').textContent=(over?'красным, только в: ':'слева: ')+dirOfP(a)+(over?' / '+a.name:'');$('ovNa').parentNode.title='Слева / красным — «'+a.path+'»';
+  $('ovNb').textContent=(over?'зелёным, только в: ':'справа: ')+dirOfP(b)+(over?' / '+b.name:'');$('ovNb').parentNode.title='Справа / зелёным — «'+b.path+'»';
   $('ovMode').textContent=OV.mode==='over'?'Две панели':'Наложение';
   $('ovTol').value=String(SET.tol);$('ovRes').className='';$('ovRes').textContent=again?'Пересчитываю…':'Сравниваю…';$('ovNum').textContent='';
   updateBar();
@@ -2769,11 +2832,26 @@ function ovInfo(){
   e.title='Совпадает '+Math.floor(r.a.frac*1000)/10+'% контура слева и '+Math.floor(r.b.frac*1000)/10+'% справа · габарит '+sz(r.sizeA)+' и '+sz(r.sizeB)+(r.mir?' · вторая деталь отражена':'')+' · '+OV.ms+' мс';
   $('ovNum').textContent=n?(OV.cur>=0?(OV.cur+1)+' / '+n:''):'';
   $('ovPrev').disabled=$('ovNext').disabled=$('ovListBtn').disabled=!n;
-  $('ovListBtn').textContent='Список отличий'+(n?' ('+n+')':'')+' ▾';
+  const inP=OV.mode!=='over';$('ovListBtn').textContent='Список отличий'+(n?' ('+n+')':'')+(inP?'':' ▾');$('ovListBtn').classList.toggle('on',inP&&n>0&&SET.ovLists!==false);
 }
 const CIRC='①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳';
 const numTxt=i=>i<20?CIRC[i]:'('+(i+1)+')';
-function ovRenderList(){
+/* список отличий — в каждом окне своё: как это место выглядит в этой детали; клик — показать место в обоих окнах */
+function ovPaneLists(){
+  const r=OV&&OV.res,show=!!(r&&r.clusters.length&&OV.mode!=='over'&&SET.ovLists!==false);
+  ovPanes().forEach((p,k)=>{
+    let L=p.el.querySelector('.ovdl');if(!show){if(L)L.hidden=true;return;}
+    if(!L){L=document.createElement('div');L.className='ovdl';p.el.appendChild(L);L.addEventListener('pointerdown',e=>e.stopPropagation());L.addEventListener('wheel',e=>e.stopPropagation());}
+    L.hidden=false;L.textContent='';const side=k===0?'a':'b';
+    const h=document.createElement('div');h.className='ovdh';h.textContent=(k===0?'Отличия слева':'Отличия справа')+' ('+r.clusters.length+')';
+    const x=document.createElement('button');x.textContent='✕';x.title='Спрятать списки (кнопка «Список отличий» — показать)';x.onclick=()=>{SET.ovLists=false;saveSet();ovPaneLists();ovInfo();};h.appendChild(x);L.appendChild(h);
+    (r.desc&&r.desc.length?r.desc:r.clusters.map(bb=>({bb,text:'отличие'}))).forEach((d,i)=>{
+      const row=document.createElement('div');row.className='ovl'+(i===OV.cur?' cur':'');row.innerHTML='<b></b><span></span>';
+      row.querySelector('b').textContent=numTxt(i);row.querySelector('span').textContent=d[side]||d.text;row.title=d.text;
+      row.onclick=()=>{OV.cur=i-1;ovGo(1);};L.appendChild(row);});
+  });
+}
+function ovRenderList(){ovPaneLists();
   const L=$('ovList'),r=OV&&OV.res;L.textContent='';if(!r)return;
   if(!r.clusters.length){L.innerHTML='<div class="pp-empty">Отличий нет</div>';return;}
   (r.desc&&r.desc.length?r.desc:r.clusters.map(bb=>({bb,text:'отличие'}))).forEach((d,i)=>{
@@ -2838,7 +2916,7 @@ function ovBlink(){ // пробел в наложении: по очереди �
 $('vOv').onclick=()=>{if(OV)ovMode(OV.mode==='over'?'two':'over');else ovStart();};
 $('ovMode').onclick=()=>ovMode(OV&&OV.mode==='over'?'two':'over');
 $('ovEnd').onclick=ovEnd;$('ovPrev').onclick=()=>ovGo(-1);$('ovNext').onclick=()=>ovGo(1);
-$('ovListBtn').onclick=()=>{$('ovList').hidden=!$('ovList').hidden;ovRenderList();};
+$('ovListBtn').onclick=()=>{if(OV&&OV.mode!=='over'){SET.ovLists=SET.ovLists===false;saveSet();ovPaneLists();ovInfo();return;}$('ovList').hidden=!$('ovList').hidden;ovRenderList();};   // две панели — списки в окнах; наложение — общий список
 $('ovAuto').onclick=()=>{if(OV){OV.D=null;ovStart(null,false);}};
 $('ovRotL').onclick=()=>ovRot(90);$('ovRotR').onclick=()=>ovRot(-90);$('ovMir').onclick=()=>ovRot(0,true);
 $('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,true);};
@@ -2900,12 +2978,21 @@ function cmpOpenFor(a){
   if(c.st==='new'){showItem(view.indexOf(a));if(!docked())setFull(true);if(a.type==='dxf')pickOpen(a);else flash('В «'+CMP.name+'» нет файла с обозначением '+a.name);return;}
   cmpOpen(a,c.b);
 }
-async function cmpFromHandle(h,rid){
+/* где лежит папка: цепочка от самой «высокой» известной папки (Chrome не отдаёт полный путь на диске) */
+async function knownPath(h,skip){
+  let best=null;
+  try{const roots=((await IDB.all('roots').catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory');
+    for(const rt of roots){try{if(skip&&await rt.h.isSameEntry(h))continue;const p=await rt.h.resolve(h);if(p&&p.length&&(!best||p.length+1>best.length))best=[rt.h.name,...p];}catch(e){}}}catch(e){}
+  return (best||[h.name]).join(' / ');
+}
+async function cmpFromHandle(h,rid,path){
   $('cmpPanel').hidden=true;$('status').textContent='Чтение папки для сравнения «'+h.name+'»…';
   const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
   const id=rid||await rememberRoot(h);
-  if(id){const L=(LS.get('cmpRecent',[])||[]).filter(x=>x.id!==id);L.unshift({id,name:h.name,t:Date.now(),n:out.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).length});LS.set('cmpRecent',L.slice(0,12));}
-  cmpSet(out,h.name,id);updateStatus();
+  const full=path&&path.split(' / ').length>1?path:await knownPath(h,true);
+  if(id){const L=(LS.get('cmpRecent',[])||[]).filter(x=>x.id!==id);L.unshift({id,name:h.name,path:full,t:Date.now(),n:out.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).length});LS.set('cmpRecent',L.slice(0,12));}
+  cmpSet(out,h.name,id);if(CMP){CMP.path=full;updCmp();}updateStatus();
+  curDirHandle().then(async c=>{if(CMP&&c){CMP.here=await knownPath(c,true);updCmp();}});
 }
 /* окно «Сравнить с папкой»: недавние папки сравнения, ярлыки, история.
    Папку, открытую сейчас (или внутри неё), выбрать нельзя. Путь: Chrome не отдаёт полный путь на диске,
@@ -2919,7 +3006,7 @@ async function renderCmpPanel(){
   const R=$('cmpRecent');R.textContent='';
   if(!FSA){R.innerHTML='<div class="pp-empty">На этом устройстве — только «Выбрать папку…».</div>';return;}
   const seen=new Set(),list=[];
-  for(const x of LS.get('cmpRecent',[])||[])if(!seen.has(x.id)){seen.add(x.id);list.push({label:x.name,root:x.id,dir:x.name,rootName:x.name,t:x.t,n:x.n,recent:true});}
+  for(const x of LS.get('cmpRecent',[])||[])if(!seen.has(x.id)){seen.add(x.id);list.push({label:x.name,root:x.id,dir:x.name,rootName:x.name,t:x.t,n:x.n,recent:true,path:x.path});}
   for(const p of PINS)if(p.kind==='folder'&&!seen.has(p.root+'|'+p.dir)){seen.add(p.root+'|'+p.dir);list.push({label:'★ '+p.label,root:p.root,dir:p.dir,rootName:p.rootName});}
   for(const e of HIST)if(e.kind==='folder'&&e.root&&!seen.has(e.root)&&!seen.has(e.root+'|'+e.rootName)&&list.length<16){seen.add(e.root+'|'+e.rootName);list.push({label:e.rootName,root:e.root,dir:e.rootName,rootName:e.rootName});}
   const cur=await curDirHandle(),roots=((await IDB.all('roots').catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory').sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,30);
@@ -2927,23 +3014,23 @@ async function renderCmpPanel(){
   for(const x of list){
     const r=document.createElement('div');r.className='pin';r.innerHTML='<span class="pi">📁</span><span class="pt"><div class="pl"></div><div class="pp"></div></span>';
     r.querySelector('.pl').textContent=x.label;
-    const info=[x.dir.split('/').join(' / ')];if(x.n!=null)info.push('файлов: '+x.n);if(x.t)info.push('сравнивали '+fmtT(x.t));
-    r.querySelector('.pp').textContent=info.join(' · ');R.appendChild(r);
+    const info=[x.path||x.dir.split('/').join(' / ')];if(x.n!=null)info.push('файлов: '+x.n);if(x.t)info.push('сравнивали '+fmtT(x.t));
+    r.querySelector('.pp').textContent=info.join(' · ');r.querySelector('.pp').classList.add('pp2');R.appendChild(r);
     // та же папка, что открыта? и где она лежит
     (async()=>{
       let h=null;try{const rr=await IDB.get(x.root,'roots');h=rr&&rr.h;if(h&&x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1))h=await h.getDirectoryHandle(seg);}}catch(e){h=null;}
       if(!h||!cur)return;
       let self=false;try{self=await h.isSameEntry(cur)||!!(await cur.resolve(h));}catch(e){}
       if(self){r.classList.add('dis');r.title='Эта папка открыта сейчас — с ней сравнивать нечего';r.querySelector('.pl').textContent=x.label+' — открыта сейчас';return;}
-      for(const rt of roots){try{if(await rt.h.isSameEntry(h))continue;const p=await rt.h.resolve(h);
-        if(p&&p.length){r.querySelector('.pp').textContent=[[rt.name,...p].join(' / ')].concat(info.slice(1)).join(' · ');break;}}catch(e){}}
+      let best=null;for(const rt of roots){try{if(await rt.h.isSameEntry(h))continue;const p=await rt.h.resolve(h);if(p&&p.length&&(!best||p.length+1>best.length))best=[rt.name,...p];}catch(e){}}
+      if(best){x.path=best.join(' / ');r.querySelector('.pp').textContent=[x.path].concat(info.slice(1)).join(' · ');}
     })();
     r.onclick=async()=>{
       if(r.classList.contains('dis')){flash('Эта папка открыта сейчас — выберите другую (старый заказ, архив)');return;}
       const rr=await IDB.get(x.root,'roots');if(!rr||!rr.h){flash('Доступ не сохранился — выберите папку заново');return;}
       try{let q=await rr.h.queryPermission({mode:'read'});if(q!=='granted')q=await rr.h.requestPermission({mode:'read'});if(q!=='granted')return;}catch(e){return;}
       let hh=rr.h;if(x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1)){try{hh=await hh.getDirectoryHandle(seg);}catch(e){flash('Папка «'+x.dir+'» не найдена');return;}}}
-      cmpFromHandle(hh,x.dir===x.rootName?x.root:null);
+      cmpFromHandle(hh,x.dir===x.rootName?x.root:null,x.path);
     };
   }
   if(!R.children.length)R.innerHTML='<div class="pp-empty">Здесь появятся папки, с которыми уже сравнивали, ярлыки и недавние.</div>';
@@ -2959,6 +3046,7 @@ $('cmpPick').onclick=async()=>{
 $('inCmp').onchange=e=>{const fs=[...e.target.files];const root=fs.length&&fs[0].webkitRelativePath?fs[0].webkitRelativePath.split('/')[0]:'папка';
   $('cmpPanel').hidden=true;cmpSet(fs.map(f=>({file:f,path:f.webkitRelativePath||f.name})),root,null);e.target.value='';};
 $('cmpEnd').onclick=cmpEnd;
+$('cmp2Chk').checked=SET.cmp2!==false;$('cmp2Chk').onchange=e=>{SET.cmp2=e.target.checked;saveSet();applyFilter();};
 $('cmpFilter').onchange=e=>{if(CMP){CMP.filter=e.target.value;applyFilter();}};
 $('cmpOnlyBtn').onclick=()=>{
   const P=$('onlyPanel');P.hidden=!P.hidden;if(P.hidden||!CMP)return;
@@ -2970,13 +3058,23 @@ $('cmpOnlyBtn').onclick=()=>{
 $('onlyClose').onclick=()=>{$('onlyPanel').hidden=true;};
 /* Ctrl+клик по двум файлам → «Сравнить рядом» */
 function toggleSel(it){
+  if(!SEL.size){const ct=$('grid').querySelector('.tile.cur'),c=ct&&ct._it;if(c&&c!==it&&c.tile){SEL.add(c);c.tile.classList.add('sel');}}   // как в Проводнике: текущий файл + Ctrl+клик по второму
   if(SEL.has(it)){SEL.delete(it);it.tile.classList.remove('sel');}
   else{if(SEL.size>=2){const f=[...SEL][0];SEL.delete(f);f.tile.classList.remove('sel');}SEL.add(it);it.tile.classList.add('sel');}
-  $('selBar').hidden=!SEL.size;$('selGo').disabled=SEL.size!==2;
-  $('selInfo').textContent=SEL.size===2?'Выбрано 2 файла':'Выбран 1 файл — Ctrl+клик по второму';
+  selUpd();
 }
-function clearSel(){for(const it of SEL)it.tile.classList.remove('sel');SEL.clear();$('selBar').hidden=true;}
-$('selGo').onclick=()=>{if(SEL.size!==2)return;const [a,b]=[...SEL];clearSel();cmpOpen(a,b,true);};
+function selUpd(){
+  document.body.classList.toggle('selmode',SEL.size>0);   // пока выбираем — рамка только у выбранных, без «лишней» рамки текущего файла
+  $('selBar').hidden=!SEL.size;$('selGo').disabled=SEL.size!==2;
+  const L=[...SEL],dxf=L.length===2&&L.every(x=>x.type==='dxf');
+  $('selGo').textContent=L.length<2||dxf?'⇆ Сравнить':'⧉ Открыть рядом';
+  $('selGo').title=dxf?'Сравнить контуры двух деталей':'Открыть рядом. Сравнивать отличия программа умеет только у двух DXF';
+  $('selInfo').textContent=L.length===2?(dxf?'Выбраны 2 детали DXF':'Выбрано 2 файла — PDF не сравниваются, только рядом'):'Выбран 1 файл — Ctrl+клик по второму';
+}
+function clearSel(){for(const it of SEL)if(it.tile)it.tile.classList.remove('sel');SEL.clear();selUpd();}
+$('selGo').onclick=()=>{if(SEL.size!==2)return;const [a,b]=[...SEL];clearSel();
+  if(a.type==='dxf'&&b.type==='dxf'){cmpOpen(a,b,true);return;}
+  const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}VW.cmp=null;closePairPanel();showSet([a,b],0);updateBar();if(!docked())setFull(true);};
 $('selClear').onclick=clearSel;
 
 /* ---------- Клавиатура ---------- */

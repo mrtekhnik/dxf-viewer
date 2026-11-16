@@ -200,16 +200,17 @@ function GEOCORE(){
       const ca=A.C.filter(c=>inB(c,bb)),cb=CB.filter(c=>inB(c,bb)),items=[];
       const same=(x,y)=>Math.hypot(x[0]-y[0],x[1]-y[1])<=tol&&Math.abs(x[2]-y[2])<=tol;
       const ra=ca.filter(c=>!cb.some(y=>same(c,y))),rb=cb.filter(c=>!ca.some(y=>same(c,y)));
-      const grp=new Map(),add=(k,t)=>{const g=grp.get(k)||{n:0,t};g.n++;grp.set(k,g);};
+      const grp=new Map(),add=(k,t,ta,tb)=>{const g=grp.get(k)||{n:0,t,ta,tb};g.n++;grp.set(k,g);},A_=[],B_=[];   // ta/tb — как это место выглядит в левой / правой детали
       for(const c of ra){if(usedA.has(c))continue;
         const y=rb.find(y=>!usedB.has(y)&&Math.hypot(y[0]-c[0],y[1]-c[1])<=tol);           // тот же центр, другой диаметр
-        if(y){usedA.add(c);usedB.add(y);add('d'+f1(c[2]*2)+'>'+f1(y[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' слева → Ø'+f1(y[2]*2)+' справа');continue;}
+        if(y){usedA.add(c);usedB.add(y);const ho=n=>n>1?n+' отверстия':'отверстие';add('d'+f1(c[2]*2)+'>'+f1(y[2]*2),n=>ho(n)+' Ø'+f1(c[2]*2)+' слева → Ø'+f1(y[2]*2)+' справа',n=>ho(n)+' Ø'+f1(c[2]*2)+' (справа Ø'+f1(y[2]*2)+')',n=>ho(n)+' Ø'+f1(y[2]*2)+' (слева Ø'+f1(c[2]*2)+')');continue;}
         const z=rb.find(y=>!usedB.has(y)&&Math.abs(y[2]-c[2])<=tol&&Math.hypot(y[0]-c[0],y[1]-c[1])<=Math.max(c[2]*4,A.size*0.05)); // тот же диаметр, сдвинуто
-        if(z){usedA.add(c);usedB.add(z);const dd=Math.hypot(z[0]-c[0],z[1]-c[1]);add('m'+f1(c[2]*2)+'|'+f1(dd),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' смещено на '+f1(dd)+' мм');continue;}
+        if(z){usedA.add(c);usedB.add(z);const dd=Math.hypot(z[0]-c[0],z[1]-c[1]),ho=n=>n>1?n+' отверстия':'отверстие';add('m'+f1(c[2]*2)+'|'+f1(dd),n=>ho(n)+' Ø'+f1(c[2]*2)+' смещено на '+f1(dd)+' мм',n=>ho(n)+' Ø'+f1(c[2]*2)+' — справа смещено на '+f1(dd)+' мм',n=>ho(n)+' Ø'+f1(c[2]*2)+' — смещено на '+f1(dd)+' мм');continue;}
       }
-      for(const c of ra)if(!usedA.has(c)){usedA.add(c);add('a'+f1(c[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' — только слева');}
-      for(const c of rb)if(!usedB.has(c)){usedB.add(c);add('b'+f1(c[2]*2),n=>(n>1?n+' отверстия':'отверстие')+' Ø'+f1(c[2]*2)+' — только справа');}
-      for(const g of grp.values())items.push(g.t(g.n));
+      const ho=n=>n>1?n+' отверстия':'отверстие',nho=n=>n>1?'нет '+n+' отверстий':'нет отверстия';
+      for(const c of ra)if(!usedA.has(c)){usedA.add(c);add('a'+f1(c[2]*2),n=>ho(n)+' Ø'+f1(c[2]*2)+' — только слева',n=>ho(n)+' Ø'+f1(c[2]*2)+' — справа его нет',n=>nho(n)+' Ø'+f1(c[2]*2)+' (слева есть)');}
+      for(const c of rb)if(!usedB.has(c)){usedB.add(c);add('b'+f1(c[2]*2),n=>ho(n)+' Ø'+f1(c[2]*2)+' — только справа',n=>nho(n)+' Ø'+f1(c[2]*2)+' (справа есть)',n=>ho(n)+' Ø'+f1(c[2]*2)+' — слева его нет');}
+      for(const g of grp.values()){items.push(g.t(g.n));A_.push(g.ta(g.n));B_.push(g.tb(g.n));}
       // участки контура, не объяснённые отверстиями
       const runLen=(rs,circ)=>{let L=0;for(const r of rs){const x0=r.x[0],y0=r.y[0];if(r.x.length<2)continue;
           let inb=false;for(let i=0;i<r.x.length;i++)if(r.x[i]>=bb[0]-1e-6&&r.x[i]<=bb[2]+1e-6&&r.y[i]>=bb[1]-1e-6&&r.y[i]<=bb[3]+1e-6){inb=true;break;}
@@ -221,12 +222,14 @@ function GEOCORE(){
           let s=0,n=0;const pa=[];for(const r of d.a.runs)for(let i=0;i<r.x.length;i++)if(r.x[i]>=bb[0]&&r.x[i]<=bb[2]&&r.y[i]>=bb[1]&&r.y[i]<=bb[3])pa.push(r.x[i],r.y[i]);
           for(const r of d.b.runs)for(let i=0;i<r.x.length;i+=3){if(!(r.x[i]>=bb[0]&&r.x[i]<=bb[2]&&r.y[i]>=bb[1]&&r.y[i]<=bb[3]))continue;let m=Infinity;for(let j=0;j<pa.length;j+=2)m=Math.min(m,Math.hypot(pa[j]-r.x[i],pa[j+1]-r.y[i]));if(isFinite(m)){s+=m;n++;}}
           const sh=n?s/n:0;
-          const mx=Math.max(la,lb);items.push(sh<=Math.max(1,mx*0.05)&&Math.abs(la-lb)<0.3*mx?'контур изменён: сдвиг ≈ '+f1(sh)+' мм на участке '+f1(Math.max(la,lb))+' мм':'контур изменён: слева '+f1(la)+' мм, справа '+f1(lb)+' мм');
-        }else if(la>tol*5)items.push('участок контура '+f1(la)+' мм — только слева');
-        else items.push('участок контура '+f1(lb)+' мм — только справа');
+          const mx=Math.max(la,lb),shift=sh<=Math.max(1,mx*0.05)&&Math.abs(la-lb)<0.3*mx;
+          items.push(shift?'контур изменён: сдвиг ≈ '+f1(sh)+' мм на участке '+f1(Math.max(la,lb))+' мм':'контур изменён: слева '+f1(la)+' мм, справа '+f1(lb)+' мм');
+          A_.push(shift?'контур: справа сдвинут ≈ '+f1(sh)+' мм':'контур здесь '+f1(la)+' мм, справа иначе');B_.push(shift?'контур сдвинут ≈ '+f1(sh)+' мм':'контур здесь '+f1(lb)+' мм, слева иначе');
+        }else if(la>tol*5){items.push('участок контура '+f1(la)+' мм — только слева');A_.push('участок контура '+f1(la)+' мм — справа его нет');B_.push('нет участка контура '+f1(la)+' мм (слева есть)');}
+        else{items.push('участок контура '+f1(lb)+' мм — только справа');A_.push('нет участка контура '+f1(lb)+' мм (справа есть)');B_.push('участок контура '+f1(lb)+' мм — слева его нет');}
       }
-      if(!items.length)items.push('мелкое отличие');
-      return {bb,text:items.join('; ')};
+      if(!items.length){items.push('мелкое отличие');A_.push('мелкое отличие');B_.push('мелкое отличие');}
+      return {bb,text:items.join('; '),a:A_.join('; '),b:B_.join('; ')};
     });
   }
   function compare(docA,docB,tol,M0){ // M0 — положение B задано вручную (без автоподбора)

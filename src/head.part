@@ -46,13 +46,41 @@ input[type=range]{width:110px}
 #cmpBar,#selBar{display:flex;gap:10px;align-items:center;padding:5px 10px;background:var(--on);font-size:13px;flex-wrap:wrap}
 #cmpBar .sp{flex:1}
 #cmpBar b{font-weight:600}
+.cmptot{opacity:.85;white-space:nowrap}
+#grid.cmp2{display:flex;flex-direction:column;gap:6px}
+#grid.cmp2 .cmprow{display:grid;grid-template-columns:minmax(0,var(--tile)) 112px minmax(0,var(--tile));gap:8px;align-items:stretch}
+#grid.cmp2.list .cmprow{grid-template-columns:minmax(0,1fr) 112px minmax(0,1fr);gap:4px}
+#grid.cmp2 .cmphead{font-size:12px;color:var(--mut);align-items:end}#grid.cmp2 .cmphead>div{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#grid.cmp2 .cmpsec{margin:10px 0 2px;font-size:13px;font-weight:600;color:var(--mut)}
+#grid.cmp2 .cmpb{display:none}
+body.mui #grid.cmp2 .cmprow,#grid.cmp2 .cmprow.narrow{grid-template-columns:minmax(0,1fr) 78px minmax(0,1fr);gap:4px}body.mui .cmpb2{min-width:0;padding:4px}
+.cmpph{display:flex;align-items:center;justify-content:center;border:1px dashed var(--line);border-radius:8px;color:var(--mut);font-size:12px;min-height:44px;text-align:center;padding:6px}
+.cmpmid{display:flex;align-items:center;justify-content:center}.cmpmid.go{cursor:pointer}
+.cmpb2{display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:8px;padding:5px 8px;color:#fff;min-width:84px;text-align:center}
+.cmpb2 b{font-size:16px;line-height:1}.cmpb2 i{font-style:normal;font-size:11px;opacity:.95}
+.cmpmid.go:hover .cmpb2{filter:brightness(1.15);box-shadow:0 0 0 2px var(--acc)}
+.cmpb2.same{background:#2e8b57}.cmpb2.diff{background:#d9822b}.cmpb2.new{background:#3a7bd5}.cmpb2.geo{background:#6f9a3a}.cmpb2.name{background:#8a6fd1}.cmpb2.ren{background:#b0679a}.cmpb2.only{background:#5a6270}.cmpb2.pend{opacity:.55}
+#mtBar .mt-w{display:inline-flex;margin-left:6px}#mtBar .mt-w button{padding:2px 9px;font-size:12px;min-height:0}#mtBar .mt-w button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#cmpInfo{display:flex;gap:14px;align-items:center;flex:1 1 400px;min-width:0}
+#cmpPaths{display:flex;flex-direction:column;gap:1px;flex:0 1 460px;min-width:220px;font-size:12px;line-height:1.25}
+#cmpPaths>div{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+#cmpPaths .cpk{opacity:.7}
+.pin .pp.pp2{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
 #selBar{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9;border:1px solid var(--acc);border-radius:10px;box-shadow:0 6px 24px rgba(0,0,0,.4)}
-.tile.sel{outline:2px dashed var(--warn);outline-offset:-3px}
+.tile.sel{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}
+body.selmode .tile.cur:not(.sel){border-color:var(--line);box-shadow:none}
+#grid.list .tile.sel{background:var(--on);border-color:var(--acc);box-shadow:none}
+body.selmode #grid.list .tile.cur:not(.sel){background:none;border-color:transparent}
 .cmpb{position:absolute;left:4px;top:4px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff}
 .cmpb.same{background:#2e8b57}.cmpb.diff{background:#d9822b}.cmpb.new{background:#3a7bd5}.cmpb.geo{background:#6f9a3a}.cmpb.name{background:#8a6fd1}.cmpb.ren{background:#b0679a}.cmpb.pend{opacity:.55}.cmpb.chk{background:#5a6270}
 #ovBar{display:flex;gap:8px;align-items:center;padding:4px 8px;background:var(--panel);border-bottom:1px solid var(--line);font-size:13px;overflow-x:auto;white-space:nowrap}
 #ovBar[hidden]{display:none}
 #ovBar>*{flex:none}#ovBar .sp{flex:1}
+.ovdl{position:absolute;left:8px;top:36px;z-index:4;max-width:min(420px,70%);max-height:45%;overflow:auto;background:rgba(20,22,26,.86);color:#e8e8e8;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:4px 0;font-size:12px}
+.ovdl[hidden]{display:none}.ovdh{display:flex;align-items:center;gap:8px;padding:2px 8px 4px;font-weight:600;opacity:.85}.ovdh button{margin-left:auto;padding:0 6px;min-height:0;font-size:12px}
+.ovdl .ovl{display:flex;gap:6px;padding:3px 8px;cursor:pointer}.ovdl .ovl:hover{background:rgba(255,255,255,.08)}.ovdl .ovl.cur{background:rgba(255,200,0,.18)}.ovdl .ovl b{color:#ffd23f;font-weight:600}
+#ovBar>#ovPaths{flex:1 1 260px;min-width:180px;display:flex;flex-direction:column;gap:1px;white-space:normal;font-size:12px;line-height:1.25}
+#ovPaths .ovk{display:block;max-width:none;}#ovPaths .ovk i{margin-right:5px;vertical-align:middle}#ovPaths .ovk{overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
 .ovk{display:inline-flex;align-items:center;gap:5px;max-width:260px;overflow:hidden;text-overflow:ellipsis}
 .ovk i{display:inline-block;width:14px;height:4px;border-radius:2px}.ovk .ova{background:#ff4d4d}.ovk .ovb{background:#39d353}
 #ovRes{font-weight:600}#ovRes.ok{color:#39d353}#ovRes.bad{color:#ff8c4d}
@@ -300,7 +328,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.3.5</small></div>
+  <div class="brand">DXF <small>+PDF · v4.4.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -345,6 +373,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <div id="mtBar" hidden></div>
 <div id="cmpBar" hidden><span id="cmpInfo"></span><span class="sp"></span>
   <label>Показать <select id="cmpFilter"><option value="">все</option><option value="chg">всё, что менялось</option><option value="diff">≠ отличаются</option><option value="geo">≈ пересохранены, геометрия та же</option><option value="name">имя изменено</option><option value="ren">⇢ переименованы</option><option value="new">нов — нет там</option><option value="same">= одинаковые</option></select></label>
+  <label title="«Показать: все» — пары файлов в строку: здесь | отличие | там"><input type="checkbox" id="cmp2Chk"> две панели</label>
   <button id="cmpOnlyBtn"></button><button id="cmpEnd" title="Закончить сравнение">✕</button></div>
 <div id="selBar" hidden><span id="selInfo"></span><button id="selGo">Сравнить рядом</button><button id="selClear">✕</button></div>
 <div id="work">
@@ -392,8 +421,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
     <button id="vClose" title="Закрыть просмотр — назад к миниатюрам (Esc)">✕</button>
   </div>
   <div id="ovBar" hidden>
-    <span class="ovk"><i class="ova"></i><span id="ovNa"></span></span>
-    <span class="ovk"><i class="ovb"></i><span id="ovNb"></span></span>
+    <span id="ovPaths"><span class="ovk"><i class="ova"></i><span id="ovNa"></span></span><span class="ovk"><i class="ovb"></i><span id="ovNb"></span></span></span>
     <span id="ovRes"></span>
     <span class="xfbox"><button id="ovPrev" title="Предыдущее отличие ( , )">‹</button><span id="ovNum"></span><button id="ovNext" title="Следующее отличие ( . )">›</button></span>
     <button id="ovListBtn" title="Все отличия словами — клик по строке приближает это место">Список отличий ▾</button>

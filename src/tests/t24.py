@@ -8,6 +8,7 @@ async def main():
     pg.on('dialog', lambda d: asyncio.ensure_future(d.accept()))
     await pg.goto('file:///home/claude/dxf-viewer.html'); await pg.set_input_files('#inFolder','cmpA/Заказ 2026'); await pg.wait_for_timeout(1500)
     await pg.set_input_files('#inCmp','cmpB/Заказ 2024'); await pg.wait_for_timeout(800)
+    await pg.evaluate("SET.cmp2=false;applyFilter()"); await pg.wait_for_timeout(300)   # обычная сетка со значками; две панели — в t69
     print('bar:', await pg.inner_text('#cmpInfo'), '|', await pg.inner_text('#cmpOnlyBtn'))
     for t in await pg.locator('.tile').all(): print('  ', (await t.locator('.nm').inner_text()), '→', await t.locator('.cmpb').inner_text(), '|', await t.locator('.cmpb').get_attribute('title'))
     await pg.screenshot(path='cmp_grid.png')

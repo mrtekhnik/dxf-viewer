@@ -8,5 +8,6 @@ run t3.py 3; run t5.py 3; run t6.py 2; run t7.py 2; run t8.py 5; run t11.py 6; r
 run t16.py 3; run t17.py 3; run t18.py 3; run t19.py 3; run t2.py 3; run t20.py 1; run t21.py 2; run t22.py 5; run t23.py 3; run t24.py 4; run t25.py 4; run t26.py 9; run t10.py 2
 run t60.py 2; run t61.py 1; run t63.py 1; run t64.py 1; run t65.py 1; run t66.py 1; run t67.py 1
 run t68.py 3
+run t69.py 1; run t70.py 1; run t71.py 1; run t72.py 1
 run t53.py 1; run t54.py 1; run t55.py 1; run t59.py 1
 pkill -f "http.server 8765"; echo DONE
