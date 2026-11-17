@@ -3,7 +3,7 @@
    телефон и компьютер узнают о новой версии: она скачивается целиком и ЖДЁТ, пока пользователь нажмёт «Обновить».
    Удаляются только свои старые кэши (dxfv-*): на домене mrtekhnik.github.io живут и другие приложения.
    Библиотека PDF (lib/) — в отдельном кэше, не сбрасывается при обновлении приложения. */
-const VERSION='4.5.0';
+const VERSION='4.5.1';
 const CORE=['./','index.html','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png'];
 const LIBS=['lib/pdf.min.js','lib/pdf.worker.min.js'];
 const C_APP='dxfv-app-'+VERSION, C_LIB='dxfv-lib-3.11.174';

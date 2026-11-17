@@ -37,6 +37,11 @@ async def main():
     await pg.evaluate("$('btnFolder').click()"); await pg.wait_for_timeout(600)
     t=await pg.inner_text('#noteBox'); print('root fail:',t.replace('\n',' | ')[:200])
     if 'не читается' not in t or 'NotAllowedError' not in t or await pg.evaluate('window.__clicked')!=0: errs.append('ошибка корня: '+t)
+    # 5) Chrome вернул папку, но в ней нет DXF/PDF (или обход ничего не нашёл) — не молчим
+    await pg.evaluate("window.showDirectoryPicker=async()=>({kind:'directory',name:'Пустая',entries:async function*(){}});0")
+    await pg.evaluate("$('noteBox').hidden=true;$('btnFolder').click()"); await pg.wait_for_timeout(600)
+    t=await pg.inner_text('#noteBox'); print('empty:',t.replace('\n',' | ')[:120])
+    if 'нет DXF и PDF' not in t: errs.append('пустая папка — без сообщения')
     await b.close()
   print('errors',errs)
 asyncio.run(main())

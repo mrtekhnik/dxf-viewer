@@ -648,6 +648,7 @@ function readDone(name,out,t0){   // итог чтения: сколько пр�
   const er=out.errs||[],nf=er.filter(x=>x.kind==='file').length,nd=er.length-nf;
   olog(er.length?'warn':'info',`«${name}»: прочитано файлов ${out.length}, ошибок ${er.length}, время ${((performance.now()-t0)/1000).toFixed(1)} с`);
   for(const x of er)olog('warn',(x.kind==='dir'?'Папка ':'Файл ')+x.path+' — '+x.why);
+  if(!out.length&&!er.length)noteBox('В папке нет DXF и PDF','«'+name.replace(/[<>&]/g,'')+'»: Chrome вернул папку, но DXF и PDF в ней (и во вложенных папках) не нашлось. Если они там есть — откройте другим способом или перетащите папку.',[['Открыть другим способом',()=>$('inFolder').click(),true],['Журнал',()=>openLog()]]);
   if(er.length)noteBox('Не прочитано файлов: '+nf+(nd?', папок: '+nd:''),'Остальные файлы открыты. Список — ниже и в журнале.',[['Журнал',()=>openLog()]],
     er.slice(0,200).map(x=>(x.kind==='dir'?'📁 ':'')+x.path+' — '+x.why).concat(er.length>200?['… и ещё '+(er.length-200)]:[]));
 }
@@ -682,8 +683,12 @@ async function pickDir(kind,id){
 }
 $('btnFolder').onclick=async()=>{
   if(!FSA){$('inFolder').click();return;}
-  const h=await pickDir('folder','dxfv-folder');if(h)await openDirHandle(h);
+  const h=await pickDir('folder','dxfv-folder');if(!h)return;
+  try{await openDirHandle(h);}catch(e){olog('error','Сбой при открытии «'+h.name+'»: '+errTxt(e));updateStatus();readFail('folder',h.name,e);}   // любой сбой — с сообщением, не молча
 };
+/* непойманные ошибки — в журнал «Открытие папок», чтобы «ничего не произошло» оставляло след */
+addEventListener('unhandledrejection',e=>{const r=e.reason;if(r&&r.name==='AbortError')return;olog('error','Ошибка программы: '+errTxt(r)+(r&&r.stack?' · '+String(r.stack).split('\n')[1]?.trim():''));updateStatus();});
+addEventListener('error',e=>{olog('error','Ошибка программы: '+(e.message||'')+' ('+(e.filename||'').split('/').pop()+':'+e.lineno+')');updateStatus();});
 $('btnFiles').onclick=async()=>{
   if('showOpenFilePicker' in window){
     try{await openFileHandles(await showOpenFilePicker({id:'dxfv-files',multiple:true,types:[{description:'DXF и PDF',accept:{'image/vnd.dxf':['.dxf'],'application/pdf':['.pdf']}}]}));}
@@ -3095,7 +3100,8 @@ $('btnCmp').onclick=()=>{
 $('cmpClose').onclick=()=>{$('cmpPanel').hidden=true;};
 $('cmpPick').onclick=async()=>{
   if(!FSA){$('inCmp').click();return;}
-  const h=await pickDir('cmp','dxfv-cmp');if(h)await cmpFromHandle(h);
+  const h=await pickDir('cmp','dxfv-cmp');if(!h)return;
+  try{await cmpFromHandle(h);}catch(e){olog('error','Сбой при чтении «'+h.name+'» для сравнения: '+errTxt(e));updateStatus();readFail('cmp',h.name,e);}
 };
 $('inCmp').onchange=e=>{const fs=[...e.target.files];const root=fs.length&&fs[0].webkitRelativePath?fs[0].webkitRelativePath.split('/')[0]:'папка';
   $('cmpPanel').hidden=true;cmpSet(fs.map(f=>({file:f,path:f.webkitRelativePath||f.name})),root,null);e.target.value='';};
