@@ -257,6 +257,9 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 .lf div{padding:1px 0 1px 12px}
 .l-info{color:var(--mut)}.l-warn{color:var(--warn)}.l-error{color:var(--err)}
 .lpf{padding:8px 12px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
+#noteBox{z-index:60;align-items:flex-start;padding-top:12vh}.lp.nb{width:min(620px,100%);max-height:76vh}
+#noteX{padding:6px 0;line-height:1.45}.nbl{margin-top:8px;max-height:40vh;overflow:auto;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:6px 8px}.nbl div{padding:1px 0;word-break:break-all}
+.nbb{display:flex;gap:8px;justify-content:flex-end;padding:10px;border-top:1px solid var(--line)}.nbb .pri{background:var(--acc);color:#fff;border-color:var(--acc)}
 .h-day{margin:12px 0 4px;font-weight:600;color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
 .h-row{display:flex;gap:10px;align-items:baseline;padding:5px 6px;border-radius:6px;cursor:pointer}
 .h-row:hover{background:var(--hover)}
@@ -331,7 +334,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.4.1</small></div>
+  <div class="brand">DXF <small>+PDF · v4.5.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -501,7 +504,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </div>
 
 <div id="setPanel" class="pop" hidden>
-  <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
+  <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><button id="setUpd" title="Проверить, есть ли новая версия">Проверить обновления</button><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
   <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option></select></div>
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
@@ -549,6 +552,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   </div>
 </div>
 
+<div id="noteBox" class="modal" hidden><div class="lp nb"><div class="lph"><b id="noteT"></b></div><div class="lbody"><div id="noteX"></div><div id="noteL" class="nbl" hidden></div></div><div id="noteB" class="nbb"></div></div></div>
 <div id="logPanel" class="modal" hidden>
   <div class="lp">
     <div class="lph">
@@ -604,6 +608,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <h2>Открыть папку или файлы</h2>
 <ul>
 <li><b>📂 Открыть ▾ → Папка…</b> — открыть папку целиком со всеми вложенными (заказ, изделие). Работает и с сетевыми папками на сервере.</li>
+<li>Если окно выбора папки закрылось само или Chrome прервал выбор — программа скажет об этом и предложит <b>Открыть другим способом</b> (обычное окно выбора) или перетащить папку из Проводника. Если какая-то подпапка или файл не читается (нет доступа, файл занят), остальное всё равно откроется, а программа покажет список непрочитанного. Все шаги — в <b>Журнале</b>, раздел «Открытие папок».</li>
 <li><b>📂 Открыть ▾ → Файлы…</b> — выбрать отдельные DXF и PDF.</li>
 <li>Можно перетащить файлы или папку мышью прямо в окно.</li>
 <li><b>★ Ярлыки</b> — закреплённые папки и файлы: открываются одним кликом. Добавить — кнопкой ★ в просмотре или в окне ярлыков.</li>
@@ -940,7 +945,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <section data-t="Обновления">
 <h2>Обновления и офлайн</h2>
 <ul>
-<li>Программа работает без интернета. Когда выходит новая версия, вверху появляется полоса «Доступна новая версия → Обновить».</li>
+<li>Программа работает без интернета: открывается из сохранённой копии. Новая версия скачивается сама и <b>ждёт</b>: вверху появляется полоса «Доступна новая версия — Обновить». Пока не нажмёте «Обновить», работает прежняя версия. ⚙ → <b>Проверить обновления</b> — проверить сейчас; там же — «Версия … от …».</li>
 <li><b>Журнал</b> (появляется на панели с числом, когда есть замечания; всегда доступен в ⚙ → «Журнал…») — замечания при чтении файлов: что не удалось прочитать или нарисовать. Там же «Проверить все файлы» и «Очистить кэш» — построить миниатюры заново, если что-то показывается не так.</li>
 </ul>
 </section>
@@ -2665,7 +2670,7 @@ function updateStatus(){
   stTimer=0;
   const done=items.filter(i=>i.log).length,bad=items.filter(i=>i.issues).length;
   if(!flashT)$('status').textContent=items.length?`${curDir?'Папка: '+curDir.split('/').join(' / ')+' · ':''}Файлов: ${items.length}${view.length!==items.length?' (показано '+view.length+')':''} · проверено: ${done} · с замечаниями: ${bad}`:'';
-  $('logBadge').hidden=!bad;$('logBadge').textContent=bad;$('btnLog').hidden=!bad;
+  const ob=OPENLOG.bad||0;$('logBadge').hidden=!(bad+ob);$('logBadge').textContent=bad+ob;$('btnLog').hidden=!(bad+ob);
   if(!$('logPanel').hidden)renderLog();
 }
 function flash(msg){const s=$('status'),t=SET.flashT||(typeof MUI!=='undefined'&&MUI?'4':'6');clearTimeout(flashT);
@@ -2677,6 +2682,9 @@ function openLog(path){logOnlyPath=path||null;$('logPanel').hidden=false;renderL
 function renderLog(){
   const only=$('logOnly').checked,body=$('logBody');body.textContent='';
   let shown=0;
+  if(OPENLOG.length&&!logOnlyPath){const lines=OPENLOG;   // шаги выбора папки — все, чтобы было видно, где сбой
+    if(lines.length){shown++;const box=document.createElement('div');box.className='lf';const h=document.createElement('h4');h.textContent='Открытие папок';h.style.cursor='default';box.appendChild(h);
+      for(const [l,m] of lines.slice(-200)){const d=document.createElement('div');d.className='l-'+l;d.textContent=m;box.appendChild(d);}body.appendChild(box);}}
   for(const it of items){
     if(!it.log||(logOnlyPath&&it.path!==logOnlyPath))continue;
     const lines=only&&!logOnlyPath?it.log.filter(l=>l[0]!=='info'):it.log;
@@ -2693,8 +2701,10 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
-$('verSet').textContent=(document.querySelector('.brand small')||{}).textContent||'';
+const APP_VERSION='4.5.0',APP_DATE='17.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
+$('verSet').textContent='Версия '+APP_VERSION+' от '+APP_DATE;
 $('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
+$('noteBox').addEventListener('click',e=>{if(e.target.id==='noteBox')$('noteBox').hidden=true;});
 /* меню «Открыть» */
 $('btnOpen').onclick=e=>{e.stopPropagation();$('openMenu').hidden=!$('openMenu').hidden;};
 document.addEventListener('click',e=>{if(!e.target.closest('.mwrap'))$('openMenu').hidden=true;});
@@ -2711,15 +2721,54 @@ const ROOTH=new Map();   // открытые папки (id → дескрипт
 /* обход папки: файлы и подпапки читаются параллельно — по сети это в разы быстрее, чем по одному */
 async function pmap(arr,n,fn){let i=0;const run=async()=>{while(i<arr.length){const k=i++;await fn(arr[k]);}};await Promise.all(Array.from({length:Math.min(n,arr.length)},run));}
 let walkShown=0;
-async function walkDir(dir,prefix,out){
-  const files=[],dirs=[];
-  for await(const [name,e] of dir.entries()){
-    if(e.kind==='file'){if(/\.(dxf|pdf)$/i.test(name))files.push([name,e]);}
-    else if(e.kind==='directory')dirs.push([name,e]);
-  }
-  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name,h:e,dh:dir});}catch(err){}});
+const errTxt=e=>e?((e.name&&e.name!=='Error'?e.name+': ':'')+(e.message||String(e))):'неизвестная ошибка';
+/* Обход папки. Ошибка корня — общая (бросается наружу); недоступная подпапка или нечитаемый файл
+   не обрывают обход — попадают в out.errs [{path, why, kind:'dir'|'file'}] */
+async function walkDir(dir,prefix,out,depth=0){
+  const errs=out.errs||(out.errs=[]),files=[],dirs=[];
+  try{
+    for await(const [name,e] of dir.entries()){
+      if(e.kind==='file'){if(/\.(dxf|pdf)$/i.test(name))files.push([name,e]);}
+      else if(e.kind==='directory')dirs.push([name,e]);
+    }
+  }catch(e){if(!depth&&!files.length&&!dirs.length)throw e;errs.push({path:prefix,why:errTxt(e),kind:'dir'});}   // подпапка (или часть корня) не читается — идём дальше
+  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name,h:e,dh:dir});}catch(err){errs.push({path:prefix+'/'+name,why:errTxt(err),kind:'file'});}});
   if(out.length-walkShown>=40){walkShown=out.length;$('status').textContent='Чтение папки… найдено файлов: '+out.length;}
-  await pmap(dirs,6,([name,e])=>walkDir(e,prefix+'/'+name,out));
+  await pmap(dirs,6,async([name,e])=>{try{await walkDir(e,prefix+'/'+name,out,depth+1);}catch(err){errs.push({path:prefix+'/'+name,why:errTxt(err),kind:'dir'});}});
+}
+/* ---------- журнал выбора папки: каждый шаг, чтобы по нему было видно, где сбой ---------- */
+const OPENLOG=[];
+function olog(l,m){const t=new Date();OPENLOG.push([l,t.toLocaleTimeString('ru-RU')+'  '+m]);if(OPENLOG.length>400)OPENLOG.splice(0,OPENLOG.length-400);
+  if(l!=='info')OPENLOG.bad=(OPENLOG.bad||0)+1;if(typeof updateStatus==='function')scheduleStatus();}
+/* сообщение с кнопками (вместо молчаливого «ничего не произошло») */
+function noteBox(title,html,buttons,list){
+  const M=$('noteBox');$('noteT').textContent=title;$('noteX').innerHTML=html||'';const L=$('noteL');L.textContent='';L.hidden=!(list&&list.length);
+  for(const x of list||[]){const d=document.createElement('div');d.textContent=x;L.appendChild(d);}
+  const B=$('noteB');B.textContent='';
+  for(const [t,fn,main] of buttons.concat([['Закрыть',null]])){const b=document.createElement('button');b.textContent=t;if(main)b.className='pri';
+    b.onclick=()=>{M.hidden=true;if(fn)fn();};B.appendChild(b);}
+  M.hidden=false;const f=B.querySelector('.pri')||B.lastChild;f.focus();
+}
+const PICKK={folder:{inp:'inFolder',what:'Папка'},cmp:{inp:'inCmp',what:'Папка для сравнения'}};
+function pickFail(kind,e){   // окно выбора вернуло ошибку — до чтения
+  const k=PICKK[kind],ab=e&&e.name==='AbortError';
+  noteBox(k.what+' не выбрана',(ab?'Окно выбора закрыто или Chrome прервал выбор.':'Chrome не дал выбрать папку: <i></i>')+
+    '<br><br>Можно открыть папку другим способом (обычное окно выбора папки) или <b>перетащить папку</b> из Проводника в это окно.',
+    [['Открыть другим способом',()=>$(k.inp).click(),true]]);
+  if(!ab)$('noteX').querySelector('i').textContent=errTxt(e);
+}
+function readFail(kind,name,e){   // папку выбрали, но прочитать не удалось — после выбора; запасной способ — новой кнопкой
+  const k=PICKK[kind];
+  noteBox(k.what+' не читается','«<i></i>»: <b></b><br><br>Попробуйте открыть её другим способом или перетащить из Проводника в это окно.',
+    [['Открыть другим способом',()=>$(k.inp).click(),true],['Журнал',()=>openLog()]]);
+  $('noteX').querySelector('i').textContent=name;$('noteX').querySelector('b').textContent=errTxt(e);
+}
+function readDone(name,out,t0){   // итог чтения: сколько прочитано, что не прочитано
+  const er=out.errs||[],nf=er.filter(x=>x.kind==='file').length,nd=er.length-nf;
+  olog(er.length?'warn':'info',`«${name}»: прочитано файлов ${out.length}, ошибок ${er.length}, время ${((performance.now()-t0)/1000).toFixed(1)} с`);
+  for(const x of er)olog('warn',(x.kind==='dir'?'Папка ':'Файл ')+x.path+' — '+x.why);
+  if(er.length)noteBox('Не прочитано файлов: '+nf+(nd?', папок: '+nd:''),'Остальные файлы открыты. Список — ниже и в журнале.',[['Журнал',()=>openLog()]],
+    er.slice(0,200).map(x=>(x.kind==='dir'?'📁 ':'')+x.path+' — '+x.why).concat(er.length>200?['… и ещё '+(er.length-200)]:[]));
 }
 async function rememberRoot(h){
   try{
@@ -2730,20 +2779,29 @@ async function rememberRoot(h){
   }catch(e){return null;}
 }
 async function openDirHandle(h){
-  $('status').textContent='Чтение папки «'+h.name+'»…';
-  const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
+  $('status').textContent='Чтение папки «'+h.name+'»…';const t0=performance.now();
+  try{olog('info','Разрешение на чтение «'+h.name+'»: '+await h.queryPermission({mode:'read'}));}catch(e){}
+  const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){olog('error','«'+h.name+'» не читается: '+errTxt(e));updateStatus();readFail('folder',h.name,e);return;}
   const rid=await rememberRoot(h);if(rid)ROOTH.set(rid,h);
   setFiles(out,{rid,rootName:h.name,folder:true});
   if(rid&&!FOLLOW)LS.set('lastRoot',{rid,name:h.name});
+  readDone(h.name,out,t0);
 }
 async function openFileHandles(hs){
   const out=[];for(const h of hs){try{const f=await h.getFile();const rid=await rememberRoot(h);out.push({file:f,path:f.name,rid,h});}catch(e){}}
   setFiles(out,{rootName:''});
   if(items.length===1){showItem(0);if(!docked())setFull(true);}
 }
+/* выбор папки: ошибка окна выбора (до чтения) и ошибка чтения (после) — разные сообщения; запасной способ — только новой кнопкой */
+async function pickDir(kind,id){
+  olog('info','Открыто окно выбора папки'+(kind==='cmp'?' для сравнения':''));
+  let h;try{h=await showDirectoryPicker({id,mode:'read'});}
+  catch(e){olog(e&&e.name==='AbortError'?'warn':'error','Выбор прерван: '+errTxt(e));updateStatus();pickFail(kind,e);return null;}
+  olog('info','Chrome вернул папку «'+h.name+'»');return h;
+}
 $('btnFolder').onclick=async()=>{
-  if(FSA){try{await openDirHandle(await showDirectoryPicker({id:'dxfv-folder',mode:'read'}));}catch(e){if(e&&e.name==='AbortError')return;$('inFolder').click();}}
-  else $('inFolder').click();
+  if(!FSA){$('inFolder').click();return;}
+  const h=await pickDir('folder','dxfv-folder');if(h)await openDirHandle(h);
 };
 $('btnFiles').onclick=async()=>{
   if('showOpenFilePicker' in window){
@@ -2773,14 +2831,14 @@ document.addEventListener('drop',async e=>{
   const dt=[...e.dataTransfer.items].filter(i=>i.kind==='file');
   if(dt.length&&dt[0].getAsFileSystemHandle){
     const hs=(await Promise.all(dt.map(i=>i.getAsFileSystemHandle()))).filter(Boolean);
-    if(hs.length===1&&hs[0].kind==='directory'){await openDirHandle(hs[0]);return;}
-    const out=[];
+    if(hs.length===1&&hs[0].kind==='directory'){olog('info','Перетащена папка «'+hs[0].name+'»');await openDirHandle(hs[0]);return;}
+    const out=[],t0=performance.now();out.errs=[];olog('info','Перетащено: '+hs.map(h=>h.name).join(', '));
     for(const h of hs){
-      if(h.kind==='directory'){try{await walkDir(h,h.name,out);}catch(err){}}
+      if(h.kind==='directory'){try{await walkDir(h,h.name,out);}catch(err){out.errs.push({path:h.name,why:errTxt(err),kind:'dir'});}}
       else if(/\.(dxf|pdf)$/i.test(h.name)){try{out.push({file:await h.getFile(),path:h.name,rid:await rememberRoot(h)});}catch(err){}}
     }
     setFiles(out,{});if(items.length===1){showItem(0);if(!docked())setFull(true);}
-    return;
+    readDone(hs.length===1?hs[0].name:'перетащенное',out,t0);return;
   }
   const ents=dt.map(i=>i.webkitGetAsEntry&&i.webkitGetAsEntry()).filter(Boolean),out=[];
   async function walk(en){
@@ -5102,11 +5160,11 @@ async function knownPath(h,skip){
 }
 async function cmpFromHandle(h,rid,path){
   $('cmpPanel').hidden=true;$('status').textContent='Чтение папки для сравнения «'+h.name+'»…';
-  const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){flash('Папка не читается: '+e.message);return;}
+  const t0=performance.now(),out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){olog('error','«'+h.name+'» (сравнение) не читается: '+errTxt(e));updateStatus();readFail('cmp',h.name,e);return;}
   const id=rid||await rememberRoot(h);
   const full=path&&path.split(' / ').length>1?path:await knownPath(h,true);
   if(id){const L=(LS.get('cmpRecent',[])||[]).filter(x=>x.id!==id);L.unshift({id,name:h.name,path:full,t:Date.now(),n:out.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).length});LS.set('cmpRecent',L.slice(0,12));}
-  cmpSet(out,h.name,id);if(CMP){CMP.path=full;updCmp();}updateStatus();
+  cmpSet(out,h.name,id);if(CMP){CMP.path=full;updCmp();}updateStatus();readDone(h.name,out,t0);
   curDirHandle().then(async c=>{if(CMP&&c){CMP.here=await knownPath(c,true);updCmp();}});
 }
 /* окно «Сравнить с папкой»: недавние папки сравнения, ярлыки, история.
@@ -5155,8 +5213,8 @@ $('btnCmp').onclick=()=>{
   for(const id of ['setPanel','pinPanel'])$(id).hidden=true;const P=$('cmpPanel');P.hidden=!P.hidden;if(!P.hidden)renderCmpPanel();};
 $('cmpClose').onclick=()=>{$('cmpPanel').hidden=true;};
 $('cmpPick').onclick=async()=>{
-  if(FSA){try{await cmpFromHandle(await showDirectoryPicker({id:'dxfv-cmp',mode:'read'}));}catch(e){if(e&&e.name!=='AbortError')$('inCmp').click();}}
-  else $('inCmp').click();
+  if(!FSA){$('inCmp').click();return;}
+  const h=await pickDir('cmp','dxfv-cmp');if(h)await cmpFromHandle(h);
 };
 $('inCmp').onchange=e=>{const fs=[...e.target.files];const root=fs.length&&fs[0].webkitRelativePath?fs[0].webkitRelativePath.split('/')[0]:'папка';
   $('cmpPanel').hidden=true;cmpSet(fs.map(f=>({file:f,path:f.webkitRelativePath||f.name})),root,null);e.target.value='';};
@@ -5338,18 +5396,28 @@ document.addEventListener('keydown',e=>{
   const d=document.createElement('div');d.style.margin='0 0 18px';d.appendChild(b);$('empty').prepend(d);
 })();
 
-/* ---------- PWA: офлайн-кэш, обновления, открытие файлов из Проводника ---------- */
+/* ---------- PWA: офлайн-кэш, обновления (как во всех моих приложениях), открытие файлов из Проводника ----------
+   Новая версия скачивается сама и ждёт: панель «Доступна новая версия — Обновить». После нажатия — перезагрузка. */
+let swReg=null;
+const showUpd=()=>{$('updBar').hidden=false;};
 if(location.protocol.startsWith('http')&&'serviceWorker' in navigator){
-  let reloading=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloading)return;reloading=true;location.reload();});
-  navigator.serviceWorker.register('sw.js').then(reg=>{
-    const offer=w=>{const b=$('updBar');b.hidden=false;$('updBtn').onclick=()=>{w.postMessage('skip');b.hidden=true;};};
-    if(reg.waiting&&navigator.serviceWorker.controller)offer(reg.waiting);
-    reg.addEventListener('updatefound',()=>{const w=reg.installing;w&&w.addEventListener('statechange',()=>{
-      if(w.state==='installed'&&navigator.serviceWorker.controller)offer(w);});});
-    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')reg.update().catch(()=>{});});
+  const hadCtrl=!!navigator.serviceWorker.controller;let reloading=false;
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!hadCtrl||reloading)return;reloading=true;location.reload();});
+  navigator.serviceWorker.register('sw.js').then(reg=>{swReg=reg;
+    if(reg.waiting&&navigator.serviceWorker.controller)showUpd();
+    reg.addEventListener('updatefound',()=>{const w=reg.installing;if(!w)return;
+      w.addEventListener('statechange',()=>{if(w.state==='installed'&&navigator.serviceWorker.controller)showUpd();});});
   }).catch(()=>{});
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&swReg)swReg.update().catch(()=>{});});
 }
+$('updBtn').onclick=()=>{const w=swReg&&swReg.waiting;if(w)w.postMessage('SKIP_WAITING');else location.reload();};
+async function checkUpdate(){
+  if(!swReg){flash('Обновления проверяются только в установленной версии (с сайта)');return;}
+  if(swReg.waiting){showUpd();return;}
+  flash('Проверка обновлений…');try{await swReg.update();}catch(e){flash('Нет связи с сервером');return;}
+  setTimeout(()=>{if(swReg.waiting||swReg.installing)showUpd();else flash('Установлена последняя версия ('+APP_VERSION+')');},1500);
+}
+$('setUpd').onclick=checkUpdate;
 if('launchQueue' in window){
   launchQueue.setConsumer(async p=>{if(p.files&&p.files.length)await openFileHandles(p.files);});
 }

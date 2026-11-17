@@ -12,7 +12,7 @@
 (теперь относительно src/), добавлена склейка трёх частей (раньше — отдельная команда cat)
 и явная кодировка UTF-8 с переводами строк \\n (чтобы на Windows результат был побайтно тем же).
 """
-import hashlib, shutil, os, json
+import hashlib, shutil, os, json, re, sys, datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 LIB = os.path.join(HERE, 'vendor', 'pdfjs-3.11.174') + os.sep
@@ -25,6 +25,14 @@ def wr(p, t): open(p, 'w', encoding='utf-8', newline='').write(t)
 
 # 0) склейка трёх частей
 s = ''.join(rd(os.path.join(HERE, p)) for p in ('head.part', 'help.part', 'core.part', 'geom.part', 'xform.part', 'main.part'))
+# версия: одна на всё — в шапке (head.part, «+PDF · vX.Y.Z»), APP_VERSION на странице и VERSION в sw.js.
+# Дата выпуска — в versions.json (ставится при первой сборке этой версии и больше не меняется).
+APP_VERSION = re.search(r'\+PDF · v([0-9][0-9.]*)<', s).group(1)
+VJ = os.path.join(HERE, 'versions.json')
+vers = json.load(open(VJ, encoding='utf-8')) if os.path.exists(VJ) else {}
+kiev = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=2)))
+APP_DATE = (vers.get(APP_VERSION) or {}).get('date') or kiev.strftime('%d.%m.%Y')
+s = s.replace('@@APPVER@@', APP_VERSION).replace('@@APPDATE@@', APP_DATE)
 wr(os.path.join(DIST, 'dxf-viewer.src.html'), s)
 
 lic = '/* pdf.js 3.11.174 (c) Mozilla Foundation, Apache License 2.0 */\n'
@@ -49,34 +57,56 @@ man = {"name": "Просмотр DXF и PDF", "short_name": "DXF просмот�
  "launch_handler": {"client_mode": "focus-existing"}}
 wr(OUT + 'manifest.webmanifest', json.dumps(man, ensure_ascii=False, indent=1))
 h = hashlib.sha1(idx.encode()).hexdigest()[:10]
-sw = '''/* Офлайн-кэш «Просмотр DXF». Версия меняется автоматически при каждом изменении index.html. */
-const VER='%s';
+# страж версии: та же версия, но другое содержимое — значит, забыли увеличить версию (телефон не узнает об обновлении)
+rec = vers.get(APP_VERSION)
+if '--release' in sys.argv:
+    if rec and rec.get('hash') != h:
+        sys.exit('ОШИБКА: версия %s уже выпускалась с другим содержимым — увеличьте версию в head.part' % APP_VERSION)
+    vers[APP_VERSION] = {'date': APP_DATE, 'hash': h}
+    open(VJ, 'w', encoding='utf-8', newline='').write(json.dumps(vers, ensure_ascii=False, indent=1))
+elif rec and rec.get('hash') != h:
+    print('ВНИМАНИЕ: содержимое изменилось, а версия %s та же — перед публикацией увеличьте версию' % APP_VERSION)
+sw = '''/* Офлайн-кэш «Просмотр DXF и PDF».
+   ВАЖНО: VERSION = APP_VERSION на странице (берутся из шапки при сборке, меняются вместе). По изменению VERSION
+   телефон и компьютер узнают о новой версии: она скачивается целиком и ЖДЁТ, пока пользователь нажмёт «Обновить».
+   Удаляются только свои старые кэши (dxfv-*): на домене mrtekhnik.github.io живут и другие приложения.
+   Библиотека PDF (lib/) — в отдельном кэше, не сбрасывается при обновлении приложения. */
+const VERSION='%s';
 const CORE=['./','index.html','manifest.webmanifest','icon.svg','icon-192.png','icon-512.png'];
 const LIBS=['lib/pdf.min.js','lib/pdf.worker.min.js'];
-const C_APP='dxfv-app-'+VER, C_LIB='dxfv-lib-3.11.174';
-self.addEventListener('install',e=>{e.waitUntil((async()=>{
-  const a=await caches.open(C_APP);await a.addAll(CORE.map(u=>new Request(u,{cache:'reload'})));
-  const l=await caches.open(C_LIB);for(const u of LIBS)if(!(await l.match(u)))await l.add(u);
-})());});
+const C_APP='dxfv-app-'+VERSION, C_LIB='dxfv-lib-3.11.174';
+const OFFLINE_PAGE='<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Просмотр DXF и PDF</title>'
+ +'<body style="margin:0;font-family:sans-serif;background:#1b1d21;color:#e9eef5;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center">'
+ +'<div style="padding:24px"><h2>Нет сети</h2><p>Сохранённая копия приложения не найдена.<br>Подключитесь к интернету и нажмите «Повторить».</p>'
+ +'<button onclick="location.reload()" style="font-size:18px;padding:12px 24px;border:0;border-radius:10px;background:#3b82f6;color:#fff">Повторить</button></div>';
+self.addEventListener('install',e=>{   // без skipWaiting: новая версия ждёт кнопку «Обновить»
+  e.waitUntil((async()=>{
+    const a=await caches.open(C_APP);await a.addAll(CORE.map(u=>new Request(u,{cache:'reload'})));
+    const l=await caches.open(C_LIB);for(const u of LIBS)if(!(await l.match(u))){try{await l.add(new Request(u,{cache:'reload'}));}catch(_){}}
+  })());
+});
+self.addEventListener('message',e=>{if(e.data==='SKIP_WAITING'||e.data==='skip')self.skipWaiting();});
 self.addEventListener('activate',e=>{e.waitUntil((async()=>{
-  for(const k of await caches.keys())if(k.startsWith('dxfv-')&&k!==C_APP&&k!==C_LIB)await caches.delete(k);   // только свои старые кэши — чужие приложения на домене не трогаем
+  for(const k of await caches.keys())if(k.startsWith('dxfv-')&&k!==C_APP&&k!==C_LIB)await caches.delete(k);   // только свои старые кэши
   await self.clients.claim();
 })());});
-self.addEventListener('message',e=>{if(e.data==='skip')self.skipWaiting();});
-self.addEventListener('fetch',e=>{
+self.addEventListener('fetch',e=>{   // сначала свой кэш (страница — index.html из кэша этой версии), иначе сеть
   const r=e.request;if(r.method!=='GET')return;
   const u=new URL(r.url);if(u.origin!==location.origin)return;
-  if(u.pathname.includes('/lib/')){ // библиотека PDF: из кэша, не меняется
-    e.respondWith(caches.match(r).then(c=>c||fetch(r).then(n=>{const cp=n.clone();caches.open(C_LIB).then(x=>x.put(r,cp));return n;})));return;}
-  if(r.mode==='navigate'||u.pathname.endsWith('/')||u.pathname.endsWith('index.html')){ // страница: сначала сеть (свежая версия), без сети — кэш
-    e.respondWith((async()=>{
-      try{const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),4000);
-        const n=await fetch(r,{cache:'no-cache',signal:ctl.signal});clearTimeout(t);
-        if(n.ok){const cp=n.clone();caches.open(C_APP).then(x=>x.put('index.html',cp));}return n;}
-      catch(err){return (await caches.match('index.html'))||(await caches.match('./'))||Response.error();}
-    })());return;}
-  e.respondWith(caches.match(r).then(c=>c||fetch(r)));
+  const isLib=u.pathname.includes('/lib/'),nav=r.mode==='navigate';
+  e.respondWith((async()=>{
+    try{
+      const c=await caches.open(isLib?C_LIB:C_APP);
+      let hit=await c.match(nav?'./index.html':r,{ignoreSearch:true});
+      if(!hit&&!isLib)hit=await caches.match(nav?new URL('./index.html',self.registration.scope).href:r,{ignoreSearch:true});   // запас: копия прошлой версии
+      if(hit)return hit;
+      const n=await fetch(r);if(isLib&&n.ok)c.put(r,n.clone());return n;
+    }catch(_){
+      if(!nav)return new Response('',{status:503});
+      return new Response(OFFLINE_PAGE,{status:503,headers:{'Content-Type':'text/html; charset=utf-8'}});
+    }
+  })());
 });
-''' % h
+''' % APP_VERSION
 wr(OUT + 'sw.js', sw)
-print('one-file', len(one.encode()) // 1024, 'KB | index.html', len(idx.encode()) // 1024, 'KB | sw', h)
+print('one-file', len(one.encode()) // 1024, 'KB | index.html', len(idx.encode()) // 1024, 'KB | версия', APP_VERSION, 'от', APP_DATE, '| hash', h)

@@ -254,6 +254,9 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 .lf div{padding:1px 0 1px 12px}
 .l-info{color:var(--mut)}.l-warn{color:var(--warn)}.l-error{color:var(--err)}
 .lpf{padding:8px 12px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
+#noteBox{z-index:60;align-items:flex-start;padding-top:12vh}.lp.nb{width:min(620px,100%);max-height:76vh}
+#noteX{padding:6px 0;line-height:1.45}.nbl{margin-top:8px;max-height:40vh;overflow:auto;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:6px 8px}.nbl div{padding:1px 0;word-break:break-all}
+.nbb{display:flex;gap:8px;justify-content:flex-end;padding:10px;border-top:1px solid var(--line)}.nbb .pri{background:var(--acc);color:#fff;border-color:var(--acc)}
 .h-day{margin:12px 0 4px;font-weight:600;color:var(--mut);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
 .h-row{display:flex;gap:10px;align-items:baseline;padding:5px 6px;border-radius:6px;cursor:pointer}
 .h-row:hover{background:var(--hover)}
@@ -328,7 +331,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.4.1</small></div>
+  <div class="brand">DXF <small>+PDF · v4.5.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -498,7 +501,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </div>
 
 <div id="setPanel" class="pop" hidden>
-  <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
+  <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><button id="setUpd" title="Проверить, есть ли новая версия">Проверить обновления</button><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
   <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option></select></div>
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
@@ -546,6 +549,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   </div>
 </div>
 
+<div id="noteBox" class="modal" hidden><div class="lp nb"><div class="lph"><b id="noteT"></b></div><div class="lbody"><div id="noteX"></div><div id="noteL" class="nbl" hidden></div></div><div id="noteB" class="nbb"></div></div></div>
 <div id="logPanel" class="modal" hidden>
   <div class="lp">
     <div class="lph">
