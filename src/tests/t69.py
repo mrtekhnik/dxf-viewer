@@ -14,7 +14,7 @@ async def main():
       v=await pg.evaluate('VW.cmp&&[VW.cmp.a.name,VW.cmp.b.name]'); print('focus',v)
       if not v or '01.04' not in v[1]: errs.append('выделенный файл не открылся сразу: '+str(v))
       # (1) пути на строке сравнения
-      t=await pg.inner_text('#cmpPaths'); print('paths',t.replace('\n',' | '))
+      t=await pg.evaluate("(document.querySelector('#cmpPaths')||document.querySelector('#grid .cmphead')).innerText"); print('paths',t.replace('\n',' | '))
       if 'Архив 2024' not in t or 'Текущий' not in t: errs.append('нет путей: '+t)
       # (2) две панели
       await pg.evaluate("SET.preview=false;VW.cmp=null;if(VW.full)setFull(false);applyFilter()"); await pg.wait_for_timeout(800)

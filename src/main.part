@@ -254,6 +254,7 @@ function setLog(it,log){it.log=log;it.issues=log.filter(l=>l[0]!=='info').length
 
 /* ---------- Список файлов ---------- */
 function setFiles(arr,src={}){
+  if(typeof REFR!=='undefined')REFR.h=null;   // обновлять можно только папку, открытую с доступом (кнопкой «Папка», перетаскиванием, из истории)
   if(typeof MEAS!=='undefined'&&MEAS.store)MEAS.store.clear();   // другая папка — размеры прежней не нужны
   gen++;pairMap=null;
   layoutClear();
@@ -263,7 +264,7 @@ function setFiles(arr,src={}){
   items=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name))
     .sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}))
     .map(x=>{const it=makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:''));it.h=x.h||null;it.dh=x.dh||null;return it;});
-  $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;$('btnCmp').hidden=!items.length||FOLLOW;
+  $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;updRefr();$('btnCmp').hidden=!items.length||FOLLOW;
   if(CMP&&!src.keepCmp){CMP=null;}MTF="";if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;document.body.classList.remove('selmode');
   if(!arr.length)$('empty').innerHTML=EMPTY_HTML;
   if(!items.length&&arr.length)$('empty').innerHTML='DXF и PDF не найдены среди выбранных ('+arr.length+' файл.).<br>Выберите другую папку.';
@@ -274,6 +275,47 @@ function setFiles(arr,src={}){
     if(rs.dir&&items.some(x=>x.path.startsWith(rs.dir+'/')))curDir=rs.dir;$('typeSel').value=rs.type||'';}
   applyCaps();updXfBadges();updCmp();renderTree();applyFilter();placeViewer();
 }
+/* ---------- Обновить список: папка перечитывается, новые файлы добавляются, удалённые убираются, изменённые перечитываются.
+   Открытый файл, выбранная папка в дереве, фильтры и сравнение остаются ---------- */
+var REFR={h:null,t:0,busy:false};
+function updRefr(){const b=$('btnRefr');if(b)b.hidden=!items.length||FOLLOW;}
+async function refreshFolder(auto){
+  const h=REFR.h;
+  if(!h){if(!auto)flash(items.length?'Эту папку обновить нельзя (открыта без постоянного доступа) — откройте её снова кнопкой «Папка»':'Сначала откройте папку');return;}
+  if(REFR.busy||WALK.out)return;REFR.busy=true;REFR.t=Date.now();
+  try{
+    const out=[];try{await walkTop(h,out,' (обновление)',auto);}catch(e){if(!auto){olog('error','Обновление «'+h.name+'»: '+errTxt(e));readFail('folder',h.name,e);}return;}
+    if(REFR.h!==h)return;   // пока читали, открыли другую папку
+    const rid=items[0]&&items[0].rid,rootName=items[0]?items[0].rootName:h.name;
+    const old=new Map(items.map(it=>[it.path,it])),next=[];let add=0,chg=0;
+    for(const x of out){if(!/\.(dxf|pdf)$/i.test(x.file.name))continue;
+      const o=old.get(x.path),key=x.path+'|'+x.file.size+'|'+x.file.lastModified;
+      if(o&&o.key===key){o.h=x.h||o.h;o.dh=x.dh||o.dh;next.push(o);old.delete(x.path);continue;}
+      const it=makeItem(x.file,x.path,rid,rootName);it.h=x.h||null;it.dh=x.dh||null;
+      if(o){chg++;old.delete(x.path);refrDrop(o);it.was=o;}else add++;
+      next.push(it);}
+    const del=old.size;for(const o of old.values())refrDrop(o);
+    const ne=(out.errs||[]).length;
+    if(!add&&!chg&&!del){if(!auto)flash('Список актуален — новых, изменённых и удалённых файлов нет'+(ne?' (не прочитано: '+ne+')':''));return;}
+    const cur=view[VW.idx]||null,shown=viewerShown();
+    items=next.sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}));pairMap=null;
+    const nowCur=cur&&(items.includes(cur)?cur:items.find(x=>x.was===cur));
+    if(cur&&!nowCur)layoutClear();
+    applyCaps();updXfBadges();renderTree();
+    if(CMP&&CMP.src){const S=CMP.src;let arr=S.arr;
+      if(S.h){const o2=[];try{await walkTop(S.h,o2,' (обновление сравнения)',true);arr=o2;}catch(e){}}
+      cmpSet(arr,S.name,S.rid,{refresh:true,h:S.h});}
+    else{updCmp();applyFilter();}
+    if(nowCur){const i=view.indexOf(nowCur);if(i>=0){VW.idx=i;if(shown&&nowCur!==cur)showItem(i);else markCurrent(nowCur);}}
+    for(const it of items)delete it.was;
+    const msg='Список обновлён: '+[add?'новых '+add:'',chg?'изменено '+chg:'',del?'удалено '+del:''].filter(Boolean).join(', ');
+    olog('info','«'+h.name+'»: '+msg.toLowerCase());flash(msg);updateStatus();
+  }finally{REFR.busy=false;}
+}
+function refrDrop(o){if(o.url)URL.revokeObjectURL(o.url);const d=docCache.get(o.key);if(d&&d.pdf)try{d.pdf.destroy();}catch(e){}docCache.delete(o.key);if(o.tile)o.tile.remove();}
+// вернулись в окно программы (например, из SolidWorks, где сохранили новый файл) — тихо проверить папку
+function refrAuto(){if(!REFR.h||FOLLOW||REFR.busy||document.hidden||Date.now()-REFR.t<15000||items.length>4000)return;refreshFolder(true);}
+addEventListener('focus',refrAuto);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refrAuto();});
 function makeItem(file,path,rid,rootName){
   const it={file,path,name:file.name,type:/\.pdf$/i.test(file.name)?'pdf':'dxf',key:path+'|'+file.size+'|'+file.lastModified,
     rid,rootName,state:0,visible:false,force:false,log:null,issues:0,err:false,gen};
@@ -462,6 +504,7 @@ async function xfReload(it,nf){   // файл перезаписан: переч
   updateBar();
 }
 $('xfGo').onclick=xfWrite;
+$('btnRefr').onclick=()=>refreshFolder(false);
 
 /* подписи под миниатюрами: свои настройки для сетки и для списка */
 function capText(it,c){const p=[];if(c.type)p.push(it.type.toUpperCase());if(c.size)p.push(fmtSize(it.file.size));if(c.date)p.push(fmtDate(it.file.lastModified));
@@ -471,6 +514,7 @@ function applyCaps(){
   g.classList.toggle('nonm',!c.name);g.classList.toggle('wrapnm',!list&&!!c.wrap);
   g.classList.toggle('nocap',!c.name&&!c.type&&!c.size&&!c.date&&!c.dir);
   for(const it of items)it.meta.textContent=capText(it,c);
+  if(typeof CMP!=='undefined'&&CMP)for(const b of CMP.items)b.meta.textContent=capText(b,c);
 }
 function markCurrent(it){
   for(const t of $('grid').querySelectorAll('.tile.cur'))t.classList.remove('cur');
@@ -619,16 +663,16 @@ async function fsOp(label,fn){
   finally{WALK.pend.delete(key);FSQ.n--;const r=FSQ.q.shift();if(r)r();}
 }
 function walkTick(){
-  if(!WALK.out)return;const now=performance.now();let old=null;
+  if(!WALK.out)return;const now=performance.now();let old=null;if(WALK.quiet&&now-WALK.t0<1500)return;
   for(const v of WALK.pend.values())if(!old||v.t<old.t)old=v;
   let s='Чтение папки «'+WALK.name+'»… найдено файлов: '+WALK.out.length;
   if(old&&now-old.t>FST.slow){const sec=Math.round((now-old.t)/1000);s+=' · жду ответ от диска: '+old.label+' ('+sec+' с)';
     if(!WALK.logged.has(old.label)){WALK.logged.add(old.label);olog('warn','Долго нет ответа от диска: '+old.label);}}
   $('status').textContent=s;
 }
-async function walkTop(h,out,what){   // обход папки целиком: с показом хода и журналом
-  WALK.out=out;WALK.name=h.name;WALK.tmo=0;WALK.logged=new Set();clearInterval(WALK.timer);WALK.timer=setInterval(walkTick,500);walkTick();
-  olog('info','Чтение «'+h.name+'»'+(what||'')+'…');
+async function walkTop(h,out,what,quiet){   // обход папки целиком: с показом хода и журналом; quiet — тихая проверка (строка — только если долго)
+  WALK.out=out;WALK.name=h.name;WALK.tmo=0;WALK.logged=new Set();WALK.t0=performance.now();WALK.quiet=!!quiet;clearInterval(WALK.timer);WALK.timer=setInterval(walkTick,500);walkTick();
+  if(!quiet)olog('info','Чтение «'+h.name+'»'+(what||'')+'…');
   try{await walkDir(h,h.name,out);}finally{clearInterval(WALK.timer);WALK.out=null;WALK.pend.clear();updateStatus();}
 }
 async function walkDir(dir,prefix,out,depth=0){
@@ -693,7 +737,7 @@ async function openDirHandle(h){
   try{olog('info','Разрешение на чтение «'+h.name+'»: '+await h.queryPermission({mode:'read'}));}catch(e){}
   const out=[];walkShown=0;try{await walkTop(h,out);}catch(e){olog('error','«'+h.name+'» не читается: '+errTxt(e));updateStatus();readFail('folder',h.name,e);return;}
   const rid=await withTO(rememberRoot(h),5000).catch(e=>{olog('warn','Не удалось запомнить папку для «Недавних»: '+errTxt(e));return null;});if(rid)ROOTH.set(rid,h);
-  setFiles(out,{rid,rootName:h.name,folder:true});
+  setFiles(out,{rid,rootName:h.name,folder:true});REFR.h=h;REFR.t=Date.now();updRefr();
   if(rid&&!FOLLOW)LS.set('lastRoot',{rid,name:h.name});
   readDone(h.name,out,t0);
 }
@@ -2461,35 +2505,57 @@ function loupeSet(){const on=loupeOn()&&viewerShown();$('vLoupe').classList.togg
 function loupeK(f){LOUPE.k=Math.max(2,Math.min(16,Math.round(LOUPE.k*f*4)/4));SET.loupeK=LOUPE.k;saveSet();if(loupeOn())loupeDraw();else flash('Лупа ×'+String(LOUPE.k).replace('.',','));}
 if(SET.loupeK>=2&&SET.loupeK<=16)LOUPE.k=SET.loupeK;
 function loupeMove(p,x,y){LOUPE.p=p;LOUPE.x=x;LOUPE.y=y;if(!loupeOn())return;$('loupe').hidden=false;loupeDraw();}
+/* Лупа: увеличенный участок вокруг курсора готовится заранее с запасом (LC) — пока курсор внутри запаса, лупа рисуется из готового мгновенно;
+   вышли за запас — сразу увеличенный кусок экрана, точный участок дорисовывается (прежняя отрисовка PDF отменяется) */
+const LC={sig:'',cv:null,X0:0,Y0:0,SZ:0,e:null,task:null,tm:0,tok:0};
+function loupeSig(p,k,d){const a=p.s2w(0,0),b=p.s2w(100,100);
+  return [p.it&&p.it.key,k,d,a[0],a[1],b[0],b[1],SET.lw,SET.texts,SET.lineK,p.isPdf?pdfFilter():dxfBg(),[...(p.hidden||[])].join(','),p.pg?p.pg.length:0].join('|');}
+function loupeHas(p,x,y,k,R,sig){return LC.cv&&LC.p===p&&LC.sig===sig&&Math.abs(x-LC.X0)*k<=LC.SZ/2-R&&Math.abs(y-LC.Y0)*k<=LC.SZ/2-R;}
+function loupeBuild(p,X,Y,k,d,sig,R,now){
+  clearTimeout(LC.tm);const tok=++LC.tok;
+  const go=async()=>{
+    if(tok!==LC.tok)return;
+    if(LC.task){try{LC.task.cancel();}catch(e){}LC.task=null;}
+    const SZ=Math.min(2400,Math.floor(3200/d),Math.max(2*R+40,Math.round(2*R+2*170*k))),s=p.s*k,[wx,wy]=p.s2w(X,Y);
+    const c=document.createElement('canvas');c.width=c.height=Math.round(SZ*d);const x=c.getContext('2d');let e=null;
+    if(!p.isPdf){if(!p.doc||!p.doc.bbox)return;x.fillStyle=dxfBg();x.fillRect(0,0,c.width,c.height);
+      renderDoc(x,p.doc,{s,cx:wx,cy:wy,W:SZ,H:SZ,dpr:d,xf:p.xf,hidden:p.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});}
+    else{e=p.pg&&p.pg.find(e=>{const y=p.ph-wy;return y>=e.oy-1&&y<=e.oy+e.h+1;});if(!e||!e.page)return;
+      const S=s*d,x0=wx-e.ox-(SZ/2)/s,y0=(p.ph-wy)-e.oy-(SZ/2)/s;
+      const t=e.page.render({canvasContext:x,viewport:e.page.getViewport({scale:S,rotation:e.rot,offsetX:-x0*S,offsetY:-y0*S})});LC.task=t;
+      try{await t.promise;}catch(er){return;}finally{if(LC.task===t)LC.task=null;}
+      if(tok!==LC.tok)return;
+      x.globalCompositeOperation='destination-in';x.fillStyle='#000';x.fillRect((0-x0)*S,(0-y0)*S,e.w*S,e.h*S);x.globalCompositeOperation='source-over';}   // только сам лист — поля вокруг остаются как на экране
+    if(tok!==LC.tok)return;
+    Object.assign(LC,{sig,cv:c,X0:X,Y0:Y,SZ,e,p});
+    if(loupeOn()&&LOUPE.p===p)loupeDraw();
+  };
+  if(now)go();else LC.tm=setTimeout(go,40);
+}
 function loupeDraw(){
   const p=LOUPE.p;if(!p||!p.doc||!viewerShown()){$('loupe').hidden=true;return;}const L=$('loupe'),R=LR(),d=devicePixelRatio||1,k=LOUPE.k*(LOUPE.boost?2:1);
-  const r=p.cv.getBoundingClientRect(),lx=r.left+LOUPE.x-R,ly=r.top+LOUPE.y-R;L.style.left=lx+'px';L.style.top=ly+'px';
+  const x=LOUPE.x,y=LOUPE.y,sig=loupeSig(p,k,d);let has=loupeHas(p,x,y,k,R,sig);
+  if(!has&&!p.isPdf&&p.doc.bbox){LC.want=null;loupeBuild(p,x,y,k,d,sig,R,true);if(loupeHas(p,x,y,k,R,sig))return;}   // DXF: запас готовится сразу (рисуется им же)
+  const r=p.cv.getBoundingClientRect(),lx=r.left+x-R,ly=r.top+y-R;L.style.left=lx+'px';L.style.top=ly+'px';
   const sr=$('stage').getBoundingClientRect(),ins=[Math.max(0,sr.top-ly),Math.max(0,lx+2*R-sr.right),Math.max(0,ly+2*R-sr.bottom),Math.max(0,sr.left-lx)];
   L.style.clipPath=ins.some(v=>v>0)?'inset('+ins.map(v=>v+'px').join(' ')+')':'';   // не выходить за окно просмотра (на панели и список)
   if(L.width!==2*R*d){L.width=L.height=2*R*d;L.style.width=L.style.height=2*R+'px';}
   const c=L.getContext('2d');c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,L.width,L.height);c.save();c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.clip();
-  const [wx,wy]=p.s2w(LOUPE.x,LOUPE.y),s=p.s*k;
-  if(!p.isPdf&&p.doc.bbox){c.fillStyle=dxfBg();c.fillRect(0,0,L.width,L.height);
-    renderDoc(c,p.doc,{s,cx:wx,cy:wy,W:2*R,H:2*R,dpr:d,xf:p.xf,hidden:p.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});}
-  else{ // PDF: сразу — увеличенный кусок экрана, через миг — точная отрисовка этого места
-    c.imageSmoothingEnabled=true;const sw=2*R*d/k;c.drawImage(p.cv,LOUPE.x*d-sw/2,LOUPE.y*d-sw/2,sw,sw,0,0,2*R*d,2*R*d);
-    clearTimeout(LOUPE.tm);const tok=++LOUPE.tok;LOUPE.tm=setTimeout(()=>loupePdf(p,wx,wy,s,tok),110);}
+  const fromCache=()=>{const sx=(LC.SZ/2+(x-LC.X0)*k-R)*d,sy=(LC.SZ/2+(y-LC.Y0)*k-R)*d;c.drawImage(LC.cv,sx,sy,2*R*d,2*R*d,0,0,2*R*d,2*R*d);};
+  if(!p.isPdf&&p.doc.bbox){
+    if(has)fromCache();
+    else{const [wx,wy]=p.s2w(x,y);c.fillStyle=dxfBg();c.fillRect(0,0,L.width,L.height);
+      renderDoc(c,p.doc,{s:p.s*k,cx:wx,cy:wy,W:2*R,H:2*R,dpr:d,xf:p.xf,hidden:p.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});}}
+  else{ // PDF: увеличенный кусок экрана, поверх — точная отрисовка из запаса
+    c.imageSmoothingEnabled=true;const sw=2*R*d/k;c.drawImage(p.cv,x*d-sw/2,y*d-sw/2,sw,sw,0,0,2*R*d,2*R*d);
+    if(has){const f=pdfFilter();if(f)c.filter=f;fromCache();c.filter='none';}}
+  // запаса нет или курсор подошёл к его краю — готовим новый вокруг курсора
+  const near=has&&Math.max(Math.abs(x-LC.X0),Math.abs(y-LC.Y0))*k>(LC.SZ/2-R)*0.55;
+  if(!has&&LC.want!==sig+'|'+Math.round(x/8)+'|'+Math.round(y/8)){LC.want=sig+'|'+Math.round(x/8)+'|'+Math.round(y/8);loupeBuild(p,x,y,k,d,sig,R,false);}
+  else if(near&&!LC.tm2){LC.tm2=1;loupeBuild(p,x,y,k,d,sig,R,false);setTimeout(()=>LC.tm2=0,300);}
   c.restore();c.lineWidth=2*d;c.strokeStyle='#ffd23f';c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.stroke();
-  c.strokeStyle='rgba(255,210,63,.6)';c.lineWidth=d;c.beginPath();c.moveTo(R*d-8*d,R*d);c.lineTo(R*d+8*d,R*d);c.moveTo(R*d,R*d-8*d);c.lineTo(R*d,R*d+8*d);c.stroke();
+  c.strokeStyle=p.isPdf?'rgba(217,130,43,.8)':'rgba(255,210,63,.6)';c.lineWidth=d;c.beginPath();c.moveTo(R*d-8*d,R*d);c.lineTo(R*d+8*d,R*d);c.moveTo(R*d,R*d-8*d);c.lineTo(R*d,R*d+8*d);c.stroke();
   c.fillStyle='rgba(16,18,22,.8)';c.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);c.fillStyle='#ffd23f';c.font=(12*d)+'px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('×'+k,R*d,2*R*d-17*d);
-}
-async function loupePdf(p,wx,wy,s,tok){
-  const e=p.pg.find(e=>{const y=p.ph-wy;return y>=e.oy-1&&y<=e.oy+e.h+1;});if(!e||!e.page)return;
-  const R=LR(),d=devicePixelRatio||1,S=s*d,x0=wx-e.ox-R/s,y0=(p.ph-wy)-e.oy-R/s;
-  const c=document.createElement('canvas');c.width=c.height=2*R*d;
-  try{await e.page.render({canvasContext:c.getContext('2d'),viewport:e.page.getViewport({scale:S,rotation:e.rot,offsetX:-x0*S,offsetY:-y0*S})}).promise;}catch(x){return;}
-  if(tok!==LOUPE.tok||!loupeOn())return;
-  const L=$('loupe').getContext('2d');L.save();L.beginPath();L.arc(R*d,R*d,R*d-1,0,Math.PI*2);L.clip();
-  const px0=(0-x0)*S,py0=(0-y0)*S;L.beginPath();L.rect(px0,py0,e.w*S,e.h*S);L.clip();   // только сам лист — поля вокруг остаются как на экране
-  const f=pdfFilter();if(f)L.filter=f;L.drawImage(c,0,0);L.restore();
-  L.lineWidth=2*d;L.strokeStyle='#ffd23f';L.beginPath();L.arc(R*d,R*d,R*d-1,0,Math.PI*2);L.stroke();
-  L.strokeStyle='rgba(217,130,43,.8)';L.lineWidth=d;L.beginPath();L.moveTo(R*d-8*d,R*d);L.lineTo(R*d+8*d,R*d);L.moveTo(R*d,R*d-8*d);L.lineTo(R*d,R*d+8*d);L.stroke();
-  L.fillStyle='rgba(16,18,22,.8)';L.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);L.fillStyle='#ffd23f';L.font=(12*d)+'px system-ui,sans-serif';L.textAlign='center';L.textBaseline='middle';L.fillText('×'+Math.round(s/p.s),R*d,2*R*d-17*d);
 }
 $('vLoupe').onclick=()=>{LOUPE.on=!LOUPE.on;LOUPE.down=false;if(LOUPE.on&&MEAS.on)measToggle(false);if(LOUPE.on&&TXT.on)txtToggle(false);loupeSet();if(LOUPE.on)flash('Лупа: клик — показать лупу, водите курсором, колесо — сильнее/слабее; ещё клик — убрать. Перетаскивание и колесо без лупы — как обычно. Esc — выключить');};
 document.addEventListener('keydown',e=>{if((e.key==='z'||e.key==='Z'||e.key==='я'||e.key==='Я')&&!e.ctrlKey&&!e.metaKey&&!e.repeat&&viewerShown()&&!/INPUT|TEXTAREA|SELECT/.test((e.target&&e.target.tagName)||'')){LOUPE.key=true;loupeSet();}});
@@ -2734,11 +2800,13 @@ const chText=ch=>ch.map(c=>(PART_N[c.k]||'имя')+': '+c.from+' → '+c.to).joi
    Пары — по обозначению; содержимое проверяется в фоне (cmpDeep). Статусы:
      same — одинаковые; name — имя изменено, содержимое то же; geo — пересохранён, геометрия DXF та же;
      diff — отличается; ren — переименован (пары по обозначению нет, но такой же файл есть под другим именем); new — нет в той папке */
-function cmpSet(arr,name,rid){
-  const ct=$('grid').querySelector('.tile.cur'),focus=docked()&&!VW.full?curItem():(ct&&ct._it)||(SEL.size===1?[...SEL][0]:null)||null;  // выделенный файл — сразу открыть его сравнение
-  const scope=items.filter(it=>!curDir||it.path.startsWith(curDir+'/'));
+function cmpSet(arr,name,rid,opt={}){
+  const ct=$('grid').querySelector('.tile.cur'),focus=opt.refresh?null:docked()&&!VW.full?curItem():(ct&&ct._it)||(SEL.size===1?[...SEL][0]:null)||null;  // выделенный файл — сразу открыть его сравнение
+  const keep=opt.refresh&&CMP?{path:CMP.path,here:CMP.here,filter:CMP.filter,scope:CMP.scope}:null;
+  if(keep)document.querySelectorAll('.tile').forEach(t=>{if(t._it&&t._it.cmpB)t.remove();});
+  const scope=items.filter(it=>keep?(!keep.scope||it.path.startsWith(keep.scope+'/')):(!curDir||it.path.startsWith(curDir+'/')));
   const paths=new Set(scope.map(it=>it.path+'|'+it.file.size));
-  if(arr.length&&arr.every(x=>paths.has(x.path+'|'+x.file.size))){flash('Для сравнения выбрана та же папка, что открыта, — выберите другую (старый заказ, архив)');return;}
+  if(!opt.refresh&&arr.length&&arr.every(x=>paths.has(x.path+'|'+x.file.size))){flash('Для сравнения выбрана та же папка, что открыта, — выберите другую (старый заказ, архив)');return;}
   const bItems=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).map(x=>{const it=makeItem(x.file,x.path,rid||null,name);it.state=2;it.cmpB=true;return it;});
   const byKey=new Map();for(const b of bItems){const k=cmpKey(b);if(!byKey.has(k))byKey.set(k,[]);byKey.get(k).push(b);}
   const used=new Set(),map=new Map();
@@ -2750,8 +2818,10 @@ function cmpSet(arr,name,rid){
     const ch=nameChanges(a,best);
     map.set(a,{st:!ch.length&&best.file.size===a.file.size?'same':'diff',b:best,others:c,ch,why:ch.length?chText(ch):'',pend:true});
   }
-  CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:'',scope:curDir};
-  $('cmpFilter').value='';updCmp();applyFilter();
+  CMP={name,rid,items:bItems,map,onlyB:bItems.filter(b=>!used.has(b)),filter:'',scope:curDir,src:{arr,name,rid,h:opt.h||null}};
+  if(keep){Object.assign(CMP,keep);$('cmpFilter').value=CMP.filter||'';}else $('cmpFilter').value='';
+  {const c=SET.layout==='list'?SET.capList:SET.capGrid;for(const b of bItems)b.meta.textContent=capText(b,c);}
+  updCmp();applyFilter();
   const C=CMP;
   if(focus&&map.has(focus)&&!map.get(focus).b){C.focus=focus;flash('Ищу «'+focus.name+'» в «'+name+'» — возможно, под другим номером…');}   // пары по обозначению нет — сначала поиск переименованного (cmpDeep), потом откроем
   cmpDeep(C);
@@ -2800,24 +2870,39 @@ async function cmpDeep(C){
 }
 const CMP_TXT={same:'=',name:'имя',geo:'≈',diff:'≠',ren:'⇢',new:'нов'};
 const CMP_WORD={same:'одинаковые',name:'имя изменено',geo:'пересохранён',diff:'отличается',ren:'переименован',new:'только здесь',only:'только там'};
+/* коротко — чем отличается пара (под значком в средней колонке) */
+function cmpShort(a,c){
+  if(!c||!c.b||(c.pend&&CMP&&CMP.deep))return '';
+  const b=c.b,out=[];
+  for(const x of c.ch||[])out.push(x.k==='name'?'другое имя':(PART_N[x.k]||'имя')+': здесь '+x.to+', там '+x.from);
+  if(c.st==='diff')out.push(a.type==='dxf'&&b.type==='dxf'?(c.geo?'геометрия: мест '+c.geo:'геометрия другая'):'содержимое другое');
+  if(c.st==='geo')out.push('геометрия та же');
+  if(c.st==='diff'||c.st==='geo'){
+    if(fmtSize(a.file.size)!==fmtSize(b.file.size))out.push('размер '+fmtSize(a.file.size)+' / '+fmtSize(b.file.size));
+    const dt=a.file.lastModified-b.file.lastModified;if(Math.abs(dt)>60000)out.push(dt>0?'здесь новее':'там новее');}
+  return out.join(' · ');
+}
+function cmpHere(){return CMP.here||(CMP.scope?CMP.scope.split('/').join(' / '):(items[0]?items[0].path.split('/')[0]:''));}
 /* две панели: строка = файл здесь | значок отличия | его версия там; внизу — то, что есть только там */
 function cmpRows(fr,cur){
   const placed=new Set(),W='«'+CMP.name+'»';
   const ph=t=>{const d=document.createElement('div');d.className='cmpph';d.textContent=t;return d;};
-  const mid=(st,tip,fn,pend)=>{const m=document.createElement('div');m.className='cmpmid';const b=document.createElement('span');b.className='cmpb2 '+st+(pend?' pend':'');
+  const mid=(st,tip,fn,pend,why)=>{const m=document.createElement('div');m.className='cmpmid';const b=document.createElement('span');b.className='cmpb2 '+st+(pend?' pend':'');
     b.innerHTML='<b></b><i></i>';b.querySelector('b').textContent=st==='only'?'там':CMP_TXT[st];b.querySelector('i').textContent=pend?'проверяю…':CMP_WORD[st];
-    m.title=tip||'';m.appendChild(b);if(fn){m.classList.add('go');m.onclick=fn;}return m;};
+    m.title=tip||'';m.appendChild(b);if(why){const w=document.createElement('small');w.className='cmpwhy';w.textContent=why;m.appendChild(w);}
+    if(fn){m.classList.add('go');m.onclick=fn;}return m;};
   const bTile=b=>{if(placed.has(b))return ph('та же версия — выше');placed.add(b);b.visible=false;if(b.state===2&&!b.img.src)b.state=0;
     b.tile.classList.remove('cur');io.observe(b.tile);
     if(!b._cmpClick){b._cmpClick=true;const open=()=>{if(!CMP)return;const a=[...CMP.map].find(([x,c])=>c.b===b);if(a)cmpOpenFor(a[0]);else{showSet([b],0);VW.cmp={a:b,b:b,manual:true};VW.set=[b];updateBar();if(!docked())setFull(true);}};
       b.tile.addEventListener('click',e=>{if(!e.ctrlKey&&!e.metaKey)open();});}   // клик по файлу «там» — сравнение пары (или сам файл, если пары нет)
     return b.tile;};
-  const head=document.createElement('div');head.className='cmprow cmphead';head.innerHTML='<div>здесь</div><div></div><div></div>';head.lastChild.textContent='там: '+(CMP.path||CMP.name);fr.appendChild(head);
+  const head=document.createElement('div');head.className='cmprow cmphead';head.innerHTML='<div><span class="cpk">здесь:</span> <b></b></div><div></div><div><span class="cpk">там:</span> <b></b></div>';
+  const hb=head.querySelectorAll('b');hb[0].textContent=cmpHere();hb[1].textContent=CMP.path||CMP.name;head.firstChild.title=hb[0].textContent;head.lastChild.title=hb[1].textContent;fr.appendChild(head);   // пути — над своими колонками
   for(const it of view){
     const c=CMP.map.get(it)||{st:'new'},row=document.createElement('div');row.className='cmprow';
     it.visible=false;it.tile.classList.toggle('cur',it===cur&&VW.idx>=0);row.appendChild(it.tile);io.observe(it.tile);
     const tip=it.cmpb&&it.cmpb.title||'';
-    row.appendChild(mid(c.st,tip,c.b||it.type==='dxf'?()=>cmpOpenFor(it):null,c.pend&&CMP.deep));
+    row.appendChild(mid(c.st,tip,c.b||it.type==='dxf'?()=>cmpOpenFor(it):null,c.pend&&CMP.deep,cmpShort(it,c)));
     row.appendChild(c.b?bTile(c.b):ph('нет в '+W));fr.appendChild(row);
   }
   const only=CMP.onlyB.filter(b=>!CMP.scope||true);
@@ -2846,10 +2931,10 @@ function updCmp(){
   const part=(k,t)=>n[k]?' · <b>'+CMP_TXT[k]+' '+n[k]+'</b> '+t:'';
   s.innerHTML=(part('same','одинаковые')+part('name','имя изменено')+part('geo','пересохранены')+part('diff','отличаются')+part('ren','переименованы')+part('new','новые')).slice(3)+
     (CMP.deep?' · <i>проверка '+CMP.deep.done+' / '+CMP.deep.n+'…</i>':'');
-  const here=CMP.here||(CMP.scope?CMP.scope.split('/').join(' / '):(items[0]?items[0].path.split('/')[0]:''));
   const P=document.createElement('div');P.id='cmpPaths';P.innerHTML='<div><span class="cpk">здесь:</span> <b></b></div><div><span class="cpk">там:</span> <b></b></div>';
-  const bb=P.querySelectorAll('b');bb[0].textContent=here;bb[1].textContent=CMP.path||CMP.name;
-  $('cmpInfo').appendChild(P);$('cmpInfo').appendChild(s);
+  const bb=P.querySelectorAll('b');bb[0].textContent=cmpHere();bb[1].textContent=CMP.path||CMP.name;
+  if(CMP.filter||SET.cmp2===false)$('cmpInfo').appendChild(P);   // две панели — пути над колонками, здесь только итог
+  $('cmpInfo').appendChild(s);
   const tot=document.createElement('span');tot.className='cmptot';tot.textContent='сравнивается: здесь '+CMP.map.size+', там '+CMP.items.length;$('cmpInfo').insertBefore(tot,s);
   $('cmpOnlyBtn').textContent='Только там: '+CMP.onlyB.length;$('cmpOnlyBtn').disabled=!CMP.onlyB.length;
   if(document.querySelector('#grid.cmp2')&&!CMP.deep)scheduleCmpRows();
@@ -3077,7 +3162,7 @@ async function cmpFromHandle(h,rid,path){
   $('cmpPanel').hidden=true;$('status').textContent='Чтение папки для сравнения «'+h.name+'»…';
   const t0=performance.now(),out=[];walkShown=0;try{await walkTop(h,out,' для сравнения');}catch(e){olog('error','«'+h.name+'» (сравнение) не читается: '+errTxt(e));updateStatus();readFail('cmp',h.name,e);return;}
   const id=rid||await withTO(rememberRoot(h),5000).catch(e=>{olog('warn','Не удалось запомнить папку сравнения: '+errTxt(e));return null;});
-  cmpSet(out,h.name,id);updateStatus();readDone(h.name,out,t0);   // сравнение — сразу; путь к папкам дописывается потом и не задерживает
+  cmpSet(out,h.name,id,{h});updateStatus();readDone(h.name,out,t0);   // сравнение — сразу; путь к папкам дописывается потом и не задерживает
   const cs=CMP;
   const full=path&&path.split(' / ').length>1?path:await knownPath(h,true);
   if(id){const L=(LS.get('cmpRecent',[])||[]).filter(x=>x.id!==id);L.unshift({id,name:h.name,path:full,t:Date.now(),n:out.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).length});LS.set('cmpRecent',L.slice(0,12));}
@@ -3179,6 +3264,7 @@ function gridCols(){const t=$('grid').children;if(t.length<2)return 1;const y=t[
 function pageRows(){const t=$('grid').children[0];return t?Math.max(1,Math.floor($('gridWrap').clientHeight/(t.offsetHeight+8))):1;}
 document.addEventListener('keydown',e=>{
   const k=e.key;
+  if(k==='F5'&&!e.ctrlKey&&!e.shiftKey&&!e.metaKey&&items.length&&!FOLLOW){e.preventDefault();refreshFolder(false);return;}   // F5 — как в Проводнике: обновить список (Ctrl+F5 — перезагрузить программу)
   if(MEAS.on&&viewerShown()&&e.ctrlKey&&/^[zZяЯ]$/.test(k)){e.preventDefault();measUndo(false);return;}
   if(TXT.on&&viewerShown()&&e.ctrlKey&&!/^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)){   // текст PDF: Ctrl+C — копировать, Ctrl+A — вся страница
     if(/^[cCсС]$/.test(k)&&panes.some(p=>p.tsel&&p.tsel.length)){e.preventDefault();txtCopy();return;}
