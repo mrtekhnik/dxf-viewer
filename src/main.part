@@ -605,16 +605,42 @@ let walkShown=0;
 const errTxt=e=>e?((e.name&&e.name!=='Error'?e.name+': ':'')+(e.message||String(e))):'неизвестная ошибка';
 /* Обход папки. Ошибка корня — общая (бросается наружу); недоступная подпапка или нечитаемый файл
    не обрывают обход — попадают в out.errs [{path, why, kind:'dir'|'file'}] */
+/* Зависший запрос к диску (Chrome не отвечает: файл в облаке, сетевой сбой, ошибка Chrome) не должен вешать всё чтение:
+   у каждого запроса — предел ожидания, одновременно — не больше FSQ.max запросов, долгие видны в строке состояния */
+const FST={to:30000,short:5000,slow:4000};
+const WALK={pend:new Map(),tmo:0,timer:0,out:null,name:'',logged:new Set()};
+function withTO(p,ms,what){let t;return Promise.race([p,new Promise((_,rj)=>{t=setTimeout(()=>{const e=new Error('нет ответа за '+Math.round(ms/1000)+' с'+(what?' ('+what+')':''));e.tmo=true;rj(e);},ms);})]).finally(()=>clearTimeout(t));}
+const FSQ={n:0,max:8,q:[]};
+async function fsOp(label,fn){
+  if(FSQ.n>=FSQ.max)await new Promise(r=>FSQ.q.push(r));
+  FSQ.n++;const key={};WALK.pend.set(key,{label,t:performance.now()});
+  try{return await withTO(fn(),WALK.tmo>=8?FST.short:FST.to);}   // после 8 зависаний подряд — ждём меньше, чтобы не тянуть минутами
+  catch(e){if(e&&e.tmo)WALK.tmo++;throw e;}
+  finally{WALK.pend.delete(key);FSQ.n--;const r=FSQ.q.shift();if(r)r();}
+}
+function walkTick(){
+  if(!WALK.out)return;const now=performance.now();let old=null;
+  for(const v of WALK.pend.values())if(!old||v.t<old.t)old=v;
+  let s='Чтение папки «'+WALK.name+'»… найдено файлов: '+WALK.out.length;
+  if(old&&now-old.t>FST.slow){const sec=Math.round((now-old.t)/1000);s+=' · жду ответ от диска: '+old.label+' ('+sec+' с)';
+    if(!WALK.logged.has(old.label)){WALK.logged.add(old.label);olog('warn','Долго нет ответа от диска: '+old.label);}}
+  $('status').textContent=s;
+}
+async function walkTop(h,out,what){   // обход папки целиком: с показом хода и журналом
+  WALK.out=out;WALK.name=h.name;WALK.tmo=0;WALK.logged=new Set();clearInterval(WALK.timer);WALK.timer=setInterval(walkTick,500);walkTick();
+  olog('info','Чтение «'+h.name+'»'+(what||'')+'…');
+  try{await walkDir(h,h.name,out);}finally{clearInterval(WALK.timer);WALK.out=null;WALK.pend.clear();updateStatus();}
+}
 async function walkDir(dir,prefix,out,depth=0){
   const errs=out.errs||(out.errs=[]),files=[],dirs=[];
   try{
-    for await(const [name,e] of dir.entries()){
+    const it=dir.entries();
+    for(;;){const r=await fsOp('список папки '+prefix,()=>it.next());if(r.done)break;const [name,e]=r.value;
       if(e.kind==='file'){if(/\.(dxf|pdf)$/i.test(name))files.push([name,e]);}
       else if(e.kind==='directory')dirs.push([name,e]);
     }
-  }catch(e){if(!depth&&!files.length&&!dirs.length)throw e;errs.push({path:prefix,why:errTxt(e),kind:'dir'});}   // подпапка (или часть корня) не читается — идём дальше
-  await pmap(files,12,async([name,e])=>{try{out.push({file:await e.getFile(),path:prefix+'/'+name,h:e,dh:dir});}catch(err){errs.push({path:prefix+'/'+name,why:errTxt(err),kind:'file'});}});
-  if(out.length-walkShown>=40){walkShown=out.length;$('status').textContent='Чтение папки… найдено файлов: '+out.length;}
+  }catch(e){if(!depth&&!files.length&&!dirs.length)throw e;errs.push({path:prefix,why:errTxt(e)+(files.length||dirs.length?' — прочитана часть':''),kind:'dir'});}   // подпапка (или часть корня) не читается — идём дальше
+  await pmap(files,12,async([name,e])=>{try{out.push({file:await fsOp(prefix+'/'+name,()=>e.getFile()),path:prefix+'/'+name,h:e,dh:dir});}catch(err){errs.push({path:prefix+'/'+name,why:errTxt(err),kind:'file'});}});
   await pmap(dirs,6,async([name,e])=>{try{await walkDir(e,prefix+'/'+name,out,depth+1);}catch(err){errs.push({path:prefix+'/'+name,why:errTxt(err),kind:'dir'});}});
 }
 /* ---------- журнал выбора папки: каждый шаг, чтобы по нему было видно, где сбой ---------- */
@@ -663,8 +689,8 @@ async function rememberRoot(h){
 async function openDirHandle(h){
   $('status').textContent='Чтение папки «'+h.name+'»…';const t0=performance.now();
   try{olog('info','Разрешение на чтение «'+h.name+'»: '+await h.queryPermission({mode:'read'}));}catch(e){}
-  const out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){olog('error','«'+h.name+'» не читается: '+errTxt(e));updateStatus();readFail('folder',h.name,e);return;}
-  const rid=await rememberRoot(h);if(rid)ROOTH.set(rid,h);
+  const out=[];walkShown=0;try{await walkTop(h,out);}catch(e){olog('error','«'+h.name+'» не читается: '+errTxt(e));updateStatus();readFail('folder',h.name,e);return;}
+  const rid=await withTO(rememberRoot(h),5000).catch(e=>{olog('warn','Не удалось запомнить папку для «Недавних»: '+errTxt(e));return null;});if(rid)ROOTH.set(rid,h);
   setFiles(out,{rid,rootName:h.name,folder:true});
   if(rid&&!FOLLOW)LS.set('lastRoot',{rid,name:h.name});
   readDone(h.name,out,t0);
@@ -720,7 +746,7 @@ document.addEventListener('drop',async e=>{
     if(hs.length===1&&hs[0].kind==='directory'){olog('info','Перетащена папка «'+hs[0].name+'»');await openDirHandle(hs[0]);return;}
     const out=[],t0=performance.now();out.errs=[];olog('info','Перетащено: '+hs.map(h=>h.name).join(', '));
     for(const h of hs){
-      if(h.kind==='directory'){try{await walkDir(h,h.name,out);}catch(err){out.errs.push({path:h.name,why:errTxt(err),kind:'dir'});}}
+      if(h.kind==='directory'){try{await walkTop(h,out);}catch(err){out.errs.push({path:h.name,why:errTxt(err),kind:'dir'});}}
       else if(/\.(dxf|pdf)$/i.test(h.name)){try{out.push({file:await h.getFile(),path:h.name,rid:await rememberRoot(h)});}catch(err){}}
     }
     setFiles(out,{});if(items.length===1){showItem(0);if(!docked())setFull(true);}
@@ -3038,20 +3064,23 @@ function cmpOpenFor(a){
   cmpOpen(a,c.b);
 }
 /* где лежит папка: цепочка от самой «высокой» известной папки (Chrome не отдаёт полный путь на диске) */
-async function knownPath(h,skip){
-  let best=null;
-  try{const roots=((await IDB.all('roots').catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory');
-    for(const rt of roots){try{if(skip&&await rt.h.isSameEntry(h))continue;const p=await rt.h.resolve(h);if(p&&p.length&&(!best||p.length+1>best.length))best=[rt.h.name,...p];}catch(e){}}}catch(e){}
+async function knownPath(h,skip){   // каждый запрос — с пределом ожидания: путь не важнее самого сравнения
+  let best=null;const T0=performance.now();
+  try{const roots=((await withTO(IDB.all('roots'),3000).catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory');
+    for(const rt of roots){if(performance.now()-T0>6000)break;
+      try{if(skip&&await withTO(rt.h.isSameEntry(h),1500))continue;const p=await withTO(rt.h.resolve(h),1500);if(p&&p.length&&(!best||p.length+1>best.length))best=[rt.h.name,...p];}catch(e){}}}catch(e){}
   return (best||[h.name]).join(' / ');
 }
 async function cmpFromHandle(h,rid,path){
   $('cmpPanel').hidden=true;$('status').textContent='Чтение папки для сравнения «'+h.name+'»…';
-  const t0=performance.now(),out=[];walkShown=0;try{await walkDir(h,h.name,out);}catch(e){olog('error','«'+h.name+'» (сравнение) не читается: '+errTxt(e));updateStatus();readFail('cmp',h.name,e);return;}
-  const id=rid||await rememberRoot(h);
+  const t0=performance.now(),out=[];walkShown=0;try{await walkTop(h,out,' для сравнения');}catch(e){olog('error','«'+h.name+'» (сравнение) не читается: '+errTxt(e));updateStatus();readFail('cmp',h.name,e);return;}
+  const id=rid||await withTO(rememberRoot(h),5000).catch(e=>{olog('warn','Не удалось запомнить папку сравнения: '+errTxt(e));return null;});
+  cmpSet(out,h.name,id);updateStatus();readDone(h.name,out,t0);   // сравнение — сразу; путь к папкам дописывается потом и не задерживает
+  const cs=CMP;
   const full=path&&path.split(' / ').length>1?path:await knownPath(h,true);
   if(id){const L=(LS.get('cmpRecent',[])||[]).filter(x=>x.id!==id);L.unshift({id,name:h.name,path:full,t:Date.now(),n:out.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).length});LS.set('cmpRecent',L.slice(0,12));}
-  cmpSet(out,h.name,id);if(CMP){CMP.path=full;updCmp();}updateStatus();readDone(h.name,out,t0);
-  curDirHandle().then(async c=>{if(CMP&&c){CMP.here=await knownPath(c,true);updCmp();}});
+  if(CMP&&CMP===cs){CMP.path=full;updCmp();}
+  withTO(curDirHandle(),5000).then(async c=>{if(CMP&&CMP===cs&&c){CMP.here=await knownPath(c,true);updCmp();}}).catch(()=>{});
 }
 /* окно «Сравнить с папкой»: недавние папки сравнения, ярлыки, история.
    Папку, открытую сейчас (или внутри неё), выбрать нельзя. Путь: Chrome не отдаёт полный путь на диске,
