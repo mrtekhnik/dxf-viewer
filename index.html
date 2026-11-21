@@ -334,7 +334,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.6.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.6.1</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -515,6 +515,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Обновление списка файлов</span><select id="sRefr"><option value="off">только вручную (⟳, F5)</option><option value="focus">при возврате в окно программы</option><option value="30">при возврате + каждые 30 с</option><option value="60">при возврате + каждую минуту</option><option value="300">при возврате + каждые 5 мин</option></select></div>
   <div class="set-row"><span>Всплывающие подсказки</span><select id="sFlash"><option value="2">2 с</option><option value="4">4 с</option><option value="6">6 с</option><option value="10">10 с</option><option value="off">не показывать</option></select></div>
   <div class="set-row"><span>Интерфейс</span><select id="sUi"><option value="auto">авто (телефон — свой)</option><option value="mob">как на телефоне</option><option value="pc">как на компьютере</option></select></div>
   <div class="set-row"><span>Размер лупы</span><select id="sLoupe"><option value="s">маленькая</option><option value="m">средняя</option><option value="l">большая</option></select></div>
@@ -609,7 +610,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <h2>Открыть папку или файлы</h2>
 <ul>
 <li><b>📂 Открыть ▾ → Папка…</b> — открыть папку целиком со всеми вложенными (заказ, изделие). Работает и с сетевыми папками на сервере.</li>
-<li><b>⟳ Обновить</b> (<kbd>F5</kbd>) — перечитать открытую папку: новые файлы добавятся, удалённые уберутся, изменённые перечитаются. Открытый файл, выбранная папка в дереве, фильтры и сравнение остаются. Программа и сама тихо проверяет папку, когда вы возвращаетесь в её окно (например, сохранили новый DXF в SolidWorks и переключились сюда). Перезагрузить программу целиком — <kbd>Ctrl+F5</kbd>.</li>
+<li><b>⟳ Обновить</b> (<kbd>F5</kbd>) — перечитать открытую папку: новые файлы добавятся, удалённые уберутся, изменённые перечитаются. Открытый файл, выбранная папка в дереве, фильтры и сравнение остаются. Программа может и сама тихо проверять папку — режим в ⚙ «Обновление списка файлов»: <i>только вручную</i>; <i>при возврате в окно программы</i> (по умолчанию: сохранили новый DXF в SolidWorks, переключились сюда — список уже новый); <i>при возврате + каждые 30 с / 1 мин / 5 мин</i> — ещё и по таймеру, пока окно программы видно на экране (удобно, если программа открыта на втором мониторе, а файлы кладут коллеги по сети). Если ничего не изменилось, проверку не видно; изменения — подсказкой внизу и в журнале. Папки больше 4000 файлов сами не проверяются — только ⟳ или F5. Перезагрузить программу целиком — <kbd>Ctrl+F5</kbd>.</li>
 <li>Если окно выбора папки закрылось само или Chrome прервал выбор — программа скажет об этом и предложит <b>Открыть другим способом</b> (обычное окно выбора) или перетащить папку из Проводника. Если какая-то подпапка или файл не читается (нет доступа, файл занят), остальное всё равно откроется, а программа покажет список непрочитанного. Если диск долго не отвечает на какой-то файл или папку (файл в облаке, сбой сети), в строке состояния видно, чего программа ждёт; через 30 с этот файл пропускается и попадает в список непрочитанного, остальное открывается. Все шаги — в <b>Журнале</b>, раздел «Открытие папок».</li>
 <li><b>📂 Открыть ▾ → Файлы…</b> — выбрать отдельные DXF и PDF.</li>
 <li>Можно перетащить файлы или папку мышью прямо в окно.</li>
@@ -2435,9 +2436,12 @@ async function refreshFolder(auto){
   }finally{REFR.busy=false;}
 }
 function refrDrop(o){if(o.url)URL.revokeObjectURL(o.url);const d=docCache.get(o.key);if(d&&d.pdf)try{d.pdf.destroy();}catch(e){}docCache.delete(o.key);if(o.tile)o.tile.remove();}
-// вернулись в окно программы (например, из SolidWorks, где сохранили новый файл) — тихо проверить папку
-function refrAuto(){if(!REFR.h||FOLLOW||REFR.busy||document.hidden||Date.now()-REFR.t<15000||items.length>4000)return;refreshFolder(true);}
-addEventListener('focus',refrAuto);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refrAuto();});
+/* автообновление (⚙ «Обновление списка файлов»): off — только ⟳/F5; focus — при возврате в окно (например, из SolidWorks);
+   30/60/300 — ещё и по таймеру, пока окно программы видно на экране (в том числе на втором мониторе без фокуса) */
+const refrMode=()=>SET.refr||'focus';
+function refrAuto(min){if(refrMode()==='off'||!REFR.h||FOLLOW||REFR.busy||document.hidden||Date.now()-REFR.t<min||items.length>4000)return;refreshFolder(true);}
+addEventListener('focus',()=>refrAuto(15000));document.addEventListener('visibilitychange',()=>{if(!document.hidden)refrAuto(15000);});
+setInterval(()=>{const m=+refrMode();if(m)refrAuto(m*1000-500);},5000);
 function makeItem(file,path,rid,rootName){
   const it={file,path,name:file.name,type:/\.pdf$/i.test(file.name)?'pdf':'dxf',key:path+'|'+file.size+'|'+file.lastModified,
     rid,rootName,state:0,visible:false,force:false,log:null,issues:0,err:false,gen};
@@ -2748,7 +2752,7 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
-const APP_VERSION='4.6.0',APP_DATE='21.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
+const APP_VERSION='4.6.1',APP_DATE='21.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
 $('verSet').textContent='Версия '+APP_VERSION+' от '+APP_DATE;
 $('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
 $('noteBox').addEventListener('click',e=>{if(e.target.id==='noteBox')$('noteBox').hidden=true;});
@@ -3915,6 +3919,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sRefr').value=refrMode();$('sRefr').onchange=e=>{SET.refr=e.target.value;saveSet();};
 $('sFlash').value=SET.flashT||(MUI?'4':'6');$('sFlash').onchange=e=>{SET.flashT=e.target.value;saveSet();if(SET.flashT!=='off')flash('Так подсказка будет держаться '+SET.flashT+' с');};
 $('sUi').value=['mob','pc'].includes(SET.ui)?SET.ui:'auto';$('sUi').onchange=e=>{SET.ui=e.target.value;saveSet();if(confirm('Интерфейс поменяется после перезапуска. Перезапустить сейчас?'))location.reload();};
 $('sLoupe').value=['s','m','l'].includes(SET.loupe)?SET.loupe:'m';$('sLoupe').onchange=e=>{SET.loupe=e.target.value;saveSet();};

@@ -45,6 +45,13 @@ async def main():
       h=await pg.evaluate("[document.querySelector('#grid .cmphead').textContent,[...document.querySelectorAll('#grid .cmpwhy')].map(x=>x.textContent)]"); print('шапка',h)
       if 'Архив 2024' not in h[0] or 'Текущий' not in h[0]: errs.append('пути не над колонками: '+h[0])
       if not any('здесь' in x and 'там' in x for x in h[1]): errs.append('нет пояснения отличия: '+str(h[1]))
+      # режимы: off — возврат в окно не обновляет; 30 с — обновляет по таймеру без фокуса
+      await pg.evaluate("SET.refr='off';0"); await pg.evaluate(FS,['put','НОВЫЙ3-St-2-K1.dxf',dxf[1][1]])
+      await pg.evaluate("REFR.t=0;window.dispatchEvent(new Event('focus'));0"); await pg.wait_for_timeout(2500)
+      if await pg.evaluate("items.some(x=>x.path.endsWith('НОВЫЙ3-St-2-K1.dxf'))"): errs.append('режим «вручную» обновил сам')
+      await pg.evaluate("$('sRefr').value='30';$('sRefr').dispatchEvent(new Event('change'));0"); await pg.evaluate("REFR.t=Date.now()-40000;0"); await pg.wait_for_timeout(7500)
+      t=await pg.evaluate("[items.some(x=>x.path.endsWith('НОВЫЙ3-St-2-K1.dxf')),SET.refr]"); print('таймер',t)
+      if t!=[True,'30']: errs.append('таймер не обновил: '+str(t))
       await b.close()
   finally: srv.terminate()
   print('errors',errs)

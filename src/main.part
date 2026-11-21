@@ -313,9 +313,12 @@ async function refreshFolder(auto){
   }finally{REFR.busy=false;}
 }
 function refrDrop(o){if(o.url)URL.revokeObjectURL(o.url);const d=docCache.get(o.key);if(d&&d.pdf)try{d.pdf.destroy();}catch(e){}docCache.delete(o.key);if(o.tile)o.tile.remove();}
-// вернулись в окно программы (например, из SolidWorks, где сохранили новый файл) — тихо проверить папку
-function refrAuto(){if(!REFR.h||FOLLOW||REFR.busy||document.hidden||Date.now()-REFR.t<15000||items.length>4000)return;refreshFolder(true);}
-addEventListener('focus',refrAuto);document.addEventListener('visibilitychange',()=>{if(!document.hidden)refrAuto();});
+/* автообновление (⚙ «Обновление списка файлов»): off — только ⟳/F5; focus — при возврате в окно (например, из SolidWorks);
+   30/60/300 — ещё и по таймеру, пока окно программы видно на экране (в том числе на втором мониторе без фокуса) */
+const refrMode=()=>SET.refr||'focus';
+function refrAuto(min){if(refrMode()==='off'||!REFR.h||FOLLOW||REFR.busy||document.hidden||Date.now()-REFR.t<min||items.length>4000)return;refreshFolder(true);}
+addEventListener('focus',()=>refrAuto(15000));document.addEventListener('visibilitychange',()=>{if(!document.hidden)refrAuto(15000);});
+setInterval(()=>{const m=+refrMode();if(m)refrAuto(m*1000-500);},5000);
 function makeItem(file,path,rid,rootName){
   const it={file,path,name:file.name,type:/\.pdf$/i.test(file.name)?'pdf':'dxf',key:path+'|'+file.size+'|'+file.lastModified,
     rid,rootName,state:0,visible:false,force:false,log:null,issues:0,err:false,gen};
@@ -1793,6 +1796,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sRefr').value=refrMode();$('sRefr').onchange=e=>{SET.refr=e.target.value;saveSet();};
 $('sFlash').value=SET.flashT||(MUI?'4':'6');$('sFlash').onchange=e=>{SET.flashT=e.target.value;saveSet();if(SET.flashT!=='off')flash('Так подсказка будет держаться '+SET.flashT+' с');};
 $('sUi').value=['mob','pc'].includes(SET.ui)?SET.ui:'auto';$('sUi').onchange=e=>{SET.ui=e.target.value;saveSet();if(confirm('Интерфейс поменяется после перезапуска. Перезапустить сейчас?'))location.reload();};
 $('sLoupe').value=['s','m','l'].includes(SET.loupe)?SET.loupe:'m';$('sLoupe').onchange=e=>{SET.loupe=e.target.value;saveSet();};
