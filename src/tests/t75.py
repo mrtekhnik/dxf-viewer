@@ -44,6 +44,15 @@ async def main():
         await pg.wait_for_timeout(500)
         if await pg.evaluate("!!window._c"): break
       if not await pg.evaluate("!!window._c"): errs.append('сравнение не закончилось (путь)')
+      # сохранённая папка на недоступном диске (сервер дома): её проверка не отвечает — открытие и путь не ждут
+      await pg.evaluate("""(d=>{const dead={isSameEntry:()=>new Promise(()=>{}),resolve:()=>new Promise(()=>{})};
+        IDB.all=async()=>[{id:'x1',h:dead,kind:'directory',name:'R3'},{id:'x2',h:dead,kind:'directory',name:'Сервер'}];IDB.put=async()=>{};
+        const R=fdir('R3',[ffile('a.dxf',d)])[1];window._t=performance.now();window._o=0;
+        openDirHandle(R).then(()=>{window._o=performance.now()-window._t;return knownPath(R,true);}).then(p=>{window._k=[performance.now()-window._t,p];});})""",DXF)
+      await pg.wait_for_timeout(5000)
+      o=await pg.evaluate("[window._o,window._k,OPENLOG.map(x=>x[1]).filter(x=>x.includes('Недавних')).length]"); print('сервер недоступен:',o)
+      if not o[0] or o[0]>2500: errs.append('открытие ждало сервер: '+str(o[0]))
+      if not o[1] or o[1][0]>4500: errs.append('путь ждал сервер: '+str(o[1]))
       await b.close()
   finally: srv.terminate()
   print('errors',errs)

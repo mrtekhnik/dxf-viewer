@@ -680,8 +680,10 @@ function readDone(name,out,t0){   // итог чтения: сколько пр�
 }
 async function rememberRoot(h){
   try{
-    const rs=(await IDB.all('roots'))||[];
-    for(const r of rs){if(r.kind===h.kind&&r.name===h.name){try{if(await r.h.isSameEntry(h)){r.t=Date.now();IDB.put(r.id,r,'roots');return r.id;}}catch(e){}}}
+    // сохранённая папка на недоступном сейчас диске (сервер дома, отключённая флешка) может не отвечать — каждую проверяем с пределом и параллельно
+    const rs=((await withTO(IDB.all('roots'),4000))||[]).filter(r=>r&&r.h&&r.kind===h.kind&&r.name===h.name);
+    const hit=await Promise.all(rs.map(r=>withTO(r.h.isSameEntry(h),1200).catch(()=>false)));
+    const k=hit.indexOf(true);if(k>=0){const r=rs[k];r.t=Date.now();IDB.put(r.id,r,'roots');return r.id;}
     const id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
     await IDB.put(id,{id,h,kind:h.kind,name:h.name,t:Date.now()},'roots');return id;
   }catch(e){return null;}
@@ -3065,10 +3067,10 @@ function cmpOpenFor(a){
 }
 /* где лежит папка: цепочка от самой «высокой» известной папки (Chrome не отдаёт полный путь на диске) */
 async function knownPath(h,skip){   // каждый запрос — с пределом ожидания: путь не важнее самого сравнения
-  let best=null;const T0=performance.now();
+  let best=null;
   try{const roots=((await withTO(IDB.all('roots'),3000).catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory');
-    for(const rt of roots){if(performance.now()-T0>6000)break;
-      try{if(skip&&await withTO(rt.h.isSameEntry(h),1500))continue;const p=await withTO(rt.h.resolve(h),1500);if(p&&p.length&&(!best||p.length+1>best.length))best=[rt.h.name,...p];}catch(e){}}}catch(e){}
+    const res=await Promise.all(roots.map(async rt=>{try{if(skip&&await withTO(rt.h.isSameEntry(h),1500))return null;const p=await withTO(rt.h.resolve(h),1500);return p&&p.length?[rt.h.name,...p]:null;}catch(e){return null;}}));
+    for(const b of res)if(b&&(!best||b.length>best.length))best=b;}catch(e){}
   return (best||[h.name]).join(' / ');
 }
 async function cmpFromHandle(h,rid,path){
@@ -3097,7 +3099,7 @@ async function renderCmpPanel(){
   for(const x of LS.get('cmpRecent',[])||[])if(!seen.has(x.id)){seen.add(x.id);list.push({label:x.name,root:x.id,dir:x.name,rootName:x.name,t:x.t,n:x.n,recent:true,path:x.path});}
   for(const p of PINS)if(p.kind==='folder'&&!seen.has(p.root+'|'+p.dir)){seen.add(p.root+'|'+p.dir);list.push({label:'★ '+p.label,root:p.root,dir:p.dir,rootName:p.rootName});}
   for(const e of HIST)if(e.kind==='folder'&&e.root&&!seen.has(e.root)&&!seen.has(e.root+'|'+e.rootName)&&list.length<16){seen.add(e.root+'|'+e.rootName);list.push({label:e.rootName,root:e.root,dir:e.rootName,rootName:e.rootName});}
-  const cur=await curDirHandle(),roots=((await IDB.all('roots').catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory').sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,30);
+  const cur=await withTO(curDirHandle(),3000).catch(()=>null),roots=((await withTO(IDB.all('roots'),3000).catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory').sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,30);
   const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});};
   for(const x of list){
     const r=document.createElement('div');r.className='pin';r.innerHTML='<span class="pi">📁</span><span class="pt"><div class="pl"></div><div class="pp"></div></span>';
@@ -3108,16 +3110,17 @@ async function renderCmpPanel(){
     (async()=>{
       let h=null;try{const rr=await IDB.get(x.root,'roots');h=rr&&rr.h;if(h&&x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1))h=await h.getDirectoryHandle(seg);}}catch(e){h=null;}
       if(!h||!cur)return;
-      let self=false;try{self=await h.isSameEntry(cur)||!!(await cur.resolve(h));}catch(e){}
+      let self=false;try{self=await withTO(h.isSameEntry(cur),1500)||!!(await withTO(cur.resolve(h),1500));}catch(e){}
       if(self){r.classList.add('dis');r.title='Эта папка открыта сейчас — с ней сравнивать нечего';r.querySelector('.pl').textContent=x.label+' — открыта сейчас';return;}
-      let best=null;for(const rt of roots){try{if(await rt.h.isSameEntry(h))continue;const p=await rt.h.resolve(h);if(p&&p.length&&(!best||p.length+1>best.length))best=[rt.name,...p];}catch(e){}}
+      let best=null;const res=await Promise.all(roots.map(async rt=>{try{if(await withTO(rt.h.isSameEntry(h),1500))return null;const p=await withTO(rt.h.resolve(h),1500);return p&&p.length?[rt.name,...p]:null;}catch(e){return null;}}));
+      for(const b of res)if(b&&(!best||b.length>best.length))best=b;
       if(best){x.path=best.join(' / ');r.querySelector('.pp').textContent=[x.path].concat(info.slice(1)).join(' · ');}
     })();
     r.onclick=async()=>{
       if(r.classList.contains('dis')){flash('Эта папка открыта сейчас — выберите другую (старый заказ, архив)');return;}
       const rr=await IDB.get(x.root,'roots');if(!rr||!rr.h){flash('Доступ не сохранился — выберите папку заново');return;}
       try{let q=await rr.h.queryPermission({mode:'read'});if(q!=='granted')q=await rr.h.requestPermission({mode:'read'});if(q!=='granted')return;}catch(e){return;}
-      let hh=rr.h;if(x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1)){try{hh=await hh.getDirectoryHandle(seg);}catch(e){flash('Папка «'+x.dir+'» не найдена');return;}}}
+      let hh=rr.h;if(x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1)){try{hh=await withTO(hh.getDirectoryHandle(seg),10000);}catch(e){flash(e&&e.tmo?'Диск с папкой «'+x.dir+'» не отвечает (сервер недоступен?)':'Папка «'+x.dir+'» не найдена');return;}}}
       cmpFromHandle(hh,x.dir===x.rootName?x.root:null,x.path);
     };
   }
