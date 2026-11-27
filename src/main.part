@@ -1346,7 +1346,9 @@ function updateBar(){if(MUI)setTimeout(muiSync,0);
   const cmp=!!VW.cmp&&VW.set.length===2;
   $('vSync').hidden=!(cmp&&VW.set[0].type===VW.set[1].type);$('vSync').classList.toggle('on',SET.sync);
   $('vOv').hidden=!!OV||!(cmp&&VW.set[0].type==='dxf'&&VW.set[1].type==='dxf');$('vOv').classList.toggle('on',!!OV);$('vOv').textContent=OV?(OV.mode==='over'?'Две панели':'Наложение'):'Сравнить контуры';
-  $('vWith').hidden=FOLLOW||!(has&&cur&&cur.type==='dxf');
+  $('vWith').hidden=FOLLOW||!(has&&cur&&(cur.type==='dxf'||cur.type==='pdf'));
+  if(cur){const pdf=cur.type==='pdf';$('vWith').innerHTML=pdf?'⧉<span class="lbl"> Рядом с…</span>':'⇆<span class="lbl"> Сравнить</span>';
+    $('vWith').title=pdf?'Поставить рядом другой PDF — из этой папки, из папки сравнения или с диска (любая папка, сервер) (V)':'Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)';}
   $('vMon').hidden=FOLLOW||!(MON.win||screen.isExtended);$('vMon').classList.toggle('on',!!MON.win);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
@@ -1442,6 +1444,7 @@ $('vSync').onclick=()=>{SET.sync=!SET.sync;saveSet();updateBar();if(SET.sync){co
 $('vMon').onclick=()=>openSecond();
 /* страницы PDF; в сравнении двух PDF при 🔒 — листаются обе версии вместе (лист 2 слева — лист 2 справа) */
 function pagesGo(d){const ap=panes[VW.active];if(!ap)return false;
+  if(VW.cmp&&VW.cmp.mon&&monOn()&&ap.isPdf){const r=ap.pageGo(d);try{MON.win.postMessage({t:'page',n:ap.pageNo},'*');}catch(e){}return r;}   // пара на двух мониторах — листы вместе
   if(VW.cmp&&SET.sync&&VW.set.length===2&&ap.isPdf){const ps=panes.slice(0,2).filter(p=>p.isPdf&&p.doc&&p.doc.pdf);if(ps.length===2){const n=ap.pageNo;const r=ap.pageGo(d);const t=ap.pageNo;for(const p of ps)if(p!==ap&&t!==n)p.pageGo(t-p.pageNo);return r;}}
   return ap.pageGo(d);}
 $('vPgPrev').onclick=()=>pagesGo(-1);
@@ -2817,8 +2820,13 @@ function monSync(){
   const it=view[VW.idx];const list=it?(VW.monList||[]):[];
   try{MON.win.postMessage({t:'show',from:it?it.name:'',list:list.map(x=>({file:x.file,path:x.path,key:x.key,name:x.name,rid:x.rid||null,rootName:x.rootName,dups:x.dups?x.dups.map(y=>y.path):null}))},'*');}catch(e){}
 }
+function monBack(){   // второй экран закрыли — пара снова рядом в основном окне
+  if(!viewerShown()){updateBar();return;}
+  const c=VW.cmp;
+  if(c&&c.a&&c.b){if(VW.set.length!==2)cmpOpen(c.a,c.b,c.manual);else updateBar();return;}
+  if(VW.idx>=0)showItem(VW.idx);else updateBar();}
 async function openSecond(){
-  if(MON.win&&!MON.win.closed){MON.win.close();MON.win=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);else updateBar();return;}
+  if(MON.win&&!MON.win.closed){clearInterval(MON.timer);MON.win.close();MON.win=null;monBack();return;}
   let feat='popup,width=1100,height=800',o=null,asked=false;
   if('getScreenDetails' in window){ // сначала — какой экран второй (Chrome один раз спросит «управление окнами»)
     try{const st=await navigator.permissions.query({name:'window-management'}).catch(()=>null);asked=!st||st.state==='prompt';
@@ -2830,12 +2838,12 @@ async function openSecond(){
   if(!w){flash(asked?'Разрешение получено — нажмите «2-й монитор» ещё раз':'Браузер заблокировал второе окно — разрешите всплывающие окна для этого сайта (значок в адресной строке)');return;}
   if(o){try{w.moveTo(o.availLeft,o.availTop);w.resizeTo(o.availWidth,o.availHeight);}catch(e){}}
   MON.win=w;updateBar();
-  clearInterval(MON.timer);MON.timer=setInterval(()=>{if(!MON.win||MON.win.closed){clearInterval(MON.timer);MON.win=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);else updateBar();}},1000);
+  clearInterval(MON.timer);MON.timer=setInterval(()=>{if(!MON.win||MON.win.closed){clearInterval(MON.timer);MON.win=null;monBack();}},1000);
 }
 window.addEventListener('message',e=>{
   const d=e.data;if(!d||typeof d!=='object')return;
   if(!FOLLOW&&MON.win&&e.source===MON.win){
-    if(d.t==='ready'){if(VW.idx>=0&&viewerShown())showItem(VW.idx);else monSync();}
+    if(d.t==='ready'){if(VW.cmp&&VW.cmp.a&&VW.cmp.b&&viewerShown())cmpOpen(VW.cmp.a,VW.cmp.b,VW.cmp.manual);else if(VW.idx>=0&&viewerShown())showItem(VW.idx);else monSync();}
     else if(d.t==='swap')monSwap();
     else if(d.t==='key'){const k=d.key;
       if(k==='Tab')monTab(d.shift?-1:1);
@@ -2843,6 +2851,7 @@ window.addEventListener('message',e=>{
       else if(/^(ArrowLeft|ArrowUp|PageUp)$/.test(k)){if(viewerShown())step(-1);else{VW.idx=Math.max(0,VW.idx-1);markCurrent(view[VW.idx]);monSync();}}}
   }
   if(FOLLOW&&e.source===window.opener&&d.t==='show')followerShow(d);
+  if(FOLLOW&&e.source===window.opener&&d.t==='page'){const p=panes[0];if(p&&p.isPdf&&p.doc&&p.doc.pdf&&d.n!==p.pageNo)p.pageGo(d.n-p.pageNo);}
   if(FOLLOW&&e.source===window.opener&&d.t==='set'){Object.assign(SET,LS.get('set',{}));applyTheme();colCache.clear();panes.forEach(p=>p.draw());}
 });
 const FMAP=new Map();let FFROM='';
@@ -3070,6 +3079,8 @@ let cmpRowsT=0;function scheduleCmpRows(){clearTimeout(cmpRowsT);cmpRowsT=setTim
 function cmpEnd(){document.querySelectorAll('.tile').forEach(t=>{if(t._it&&t._it.cmpB)t.remove();});CMP=null;if(VW.cmp&&!VW.cmp.manual){VW.cmp=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);}updCmp();applyFilter();}
 function cmpOpen(a,b,manual){
   const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}
+  // 2-й монитор: левая версия — здесь, правая — на втором экране (кроме сравнения контуров DXF — оно в одном окне)
+  if(monOn()&&!(a.type==='dxf'&&b.type==='dxf'&&SET.cmpGeo!==false)){closePairPanel();showSet([a],0);VW.cmp={a,b,manual:!!manual,mon:true};VW.monList=[b];updateBar();monSync();if(!docked())setFull(true);return;}
   closePairPanel();showSet([a,b],0);VW.cmp={a,b,manual:!!manual};updateBar();
   if(!docked())setFull(true);
   if(a.type==='dxf'&&b.type==='dxf'&&SET.cmpGeo!==false){ovStart();return;}
@@ -3220,7 +3231,7 @@ $('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,tru
 const PICK={a:null,tok:0,list:[],sig:new Map(),last:new Map()};
 function pickCands(a){
   const src=CMP?CMP.items.concat(items):items,seen=new Set(),out=[];
-  for(const it of src){if(it===a||physSame(a,it)||it.type!=='dxf'||seen.has(it.key))continue;seen.add(it.key);out.push(it);}   // сам файл (и он же из папки сравнения) не предлагаем
+  for(const it of src){if(it===a||physSame(a,it)||it.type!==a.type||seen.has(it.key))continue;seen.add(it.key);out.push(it);}   // сам файл (и он же из папки сравнения) не предлагаем
   return out;
 }
 async function pickSig(it){ // «отпечаток» детали, не зависящий от поворота: габарит вдоль главных осей и длина всех контуров
@@ -3235,10 +3246,17 @@ async function pickSig(it){ // «отпечаток» детали, не зав�
 }
 function pickScore(p,q){if(!p||!q)return -1;const r=(a,b)=>Math.abs(a-b)/Math.max(a,b,1);
   return Math.max(0,1-(r(p[0],q[0])+r(p[1],q[1]))*1.5-r(p[2],q[2])*0.5);}
+/* PDF: «рядом с…» — сверху тот же децимальный номер, дальше — чем длиннее общее начало обозначения */
+function pickDesigScore(a,b){const x=(nameParts(a).desig||'').toLowerCase(),y=(nameParts(b).desig||'').toLowerCase();if(!x||!y)return 0;if(x===y)return 1;
+  let i=0;while(i<x.length&&i<y.length&&x[i]===y[i])i++;return Math.min(0.9,i/Math.max(x.length,y.length));}
 async function pickOpen(a){
-  a=a||curItem();if(!a||a.type!=='dxf')return;
+  a=a||curItem();if(!a||(a.type!=='dxf'&&a.type!=='pdf'))return;
   PICK.a=a;const tok=++PICK.tok;$('pickPanel').hidden=false;$('pickQ').value='';
-  $('pickFor').textContent='для: '+a.path;
+  const pdf=a.type==='pdf';$('pickTitle').textContent=pdf?'Рядом с…':'Сравнить с…';$('pickInput').accept=pdf?'.pdf':'.dxf';$('pickFile').title=pdf?'Любой PDF — с сервера, из архива, из другой папки':'Любой DXF — с сервера, из архива, с диска';
+  $('pickFor').textContent='для: '+a.path;$('pickFor').title=a.path;
+  if(pdf){const lb=PICK.last.get(a.key);
+    PICK.list=pickCands(a).map(it=>({it,sc:pickDesigScore(a,it),other:!!(CMP&&CMP.items.includes(it)),last:it===lb,pdf:true}));pickRender();
+    $('pickInfo').textContent=PICK.list.length?'':'Других PDF нет — «Файл с диска…» (любая папка, сервер) или «⇆ Сравнить» с другой папкой';return;}
   const lb=PICK.last.get(a.key);
   PICK.list=pickCands(a).map(it=>({it,sc:-1,other:!!(CMP&&CMP.items.includes(it)),last:it===lb}));pickRender();
   const sa=await pickSig(a);if(tok!==PICK.tok)return;
@@ -3257,8 +3275,9 @@ function pickRender(){
     const sg=PICK.sig.get(r.it.key),dir=r.it.path.includes('/')?r.it.path.slice(0,r.it.path.lastIndexOf('/')):'';
     d.innerHTML='<span class="pn"></span><span class="ps"></span><span class="pd"></span>';
     d.querySelector('.pn').textContent=(r.last?'↺ ':'')+r.it.name;d.querySelector('.pd').textContent=(r.last?'сравнивали последним · ':'')+(r.other?'⇆ ':'')+dir;
-    d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>размер совпал</b>':r.sc>0.85?'<br>размер близок':'')):'…';
-    d.title='Габарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';
+    if(r.pdf){d.querySelector('.ps').innerHTML=r.sc>=1?'<b>тот же номер</b>':r.sc>0.75?'номер похож':'';d.title=r.it.path;}
+    else{d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>размер совпал</b>':r.sc>0.85?'<br>размер близок':'')):'…';
+    d.title=r.it.path+'\nГабарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';}
     d.onclick=()=>pickGo(r.it);L.appendChild(d);}
 }
 function pickGo(b){const a=PICK.a;pickClose();if(!a)return;cmpOpen(a,b,true);}
@@ -3372,8 +3391,9 @@ function selUpd(){
 }
 function clearSel(){for(const it of SEL)if(it.tile)it.tile.classList.remove('sel');SEL.clear();selUpd();}
 $('selGo').onclick=()=>{if(SEL.size!==2)return;const [a,b]=[...SEL];clearSel();
-  if(a.type==='dxf'&&b.type==='dxf'){cmpOpen(a,b,true);return;}
-  const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}VW.cmp=null;closePairPanel();showSet([a,b],0);updateBar();if(!docked())setFull(true);};
+  if(a.type===b.type){cmpOpen(a,b,true);return;}   // два PDF или два DXF — как пара (общий масштаб 🔒, листы вместе, 2-й монитор)
+  const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}VW.cmp=null;closePairPanel();
+  if(monOn()){showSet([a],0);VW.monList=[b];monSync();}else showSet([a,b],0);updateBar();if(!docked())setFull(true);};
 $('selClear').onclick=clearSel;
 
 /* ---------- Клавиатура ---------- */
@@ -3435,7 +3455,7 @@ document.addEventListener('keydown',e=>{
     if(k==='ArrowLeft'&&(list||i<=0||i%cols===0)&&toTree()){e.preventDefault();return;}  // из первого столбца — в дерево
     if(k==='Tab'&&i>=0&&ts[i]._it){e.preventDefault();kbMark(ts[i]);openSel('pair',e.shiftKey?-1:1);return;}
     if(/^[rRкК]$/.test(k)&&i>=0&&ts[i]._it){e.preventDefault();kbMark(ts[i]);openSel('side');return;}
-    if(/^[vVмМ]$/.test(k)&&i>=0&&ts[i]._it&&ts[i]._it.type==='dxf'){e.preventDefault();showItem(view.indexOf(ts[i]._it));if(!docked())setFull(true);pickOpen(ts[i]._it);return;}
+    if(/^[vVмМ]$/.test(k)&&i>=0&&ts[i]._it&&(ts[i]._it.type==='dxf'||ts[i]._it.type==='pdf')){e.preventDefault();showItem(view.indexOf(ts[i]._it));if(!docked())setFull(true);pickOpen(ts[i]._it);return;}
     if(k==='ArrowRight')i=i<0?0:i+1;else if(k==='ArrowLeft')i=i<0?0:i-1;
     else if(k==='ArrowDown')i=i<0?0:i+cols;else if(k==='ArrowUp')i=i<0?0:i-cols;
     else if(k==='Home')i=0;else if(k==='End')i=ts.length-1;

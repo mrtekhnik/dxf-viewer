@@ -240,10 +240,10 @@ table.tbl.sum{width:auto}table.tbl.sum th{position:static;cursor:default}table.t
 #tblColMenu{right:0;left:auto}
 .chkb{position:absolute;left:4px;bottom:4px;border-radius:5px;padding:0 6px;font-size:11px;font-weight:700;cursor:pointer;color:#fff}
 .chkb.bad{background:#d9822b}.chkb.ok{background:#2e8b57}
-.pk-for{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pk-for{color:var(--mut);font-size:12px;overflow-wrap:anywhere}
 .pk{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-top:1px solid var(--line);cursor:pointer;font-size:13px}
 .pk:hover,.pk.cur{background:var(--hover,#2b2f36)}
-.pk .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pk .pd{grid-column:1;color:var(--mut);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pickPanel{width:min(860px,calc(100vw - 16px))}.pk .pn{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pk .pd{grid-column:1;color:var(--mut);font-size:11px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .pk .ps{grid-row:1/3;grid-column:2;text-align:right;font-size:12px;color:var(--mut);align-self:center}.pk .ps b{color:#39d353}
 .pp-empty{padding:6px 10px;color:var(--mut);font-size:13px}
 .set-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:8px 12px}
@@ -341,7 +341,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.7.6</small></div>
+  <div class="brand">DXF <small>+PDF · v4.8.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -432,7 +432,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
         <label><input type="radio" name="pngWhat" id="pngOnlyDxf" value="dxf"> только развёртки DXF</label>
         <label><input type="checkbox" id="pngClip"> ещё и копировать в буфер обмена</label>
         <button id="pngGo">Сохранить PNG</button>
-      </div></span><button id="vMon" hidden title="Пара текущего файла — на втором мониторе">🖵</button><button id="vFull" hidden title="На весь экран (Enter)">⛶</button></span>
+      </div></span><button id="vMon" hidden title="Второй монитор: пара текущего файла (чертёж ⇄ развёртка, вторая версия в сравнении, второй PDF) — в отдельном окне на втором экране">🖥<span class="lbl"> 2-й монитор</span></button><button id="vFull" hidden title="На весь экран (Enter)">⛶</button></span>
     <button id="vClose" title="Закрыть просмотр — назад к миниатюрам (Esc)">✕</button>
   </div>
   <div id="ovBar" hidden>
@@ -500,7 +500,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </div>
 <div id="chkList" class="pop" hidden style="top:96px"></div>
 <div id="pickPanel" class="pop" hidden>
-  <div class="pp-h"><b>Сравнить с…</b><span class="sp"></span><button id="pickFile" title="Любой DXF — с сервера, из архива, с диска">Файл с диска…</button><button id="pickClose">✕</button></div>
+  <div class="pp-h"><b id="pickTitle">Сравнить с…</b><span class="sp"></span><button id="pickFile" title="Любой DXF — с сервера, из архива, с диска">Файл с диска…</button><button id="pickClose">✕</button></div>
   <div class="pp-row"><span id="pickFor" class="pk-for"></span></div>
   <div class="pp-row"><input id="pickQ" type="search" placeholder="Поиск по имени или папке" style="flex:1"></div>
   <div id="pickInfo" class="pp-empty"></div>
@@ -831,7 +831,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <section data-t="Два монитора">
 <h2>Два монитора</h2>
 <ul>
-<li>Кнопка <b>🖵 2-й монитор</b> в просмотре (видна, когда подключён второй монитор) открывает второе окно: на одном мониторе чертёж, на другом его развёртки — меняются вместе при листании.</li>
+<li>Кнопка <b>🖥 2-й монитор</b> в просмотре (видна, только когда Chrome видит второй монитор; на ноутбуке с одним экраном её нет) открывает второе окно: на одном мониторе чертёж, на другом его развёртки — меняются вместе при листании.</li>
 <li><b>⇄ поменять</b> — поменять мониторы местами (чертежи ↔ развёртки).</li>
 <li>Листать можно с любого монитора. Закрыть — той же кнопкой или закрыв второе окно.</li>
 </ul>
@@ -870,7 +870,13 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <li><b>🔒</b> — общий масштаб и сдвиг, и листы многостраничных PDF листаются вместе (<kbd>PgDn</kbd> / <kbd>PgUp</kbd> — лист 2 слева и лист 2 справа). Без 🔒 каждое окно само по себе.</li>
 <li>Номера, которые есть только в одной папке, в паре не участвуют: в списке у них значок «нов» или «только там».</li>
 </ol>
-<p>Два PDF рядом без сравнения папок — Ctrl+клик по двум файлам → «⧉ Открыть рядом» (из разных подпапок открытой папки тоже).</p>
+<p>Два PDF рядом без сравнения папок:</p>
+<ul>
+<li><b>⧉ Рядом с…</b> в просмотре PDF (или <kbd>V</kbd>) — список других PDF из открытой папки и папки сравнения, сверху — с <b>тем же децимальным номером</b>; <b>Файл с диска…</b> — PDF из любой другой папки, с сервера, из архива. Пара, которую ставили последней, — первой со значком ↺.</li>
+<li><b>Ctrl+клик</b> по двум PDF → «⧉ Открыть рядом» (из разных подпапок открытой папки тоже).</li>
+<li>Обе версии — как пара: 🔒 общий масштаб, листы многостраничных листаются вместе.</li>
+<li>С <b>🖥 2-й монитор</b> пара раскладывается по экранам: левая версия — в основном окне, правая — на втором мониторе; <kbd>PgDn</kbd> / <kbd>PgUp</kbd> листают листы в обоих окнах, <kbd>←</kbd> <kbd>→</kbd> в сравнении папок — следующая пара на обоих экранах. Закрыли второй экран — пара снова рядом в одном окне. (Сравнение контуров двух DXF всегда в одном окне — там нужны обе детали вместе.)</li>
+</ul>
 </section>
 
 <section data-t="Сравнение деталей">
@@ -2822,7 +2828,7 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
-const APP_VERSION='4.7.6',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
+const APP_VERSION='4.8.0',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
 $('verSet').textContent='Версия '+APP_VERSION+' от '+APP_DATE;
 $('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
 $('noteBox').addEventListener('click',e=>{if(e.target.id==='noteBox')$('noteBox').hidden=true;});
@@ -3496,7 +3502,9 @@ function updateBar(){if(MUI)setTimeout(muiSync,0);
   const cmp=!!VW.cmp&&VW.set.length===2;
   $('vSync').hidden=!(cmp&&VW.set[0].type===VW.set[1].type);$('vSync').classList.toggle('on',SET.sync);
   $('vOv').hidden=!!OV||!(cmp&&VW.set[0].type==='dxf'&&VW.set[1].type==='dxf');$('vOv').classList.toggle('on',!!OV);$('vOv').textContent=OV?(OV.mode==='over'?'Две панели':'Наложение'):'Сравнить контуры';
-  $('vWith').hidden=FOLLOW||!(has&&cur&&cur.type==='dxf');
+  $('vWith').hidden=FOLLOW||!(has&&cur&&(cur.type==='dxf'||cur.type==='pdf'));
+  if(cur){const pdf=cur.type==='pdf';$('vWith').innerHTML=pdf?'⧉<span class="lbl"> Рядом с…</span>':'⇆<span class="lbl"> Сравнить</span>';
+    $('vWith').title=pdf?'Поставить рядом другой PDF — из этой папки, из папки сравнения или с диска (любая папка, сервер) (V)':'Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)';}
   $('vMon').hidden=FOLLOW||!(MON.win||screen.isExtended);$('vMon').classList.toggle('on',!!MON.win);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
@@ -3592,6 +3600,7 @@ $('vSync').onclick=()=>{SET.sync=!SET.sync;saveSet();updateBar();if(SET.sync){co
 $('vMon').onclick=()=>openSecond();
 /* страницы PDF; в сравнении двух PDF при 🔒 — листаются обе версии вместе (лист 2 слева — лист 2 справа) */
 function pagesGo(d){const ap=panes[VW.active];if(!ap)return false;
+  if(VW.cmp&&VW.cmp.mon&&monOn()&&ap.isPdf){const r=ap.pageGo(d);try{MON.win.postMessage({t:'page',n:ap.pageNo},'*');}catch(e){}return r;}   // пара на двух мониторах — листы вместе
   if(VW.cmp&&SET.sync&&VW.set.length===2&&ap.isPdf){const ps=panes.slice(0,2).filter(p=>p.isPdf&&p.doc&&p.doc.pdf);if(ps.length===2){const n=ap.pageNo;const r=ap.pageGo(d);const t=ap.pageNo;for(const p of ps)if(p!==ap&&t!==n)p.pageGo(t-p.pageNo);return r;}}
   return ap.pageGo(d);}
 $('vPgPrev').onclick=()=>pagesGo(-1);
@@ -4967,8 +4976,13 @@ function monSync(){
   const it=view[VW.idx];const list=it?(VW.monList||[]):[];
   try{MON.win.postMessage({t:'show',from:it?it.name:'',list:list.map(x=>({file:x.file,path:x.path,key:x.key,name:x.name,rid:x.rid||null,rootName:x.rootName,dups:x.dups?x.dups.map(y=>y.path):null}))},'*');}catch(e){}
 }
+function monBack(){   // второй экран закрыли — пара снова рядом в основном окне
+  if(!viewerShown()){updateBar();return;}
+  const c=VW.cmp;
+  if(c&&c.a&&c.b){if(VW.set.length!==2)cmpOpen(c.a,c.b,c.manual);else updateBar();return;}
+  if(VW.idx>=0)showItem(VW.idx);else updateBar();}
 async function openSecond(){
-  if(MON.win&&!MON.win.closed){MON.win.close();MON.win=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);else updateBar();return;}
+  if(MON.win&&!MON.win.closed){clearInterval(MON.timer);MON.win.close();MON.win=null;monBack();return;}
   let feat='popup,width=1100,height=800',o=null,asked=false;
   if('getScreenDetails' in window){ // сначала — какой экран второй (Chrome один раз спросит «управление окнами»)
     try{const st=await navigator.permissions.query({name:'window-management'}).catch(()=>null);asked=!st||st.state==='prompt';
@@ -4980,12 +4994,12 @@ async function openSecond(){
   if(!w){flash(asked?'Разрешение получено — нажмите «2-й монитор» ещё раз':'Браузер заблокировал второе окно — разрешите всплывающие окна для этого сайта (значок в адресной строке)');return;}
   if(o){try{w.moveTo(o.availLeft,o.availTop);w.resizeTo(o.availWidth,o.availHeight);}catch(e){}}
   MON.win=w;updateBar();
-  clearInterval(MON.timer);MON.timer=setInterval(()=>{if(!MON.win||MON.win.closed){clearInterval(MON.timer);MON.win=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);else updateBar();}},1000);
+  clearInterval(MON.timer);MON.timer=setInterval(()=>{if(!MON.win||MON.win.closed){clearInterval(MON.timer);MON.win=null;monBack();}},1000);
 }
 window.addEventListener('message',e=>{
   const d=e.data;if(!d||typeof d!=='object')return;
   if(!FOLLOW&&MON.win&&e.source===MON.win){
-    if(d.t==='ready'){if(VW.idx>=0&&viewerShown())showItem(VW.idx);else monSync();}
+    if(d.t==='ready'){if(VW.cmp&&VW.cmp.a&&VW.cmp.b&&viewerShown())cmpOpen(VW.cmp.a,VW.cmp.b,VW.cmp.manual);else if(VW.idx>=0&&viewerShown())showItem(VW.idx);else monSync();}
     else if(d.t==='swap')monSwap();
     else if(d.t==='key'){const k=d.key;
       if(k==='Tab')monTab(d.shift?-1:1);
@@ -4993,6 +5007,7 @@ window.addEventListener('message',e=>{
       else if(/^(ArrowLeft|ArrowUp|PageUp)$/.test(k)){if(viewerShown())step(-1);else{VW.idx=Math.max(0,VW.idx-1);markCurrent(view[VW.idx]);monSync();}}}
   }
   if(FOLLOW&&e.source===window.opener&&d.t==='show')followerShow(d);
+  if(FOLLOW&&e.source===window.opener&&d.t==='page'){const p=panes[0];if(p&&p.isPdf&&p.doc&&p.doc.pdf&&d.n!==p.pageNo)p.pageGo(d.n-p.pageNo);}
   if(FOLLOW&&e.source===window.opener&&d.t==='set'){Object.assign(SET,LS.get('set',{}));applyTheme();colCache.clear();panes.forEach(p=>p.draw());}
 });
 const FMAP=new Map();let FFROM='';
@@ -5220,6 +5235,8 @@ let cmpRowsT=0;function scheduleCmpRows(){clearTimeout(cmpRowsT);cmpRowsT=setTim
 function cmpEnd(){document.querySelectorAll('.tile').forEach(t=>{if(t._it&&t._it.cmpB)t.remove();});CMP=null;if(VW.cmp&&!VW.cmp.manual){VW.cmp=null;if(VW.idx>=0&&viewerShown())showItem(VW.idx);}updCmp();applyFilter();}
 function cmpOpen(a,b,manual){
   const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}
+  // 2-й монитор: левая версия — здесь, правая — на втором экране (кроме сравнения контуров DXF — оно в одном окне)
+  if(monOn()&&!(a.type==='dxf'&&b.type==='dxf'&&SET.cmpGeo!==false)){closePairPanel();showSet([a],0);VW.cmp={a,b,manual:!!manual,mon:true};VW.monList=[b];updateBar();monSync();if(!docked())setFull(true);return;}
   closePairPanel();showSet([a,b],0);VW.cmp={a,b,manual:!!manual};updateBar();
   if(!docked())setFull(true);
   if(a.type==='dxf'&&b.type==='dxf'&&SET.cmpGeo!==false){ovStart();return;}
@@ -5370,7 +5387,7 @@ $('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,tru
 const PICK={a:null,tok:0,list:[],sig:new Map(),last:new Map()};
 function pickCands(a){
   const src=CMP?CMP.items.concat(items):items,seen=new Set(),out=[];
-  for(const it of src){if(it===a||physSame(a,it)||it.type!=='dxf'||seen.has(it.key))continue;seen.add(it.key);out.push(it);}   // сам файл (и он же из папки сравнения) не предлагаем
+  for(const it of src){if(it===a||physSame(a,it)||it.type!==a.type||seen.has(it.key))continue;seen.add(it.key);out.push(it);}   // сам файл (и он же из папки сравнения) не предлагаем
   return out;
 }
 async function pickSig(it){ // «отпечаток» детали, не зависящий от поворота: габарит вдоль главных осей и длина всех контуров
@@ -5385,10 +5402,17 @@ async function pickSig(it){ // «отпечаток» детали, не зав�
 }
 function pickScore(p,q){if(!p||!q)return -1;const r=(a,b)=>Math.abs(a-b)/Math.max(a,b,1);
   return Math.max(0,1-(r(p[0],q[0])+r(p[1],q[1]))*1.5-r(p[2],q[2])*0.5);}
+/* PDF: «рядом с…» — сверху тот же децимальный номер, дальше — чем длиннее общее начало обозначения */
+function pickDesigScore(a,b){const x=(nameParts(a).desig||'').toLowerCase(),y=(nameParts(b).desig||'').toLowerCase();if(!x||!y)return 0;if(x===y)return 1;
+  let i=0;while(i<x.length&&i<y.length&&x[i]===y[i])i++;return Math.min(0.9,i/Math.max(x.length,y.length));}
 async function pickOpen(a){
-  a=a||curItem();if(!a||a.type!=='dxf')return;
+  a=a||curItem();if(!a||(a.type!=='dxf'&&a.type!=='pdf'))return;
   PICK.a=a;const tok=++PICK.tok;$('pickPanel').hidden=false;$('pickQ').value='';
-  $('pickFor').textContent='для: '+a.path;
+  const pdf=a.type==='pdf';$('pickTitle').textContent=pdf?'Рядом с…':'Сравнить с…';$('pickInput').accept=pdf?'.pdf':'.dxf';$('pickFile').title=pdf?'Любой PDF — с сервера, из архива, из другой папки':'Любой DXF — с сервера, из архива, с диска';
+  $('pickFor').textContent='для: '+a.path;$('pickFor').title=a.path;
+  if(pdf){const lb=PICK.last.get(a.key);
+    PICK.list=pickCands(a).map(it=>({it,sc:pickDesigScore(a,it),other:!!(CMP&&CMP.items.includes(it)),last:it===lb,pdf:true}));pickRender();
+    $('pickInfo').textContent=PICK.list.length?'':'Других PDF нет — «Файл с диска…» (любая папка, сервер) или «⇆ Сравнить» с другой папкой';return;}
   const lb=PICK.last.get(a.key);
   PICK.list=pickCands(a).map(it=>({it,sc:-1,other:!!(CMP&&CMP.items.includes(it)),last:it===lb}));pickRender();
   const sa=await pickSig(a);if(tok!==PICK.tok)return;
@@ -5407,8 +5431,9 @@ function pickRender(){
     const sg=PICK.sig.get(r.it.key),dir=r.it.path.includes('/')?r.it.path.slice(0,r.it.path.lastIndexOf('/')):'';
     d.innerHTML='<span class="pn"></span><span class="ps"></span><span class="pd"></span>';
     d.querySelector('.pn').textContent=(r.last?'↺ ':'')+r.it.name;d.querySelector('.pd').textContent=(r.last?'сравнивали последним · ':'')+(r.other?'⇆ ':'')+dir;
-    d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>размер совпал</b>':r.sc>0.85?'<br>размер близок':'')):'…';
-    d.title='Габарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';
+    if(r.pdf){d.querySelector('.ps').innerHTML=r.sc>=1?'<b>тот же номер</b>':r.sc>0.75?'номер похож':'';d.title=r.it.path;}
+    else{d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>размер совпал</b>':r.sc>0.85?'<br>размер близок':'')):'…';
+    d.title=r.it.path+'\nГабарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';}
     d.onclick=()=>pickGo(r.it);L.appendChild(d);}
 }
 function pickGo(b){const a=PICK.a;pickClose();if(!a)return;cmpOpen(a,b,true);}
@@ -5522,8 +5547,9 @@ function selUpd(){
 }
 function clearSel(){for(const it of SEL)if(it.tile)it.tile.classList.remove('sel');SEL.clear();selUpd();}
 $('selGo').onclick=()=>{if(SEL.size!==2)return;const [a,b]=[...SEL];clearSel();
-  if(a.type==='dxf'&&b.type==='dxf'){cmpOpen(a,b,true);return;}
-  const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}VW.cmp=null;closePairPanel();showSet([a,b],0);updateBar();if(!docked())setFull(true);};
+  if(a.type===b.type){cmpOpen(a,b,true);return;}   // два PDF или два DXF — как пара (общий масштаб 🔒, листы вместе, 2-й монитор)
+  const i=view.indexOf(a);if(i>=0){VW.idx=i;markCurrent(a);}VW.cmp=null;closePairPanel();
+  if(monOn()){showSet([a],0);VW.monList=[b];monSync();}else showSet([a,b],0);updateBar();if(!docked())setFull(true);};
 $('selClear').onclick=clearSel;
 
 /* ---------- Клавиатура ---------- */
@@ -5585,7 +5611,7 @@ document.addEventListener('keydown',e=>{
     if(k==='ArrowLeft'&&(list||i<=0||i%cols===0)&&toTree()){e.preventDefault();return;}  // из первого столбца — в дерево
     if(k==='Tab'&&i>=0&&ts[i]._it){e.preventDefault();kbMark(ts[i]);openSel('pair',e.shiftKey?-1:1);return;}
     if(/^[rRкК]$/.test(k)&&i>=0&&ts[i]._it){e.preventDefault();kbMark(ts[i]);openSel('side');return;}
-    if(/^[vVмМ]$/.test(k)&&i>=0&&ts[i]._it&&ts[i]._it.type==='dxf'){e.preventDefault();showItem(view.indexOf(ts[i]._it));if(!docked())setFull(true);pickOpen(ts[i]._it);return;}
+    if(/^[vVмМ]$/.test(k)&&i>=0&&ts[i]._it&&(ts[i]._it.type==='dxf'||ts[i]._it.type==='pdf')){e.preventDefault();showItem(view.indexOf(ts[i]._it));if(!docked())setFull(true);pickOpen(ts[i]._it);return;}
     if(k==='ArrowRight')i=i<0?0:i+1;else if(k==='ArrowLeft')i=i<0?0:i-1;
     else if(k==='ArrowDown')i=i<0?0:i+cols;else if(k==='ArrowUp')i=i<0?0:i-cols;
     else if(k==='Home')i=0;else if(k==='End')i=ts.length-1;

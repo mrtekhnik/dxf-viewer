@@ -1,0 +1,47 @@
+# этап А: «Рядом с…» для PDF (тот же номер сверху, файл с диска), Ctrl+клик двух PDF — пара; 2-й монитор: пара на двух окнах, листы вместе
+import asyncio,sys,subprocess
+sys.path.insert(0,'/tmp/claude-0/t'); from cmpx import *
+async def main():
+  srv=subprocess.Popen('cd /tmp/claude-0/srv && python3 -m http.server 8765',shell=True,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL); await asyncio.sleep(1)
+  errs=[]
+  try:
+    async with async_playwright() as p:
+      b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); ctx=await b.new_context(viewport={'width':1400,'height':800}); pg=await ctx.new_page(); pg.on('pageerror',lambda e:errs.append(str(e)))
+      await setup(pg,'cmp4/A','cmp4/B'); await cmp(pg); await pg.evaluate("cmpEnd&&0")
+      await pg.evaluate("(()=>{const a=items.find(x=>x.name.includes('Рама'));showItem(view.indexOf(a));setFull(true);})()"); await pg.wait_for_timeout(1200)
+      t=await pg.evaluate("[$('vWith').hidden,$('vWith').textContent]"); print('кнопка',t)
+      if t[0] or 'Рядом' not in t[1]: errs.append('нет «Рядом с…» для PDF: '+str(t))
+      await pg.keyboard.press('v'); await pg.wait_for_timeout(500)
+      L=await pg.evaluate("[$('pickTitle').textContent,[...$('pickList').children].map(x=>x.textContent),getComputedStyle($('pickPanel')).width]"); print('список',L)
+      if L[0]!='Рядом с…' or not L[1] or 'Рама нова' not in L[1][0] or 'тот же номер' not in L[1][0]: errs.append('список PDF: '+str(L[:2]))
+      if any('.dxf' in x for x in L[1]): errs.append('в списке PDF есть DXF')
+      if float(L[2][:-2])<700: errs.append('окно узкое: '+L[2])
+      await pg.locator('#pickList .pk').first.click(); await pg.wait_for_timeout(1800)
+      r=await pg.evaluate("[VW.set.map(x=>x.name),!!VW.cmp,!$('vSync').hidden]"); print('рядом',r)
+      if len(r[0])!=2 or not r[1] or not r[2]: errs.append('пара не открылась: '+str(r))
+      # файл с диска (другая папка)
+      await pg.evaluate("$('pickClose').click();0"); await pg.keyboard.press('v'); await pg.wait_for_timeout(300)
+      await pg.set_input_files('#pickInput','pair/АБВГ.123456.001 Кронштейн.pdf'); await pg.wait_for_timeout(1500)
+      r=await pg.evaluate("VW.set.map(x=>x.path)"); print('с диска',r)
+      if len(r)!=2 or 'с диска' not in r[1]: errs.append('файл с диска: '+str(r))
+      # 2-й монитор (отдельный браузер: файлы через «Файлы…», без сохранённых папок)
+      await b.close(); b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); ctx=await b.new_context(viewport={'width':1400,'height':800}); pg=await ctx.new_page(); pg.on('pageerror',lambda e:errs.append(str(e)))
+      await pg.add_init_script("localStorage.setItem('dxfv.set',JSON.stringify({click:'1'}))")
+      await pg.goto('http://localhost:8765/dxf-viewer/'); await pg.wait_for_timeout(800)
+      import glob
+      await pg.set_input_files('#inFiles',sorted(glob.glob('cmp4/A/*.pdf')+glob.glob('cmp4/B/*.pdf'))); await pg.wait_for_timeout(1500)
+      async with ctx.expect_page() as np: await pg.evaluate("openSecond()")
+      w=await np.value; await w.wait_for_timeout(2500)
+      await pg.evaluate("(()=>{const a=items.find(x=>x.name.includes('Рама.pdf')),b=items.find(x=>x.name.includes('Рама нова'));SEL.clear();SEL.add(a);SEL.add(b);$('selGo').click();})()"); await pg.wait_for_timeout(2500)
+      m=await pg.evaluate("[VW.set.map(x=>x.name),VW.cmp&&VW.cmp.mon]"); s2=await w.evaluate("VW.set.map(x=>x.name)"); print('два окна',m,s2)
+      if len(m[0])!=1 or not m[1] or len(s2)!=1 or 'нова' not in s2[0]: errs.append(f'монитор: {m} {s2}')
+      await pg.keyboard.press('PageDown'); await pg.wait_for_timeout(1500)
+      pp=[await pg.evaluate("panes[0].pageNo"),await w.evaluate("panes[0].pageNo")]; print('листы',pp)
+      if pp!=[2,2]: errs.append('листы на двух окнах не вместе: '+str(pp))
+      await pg.evaluate("openSecond()"); await pg.wait_for_timeout(2500)
+      m3=await pg.evaluate("VW.set.length"); print('монитор закрыт, в окне',m3)
+      if m3!=2: errs.append('после закрытия второго экрана пара не вернулась: '+str(m3))
+      await b.close()
+  finally: srv.terminate()
+  print('errors',errs)
+asyncio.run(main())
