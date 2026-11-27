@@ -37,7 +37,7 @@ async def main():
       await pg.evaluate("LS.set('cmpRecent',[{id:items[0].rid,name:'A',t:Date.now(),n:4}]);0")
       await pg.evaluate("IDB.get=async()=>null;IDB.all=async()=>[];0"); await pg.click('#btnCmp'); await pg.wait_for_timeout(1500)
       rows=await pg.evaluate("[...$('cmpRecent').children].map(x=>x.textContent)"); print('в списке сравнения',rows)
-      if any(r.startswith('📁A') for r in rows): errs.append('предлагает сравнить с собой: '+str(rows))
+      if not any(r.startswith('📁A') for r in rows): errs.append('открытая папка не предлагается: '+str(rows))
       await pg.keyboard.press('Escape')
       # сравнение папок: Esc выходит
       await cmp(pg); await pg.evaluate("if(viewerShown()&&VW.full)setFull(false);0"); await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)

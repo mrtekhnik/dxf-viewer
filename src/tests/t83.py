@@ -20,6 +20,17 @@ async def main():
       # «Сравнить с…» для файла из подпапки — без него самого
       c=await pg.evaluate("pickCands(items.find(x=>x.path.includes('Старое'))).map(x=>x.path+(x.cmpB?' (там)':''))"); print('кандидаты',c)
       if any('Старое' in x for x in c): errs.append('предлагает тот же файл: '+str(c))
+      # сравнение папки с самой собой: версии внутри одной папки, файл сам с собой — никогда
+      await b.close(); b=await p.chromium.launch(executable_path='/usr/bin/google-chrome'); pg=await b.new_page(viewport={'width':1400,'height':800}); pg.on('pageerror',lambda e:errs.append(str(e)))
+      await setup(pg,'same/A','cmp4/B')
+      await pg.evaluate("window.knownPath=async h=>'Сервер / '+h.name;window.curDirHandle=async()=>window.__A;window.rememberRoot=async()=>null;0")
+      await pg.evaluate("cmpFromHandle(window.__A)"); await pg.wait_for_timeout(3000)
+      m=await pg.evaluate("CMP?[...CMP.map].map(([a,c])=>[a.name,c.st,c.b&&c.b.name]):null"); print('сама с собой',m)
+      if not m: errs.append('сравнение с той же папкой не открылось')
+      else:
+        if any(x[0]==x[2] for x in m): errs.append('файл сравнивается сам с собой: '+str(m))
+        v=[x for x in m if '04-St-3' in x[0]]
+        if not v or '09Г2С' not in str(v[0][2]): errs.append('версия в той же папке не нашлась: '+str(v))
       await b.close()
   finally: srv.terminate()
   print('errors',errs)
