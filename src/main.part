@@ -2875,6 +2875,8 @@ const chText=ch=>ch.map(c=>(PART_N[c.k]||'имя')+': '+c.from+' → '+c.to).joi
    Пары — по обозначению; содержимое проверяется в фоне (cmpDeep). Статусы:
      same — одинаковые; name — имя изменено, содержимое то же; geo — пересохранён, геометрия DXF та же;
      diff — отличается; ren — переименован (пары по обозначению нет, но такой же файл есть под другим именем); new — нет в той папке */
+/* один и тот же файл на диске, попавший в список дважды (открытая папка и вложенная в неё папка сравнения) */
+function physSame(a,b){return a!==b&&a.file.size===b.file.size&&a.file.lastModified===b.file.lastModified&&fname(a.path)===fname(b.path)&&(a.path===b.path||a.path.endsWith('/'+b.path)||b.path.endsWith('/'+a.path));}
 function cmpSet(arr,name,rid,opt={}){
   const ct=$('grid').querySelector('.tile.cur'),focus=opt.refresh?null:docked()&&!VW.full?curItem():(ct&&ct._it)||(SEL.size===1?[...SEL][0]:null)||null;  // выделенный файл — сразу открыть его сравнение
   const keep=opt.refresh&&CMP?{path:CMP.path,here:CMP.here,filter:CMP.filter,scope:CMP.scope}:null;
@@ -2884,10 +2886,13 @@ function cmpSet(arr,name,rid,opt={}){
   if(!opt.refresh&&arr.length&&arr.every(x=>paths.has(x.path+'|'+x.file.size))){flash('Для сравнения выбрана та же папка, что открыта, — выберите другую (старый заказ, архив)');return;}
   const bItems=arr.filter(x=>/\.(dxf|pdf)$/i.test(x.file.name)).map(x=>{const it=makeItem(x.file,x.path,rid||null,name);it.state=2;it.cmpB=true;return it;});
   const byKey=new Map();for(const b of bItems){const k=cmpKey(b);if(!byKey.has(k))byKey.set(k,[]);byKey.get(k).push(b);}
-  const used=new Set(),map=new Map();
+  const used=new Set(),map=new Map(),inB=new Set();
+  // папка сравнения внутри открытой (подпапка): её файлы есть и «здесь» — сами с собой их не сравниваем
+  for(const a of scope)for(const b of byKey.get(cmpKey(a))||[])if(physSame(a,b)){inB.add(a);used.add(b);}
   for(const a of scope){
-    const c=byKey.get(cmpKey(a));
-    if(!c){map.set(a,{st:'new'});continue;}
+    if(inB.has(a))continue;
+    const c0=byKey.get(cmpKey(a)),c=c0&&c0.filter(x=>!physSame(a,x));
+    if(!c||!c.length){map.set(a,{st:'new'});continue;}
     c.forEach(x=>used.add(x));
     const best=c.find(x=>fname(x.path)===fname(a.path))||c.slice().sort((x,y)=>y.file.lastModified-x.file.lastModified)[0];
     const ch=nameChanges(a,best);
@@ -3174,7 +3179,7 @@ $('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,tru
 const PICK={a:null,tok:0,list:[],sig:new Map()};
 function pickCands(a){
   const src=CMP?CMP.items.concat(items):items,seen=new Set(),out=[];
-  for(const it of src){if(it===a||it.type!=='dxf'||seen.has(it.key))continue;seen.add(it.key);out.push(it);}
+  for(const it of src){if(it===a||physSame(a,it)||it.type!=='dxf'||seen.has(it.key))continue;seen.add(it.key);out.push(it);}   // сам файл (и он же из папки сравнения) не предлагаем
   return out;
 }
 async function pickSig(it){ // «отпечаток» детали, не зависящий от поворота: габарит вдоль главных осей и длина всех контуров
@@ -3272,8 +3277,8 @@ async function renderCmpPanel(){
     (async()=>{
       let h=null;try{const rr=await IDB.get(x.root,'roots');h=rr&&rr.h;if(h&&x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1))h=await h.getDirectoryHandle(seg);}}catch(e){h=null;}
       if(!h||!cur)return;
-      let self=false;try{self=await withTO(h.isSameEntry(cur),1500)||!!(await withTO(cur.resolve(h),1500));}catch(e){}
-      if(self){r.remove();if(!R.children.length)R.innerHTML='<div class="pp-empty">Других папок пока нет — «Выбрать папку…».</div>';return;}   // та же папка (или вложенная в открытую) — не предлагаем
+      let self=false;try{self=await withTO(h.isSameEntry(cur),1500);}catch(e){}
+      if(self){r.remove();if(!R.children.length)R.innerHTML='<div class="pp-empty">Других папок пока нет — «Выбрать папку…».</div>';return;}   // та же самая папка — не предлагаем (подпапки открытой — можно)
       let best=null;const res=await Promise.all(roots.map(async rt=>{try{if(await withTO(rt.h.isSameEntry(h),1500))return null;const p=await withTO(rt.h.resolve(h),1500);return p&&p.length?[rt.name,...p]:null;}catch(e){return null;}}));
       for(const b of res)if(b&&(!best||b.length>best.length))best=b;
       if(best){x.path=best.join(' / ');r.querySelector('.pp').textContent=[x.path].concat(info.slice(1)).join(' · ');}
