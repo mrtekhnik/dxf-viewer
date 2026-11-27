@@ -38,6 +38,8 @@ header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg b
 @media (max-width:1480px){header .lbl.b{display:none}header .szbox input{width:60px}header .grp{padding:0 7px}}
 @media (max-width:1250px){header .lbl{display:none}}
 #status a.crumb{color:var(--acc);cursor:pointer;text-decoration:none}#status a.crumb:hover{text-decoration:underline}#status a.crumb.here{color:inherit;font-weight:600;cursor:default;text-decoration:none}
+.sh-set{margin:4px 8px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--mut)}.sh-set input{width:100%;margin:6px 0}.sh-row{display:flex;gap:6px}
+#pickPanel.pw-n{width:min(460px,calc(100vw - 16px))}#pickPanel.pw-m{width:min(640px,calc(100vw - 16px))}#pickPanel.pw-w{width:min(860px,calc(100vw - 16px))}#pickPanel.pw-f{width:calc(100vw - 16px);max-height:88vh}
 .sh-drag{margin:4px 8px;padding:9px 10px;border:1px dashed var(--btnh);border-radius:8px;cursor:grab;color:var(--fg);font-size:13px;user-select:none}.sh-drag:active{cursor:grabbing}.sh-note{padding:4px 10px 8px;color:var(--mut);font-size:11px;max-width:330px;line-height:1.35}#shareMenu small{color:var(--mut)}
 header.c1 .lbl.a{display:none}header.c2 .lbl.b{display:none}header.c2 .grp{padding:0 7px}header.c3 .lbl{display:none}header.c3 .szbox input{width:60px}header.c4 .grp{padding:0 4px}header.c4 .szbox{display:none}header.c4 .grp.grow{flex-basis:90px}header.c5 button{padding-left:6px;padding-right:6px}header.c5 .grp{gap:3px;padding:0 3px}header.c5 .grp.grow{flex-basis:60px}header.c5 #typeSel{max-width:62px}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
@@ -344,7 +346,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.9.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.9.1</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -417,6 +419,8 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
     <span class="vgrp"><span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span><button id="vPin" title="Добавить файл в ярлыки">★</button><span class="mwrap"><button id="vShare" title="Открыть в другой программе, поделиться, сохранить копию">⤴</button>
       <div id="shareMenu" class="menu" hidden style="min-width:320px">
+        <button id="shPath" title="Полный путь к самому файлу (оригиналу) — вставить в окно «Открыть» AutoCAD или PDF-редактора: Ctrl+O, Ctrl+V, Enter">📋 Копировать путь <small>(открыть оригинал: Ctrl+O, Ctrl+V)</small></button>
+        <div id="shPathSet" class="sh-set" hidden><div id="shPathQ"></div><input id="shPathIn" type="text" placeholder="\\server\Заказы\…" spellcheck="false"><div class="sh-row"><button id="shPathOk">Запомнить и копировать</button><button id="shPathCancel">Отмена</button></div></div>
         <button id="shShare">📤 Поделиться… <small>(почта, Telegram, Teams)</small></button>
         <button id="shSave">💾 Сохранить копию…</button>
         <button id="shTab">🌐 Открыть PDF во вкладке Chrome</button>
@@ -534,6 +538,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
   <div class="set-row"><span>Подписи Ø отверстий (режим «Размеры», кнопка Ø)</span><select id="sHoles"><option value="sum">цвет по диаметру + сводка внизу окна (цифры — у крупных)</option><option value="all">цифры у всех отверстий</option><option value="big">цифры только у крупных</option></select></div>
+  <div class="set-row"><span>Окно «Сравнить с…» / «Рядом с…»</span><select id="sPickW"><option value="n">узкое</option><option value="m">среднее</option><option value="w">широкое</option><option value="f">во всю ширину экрана</option></select></div>
   <div class="set-row"><span>Стрелки ‹ › по краям просмотра</span><select id="sEdge"><option value="1">показывать, когда курсор у края</option><option value="0">не показывать</option></select></div>
   <div class="set-row"><span>Обновление списка файлов</span><select id="sRefr"><option value="off">только вручную (⟳, F5)</option><option value="focus">при возврате в окно программы</option><option value="30">при возврате + каждые 30 с</option><option value="60">при возврате + каждую минуту</option><option value="300">при возврате + каждые 5 мин</option></select></div>
   <div class="set-row"><span>Всплывающие подсказки</span><select id="sFlash"><option value="2">2 с</option><option value="4">4 с</option><option value="6">6 с</option><option value="10">10 с</option><option value="off">не показывать</option></select></div>
@@ -632,6 +637,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <li><b>📂 Открыть ▾ → Папка…</b> — открыть папку целиком со всеми вложенными (заказ, изделие). Работает и с сетевыми папками на сервере.</li>
 <li><b>🗗 Новое окно</b> (меню 📂 ▾) — ещё одно окно программы, пустое: откройте в нём другой проект и смотрите оба (рядом на одном экране — <kbd>Win+←</kbd> / <kbd>Win+→</kbd>, или на двух мониторах). Окна независимы, настройки общие.</li>
 <li>В строке состояния всегда видно, какая папка открыта: в корне — имя самой папки, в подпапке — путь к ней. Путь работает как в Проводнике: <b>клик по любой папке в пути</b> — перейти в неё. Там же — сколько <b>листов PDF</b> среди показанных файлов (многостраничные считаются по страницам; пока не все PDF прочитаны — «+ ещё N не прочитано»).</li>
+<li><b>⤴ → 📋 Копировать путь</b> — открыть <b>сам оригинал</b> в AutoCAD или PDF-редакторе: в первый раз программа спросит, где лежит открытая папка (скопируйте путь из адресной строки Проводника, например <code>\\server\Заказы\АЮИА.311-03 Шафа ГС</code>) и запомнит его для этой папки. Дальше один клик копирует полный путь файла; в AutoCAD — <kbd>Ctrl+O</kbd>, <kbd>Ctrl+V</kbd>, <kbd>Enter</kbd>. Правки сохраняются в оригинале, <kbd>F5</kbd> в просмотрщике покажет их. Изменить путь папки — Shift+клик по «Копировать путь».</li>
 <li><b>⤴</b> в просмотре — <b>открыть в другой программе</b>. Запустить AutoCAD или PDF-программу сам браузер не позволяет, поэтому: <b>перетащите</b> строку «⠿ Перетащите отсюда…» в окно AutoCAD, в Проводник или на рабочий стол (файл скопируется туда); <b>📤 Поделиться</b> — окно Windows «Отправить» (почта, Telegram, Teams); <b>💾 Сохранить копию…</b> — в любую папку, откуда её можно открыть чем угодно; <b>🌐 Открыть PDF во вкладке Chrome</b> — встроенный просмотрщик Chrome (печать, поиск по тексту).</li>
 <li><b>Тема «Как в AutoCAD»</b> (⚙ «Тема») — цвета панелей и фон чертежа (#212830) как в тёмной теме AutoCAD.</li>
 <li><b>⟳ Обновить</b> (<kbd>F5</kbd>) — перечитать открытую папку: новые файлы добавятся, удалённые уберутся, изменённые перечитаются. Открытый файл, выбранная папка в дереве, фильтры и сравнение остаются. Программа может и сама тихо проверять папку — режим в ⚙ «Обновление списка файлов»: <i>только вручную</i>; <i>при возврате в окно программы</i> (по умолчанию: сохранили новый DXF в SolidWorks, переключились сюда — список уже новый); <i>при возврате + каждые 30 с / 1 мин / 5 мин</i> — ещё и по таймеру, пока окно программы видно на экране (удобно, если программа открыта на втором мониторе, а файлы кладут коллеги по сети). Если ничего не изменилось, проверку не видно; изменения — подсказкой внизу и в журнале. Папки больше 4000 файлов сами не проверяются — только ⟳ или F5. Перезагрузить программу целиком — <kbd>Ctrl+F5</kbd>.</li>
@@ -896,6 +902,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <h2>Сравнение двух деталей DXF</h2>
 <h3>Как выбрать две детали</h3>
 <ul>
+<li>Ширина окна «Сравнить с…» / «Рядом с…» — ⚙: узкое, среднее, широкое (по умолчанию) или во всю ширину экрана.</li>
 <li><b>✕ закрыть просмотр</b> во время сравнения — сравнение заканчивается полностью; файл потом откроется один. Чтобы снова увидеть обе детали рядом: <b>⇆ Сравнить с…</b> (<kbd>V</kbd>) — пара, которую сравнивали последней, стоит в списке первой со значком ↺, один клик. В сравнении папок — клик по значку посередине строки.</li>
 <li><b>⇆ Сравнить с…</b> в просмотре или <kbd>V</kbd> (в сетке — для выделенного файла): список других DXF, <b>сверху похожие по размеру</b> («размер совпал», «размер близок» — это только подсказка, не вывод), поиск, <b>Файл с диска…</b> — любой DXF откуда угодно. Номера и имена могут быть любыми.</li>
 <li>Через сравнение папок — клик по значку ≠ ≈ имя ⇢.</li>
@@ -2701,9 +2708,26 @@ $('btnRefr').onclick=()=>refreshFolder(false);
 /* ⤴ Открыть в…: браузер не запускает AutoCAD или PDF-программу сам — даём перетащить файл (в AutoCAD, Проводник, на рабочий стол),
    поделиться через окно Windows «Отправить», сохранить копию, открыть PDF во вкладке Chrome */
 const mimeOf=it=>it.type==='pdf'?'application/pdf':'application/dxf';
-$('vShare').onclick=e=>{e.stopPropagation();const M=$('shareMenu'),it=curItem();if(!it)return;M.hidden=!M.hidden;if(!M.hidden){$('shTab').hidden=it.type!=='pdf';
+$('vShare').onclick=e=>{e.stopPropagation();const M=$('shareMenu'),it=curItem();if(!it)return;M.hidden=!M.hidden;if(!M.hidden){$('shTab').hidden=it.type!=='pdf';$('shPathSet').hidden=true;
+  const fp=fullPathOf(it);$('shPath').title=fp?fp+'\n(Shift+клик — изменить путь папки)':'Полный путь к самому файлу (оригиналу) — вставить в окно «Открыть» AutoCAD или PDF-редактора: Ctrl+O, Ctrl+V, Enter';
   $('shShare').hidden=!(navigator.canShare&&navigator.canShare({files:[new File([''],'a.pdf',{type:'application/pdf'})]}));menuFix(M,$('vShare'));}};
 document.addEventListener('click',e=>{if(!e.target.closest('#shareMenu')&&e.target.id!=='vShare')$('shareMenu').hidden=true;});
+/* 📋 Копировать путь: Chrome не знает, где папка лежит на диске, — путь папки указывается один раз и запоминается (для этой открытой папки) */
+function rootKeyOf(it){return it.rid?'rid:'+it.rid:'name:'+(it.path.includes('/')?it.path.split('/')[0]:'');}
+function fullPathOf(it){const base=(SET.rootPaths||{})[rootKeyOf(it)];if(!base)return null;
+  const rel=it.path.includes('/')?it.path.split('/').slice(1).join('\\'):it.path;return base.replace(/[\\/]+$/,'')+(rel?'\\'+rel:'');}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(x){}ta.remove();return ok;}}
+async function shPathCopy(it){const f=fullPathOf(it);if(!f)return false;const ok=await copyText(f);$('shareMenu').hidden=true;
+  flash(ok?'Путь скопирован: '+f+' — в AutoCAD: Ctrl+O, Ctrl+V, Enter':'Не удалось скопировать: '+f);return true;}
+$('shPath').onclick=async e=>{e.stopPropagation();const it=curItem();if(!it)return;
+  if(!e.shiftKey&&await shPathCopy(it))return;   // Shift+клик — изменить путь папки
+  const root=it.path.includes('/')?it.path.split('/')[0]:'папка';
+  $('shPathQ').textContent='Где лежит папка «'+root+'»? Скопируйте путь из адресной строки Проводника (папка «'+root+'» целиком) и вставьте сюда. Один раз — программа запомнит.';
+  $('shPathIn').value=(SET.rootPaths||{})[rootKeyOf(it)]||'';$('shPathSet').hidden=false;$('shPathIn').focus();};
+$('shPathOk').onclick=async e=>{e.stopPropagation();const it=curItem();if(!it)return;let v=$('shPathIn').value.trim().replace(/^"|"$/g,'');if(!v){$('shPathIn').focus();return;}
+  SET.rootPaths=Object.assign({},SET.rootPaths||{},{[rootKeyOf(it)]:v});saveSet();$('shPathSet').hidden=true;await shPathCopy(it);};
+$('shPathCancel').onclick=e=>{e.stopPropagation();$('shPathSet').hidden=true;};
+$('shPathIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('shPathOk').click();}else if(e.key==='Escape'){e.stopPropagation();$('shPathSet').hidden=true;}e.stopPropagation();};
 $('shShare').onclick=async()=>{const it=curItem();$('shareMenu').hidden=true;if(!it)return;
   try{const f=new File([await it.file.arrayBuffer()],it.name,{type:mimeOf(it)});await navigator.share({files:[f],title:it.name});}
   catch(e){if(e&&e.name!=='AbortError')flash('Не удалось поделиться: '+(e.message||e));}};
@@ -2859,7 +2883,7 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
-const APP_VERSION='4.9.0',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
+const APP_VERSION='4.9.1',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
 $('verSet').textContent='Версия '+APP_VERSION+' от '+APP_DATE;
 $('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
 $('noteBox').addEventListener('click',e=>{if(e.target.id==='noteBox')$('noteBox').hidden=true;});
@@ -3468,7 +3492,7 @@ function gridStage(){
 new ResizeObserver(()=>{if(VW.set.length>1)gridStage();}).observe($('stage'));
 
 function showSet(set,act=0){
-  if(OV&&(!OV.keep||!(set.length===2&&set.includes(OV.a)&&set.includes(OV.b))))ovClear();   // открыли другое — сравнение закончено
+  if(OV&&!OV.keep&&!(set.includes(OV.a)&&(set.length===1?OV.mode==='over':set.length===2&&set.includes(OV.b))))ovClear();   // открыли другое — сравнение закончено (пока ovStart раскладывает окна — keep)
   VW.set=set;layoutStage();VW.active=Math.max(0,Math.min(act,set.length-1));
   set.forEach((x,k)=>panes[k].show(x));
   panes.forEach((p,k)=>p.el.classList.toggle('active',set.length>1&&k===VW.active));
@@ -4045,6 +4069,9 @@ $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forE
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
 $('sHoles').value=holeMode();$('sHoles').onchange=e=>{SET.mhSmall=e.target.value;saveSet();panes.forEach(p=>p.draw());};
+const pickW=()=>['n','m','w','f'].includes(SET.pickW)?SET.pickW:'w';
+function applyPickW(){const P=$('pickPanel');P.classList.remove('pw-n','pw-m','pw-w','pw-f');P.classList.add('pw-'+pickW());}
+applyPickW();$('sPickW').value=pickW();$('sPickW').onchange=e=>{SET.pickW=e.target.value;saveSet();applyPickW();};
 $('sEdge').value=SET.edge===false?'0':'1';$('sEdge').onchange=e=>{SET.edge=e.target.value==='1';saveSet();};
 $('sRefr').value=refrMode();$('sRefr').onchange=e=>{SET.refr=e.target.value;saveSet();};
 $('sFlash').value=SET.flashT||(MUI?'4':'6');$('sFlash').onchange=e=>{SET.flashT=e.target.value;saveSet();if(SET.flashT!=='off')flash('Так подсказка будет держаться '+SET.flashT+' с');};

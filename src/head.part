@@ -35,6 +35,8 @@ header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg b
 @media (max-width:1480px){header .lbl.b{display:none}header .szbox input{width:60px}header .grp{padding:0 7px}}
 @media (max-width:1250px){header .lbl{display:none}}
 #status a.crumb{color:var(--acc);cursor:pointer;text-decoration:none}#status a.crumb:hover{text-decoration:underline}#status a.crumb.here{color:inherit;font-weight:600;cursor:default;text-decoration:none}
+.sh-set{margin:4px 8px;padding:8px;border:1px solid var(--line);border-radius:8px;font-size:12px;color:var(--mut)}.sh-set input{width:100%;margin:6px 0}.sh-row{display:flex;gap:6px}
+#pickPanel.pw-n{width:min(460px,calc(100vw - 16px))}#pickPanel.pw-m{width:min(640px,calc(100vw - 16px))}#pickPanel.pw-w{width:min(860px,calc(100vw - 16px))}#pickPanel.pw-f{width:calc(100vw - 16px);max-height:88vh}
 .sh-drag{margin:4px 8px;padding:9px 10px;border:1px dashed var(--btnh);border-radius:8px;cursor:grab;color:var(--fg);font-size:13px;user-select:none}.sh-drag:active{cursor:grabbing}.sh-note{padding:4px 10px 8px;color:var(--mut);font-size:11px;max-width:330px;line-height:1.35}#shareMenu small{color:var(--mut)}
 header.c1 .lbl.a{display:none}header.c2 .lbl.b{display:none}header.c2 .grp{padding:0 7px}header.c3 .lbl{display:none}header.c3 .szbox input{width:60px}header.c4 .grp{padding:0 4px}header.c4 .szbox{display:none}header.c4 .grp.grow{flex-basis:90px}header.c5 button{padding-left:6px;padding-right:6px}header.c5 .grp{gap:3px;padding:0 3px}header.c5 .grp.grow{flex-basis:60px}header.c5 #typeSel{max-width:62px}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
@@ -341,7 +343,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.9.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.9.1</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -414,6 +416,8 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
     <span class="vgrp"><span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span><button id="vPin" title="Добавить файл в ярлыки">★</button><span class="mwrap"><button id="vShare" title="Открыть в другой программе, поделиться, сохранить копию">⤴</button>
       <div id="shareMenu" class="menu" hidden style="min-width:320px">
+        <button id="shPath" title="Полный путь к самому файлу (оригиналу) — вставить в окно «Открыть» AutoCAD или PDF-редактора: Ctrl+O, Ctrl+V, Enter">📋 Копировать путь <small>(открыть оригинал: Ctrl+O, Ctrl+V)</small></button>
+        <div id="shPathSet" class="sh-set" hidden><div id="shPathQ"></div><input id="shPathIn" type="text" placeholder="\\server\Заказы\…" spellcheck="false"><div class="sh-row"><button id="shPathOk">Запомнить и копировать</button><button id="shPathCancel">Отмена</button></div></div>
         <button id="shShare">📤 Поделиться… <small>(почта, Telegram, Teams)</small></button>
         <button id="shSave">💾 Сохранить копию…</button>
         <button id="shTab">🌐 Открыть PDF во вкладке Chrome</button>
@@ -531,6 +535,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
   <div class="set-row"><span>Подписи Ø отверстий (режим «Размеры», кнопка Ø)</span><select id="sHoles"><option value="sum">цвет по диаметру + сводка внизу окна (цифры — у крупных)</option><option value="all">цифры у всех отверстий</option><option value="big">цифры только у крупных</option></select></div>
+  <div class="set-row"><span>Окно «Сравнить с…» / «Рядом с…»</span><select id="sPickW"><option value="n">узкое</option><option value="m">среднее</option><option value="w">широкое</option><option value="f">во всю ширину экрана</option></select></div>
   <div class="set-row"><span>Стрелки ‹ › по краям просмотра</span><select id="sEdge"><option value="1">показывать, когда курсор у края</option><option value="0">не показывать</option></select></div>
   <div class="set-row"><span>Обновление списка файлов</span><select id="sRefr"><option value="off">только вручную (⟳, F5)</option><option value="focus">при возврате в окно программы</option><option value="30">при возврате + каждые 30 с</option><option value="60">при возврате + каждую минуту</option><option value="300">при возврате + каждые 5 мин</option></select></div>
   <div class="set-row"><span>Всплывающие подсказки</span><select id="sFlash"><option value="2">2 с</option><option value="4">4 с</option><option value="6">6 с</option><option value="10">10 с</option><option value="off">не показывать</option></select></div>

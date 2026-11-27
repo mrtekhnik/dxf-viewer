@@ -532,9 +532,26 @@ $('btnRefr').onclick=()=>refreshFolder(false);
 /* ⤴ Открыть в…: браузер не запускает AutoCAD или PDF-программу сам — даём перетащить файл (в AutoCAD, Проводник, на рабочий стол),
    поделиться через окно Windows «Отправить», сохранить копию, открыть PDF во вкладке Chrome */
 const mimeOf=it=>it.type==='pdf'?'application/pdf':'application/dxf';
-$('vShare').onclick=e=>{e.stopPropagation();const M=$('shareMenu'),it=curItem();if(!it)return;M.hidden=!M.hidden;if(!M.hidden){$('shTab').hidden=it.type!=='pdf';
+$('vShare').onclick=e=>{e.stopPropagation();const M=$('shareMenu'),it=curItem();if(!it)return;M.hidden=!M.hidden;if(!M.hidden){$('shTab').hidden=it.type!=='pdf';$('shPathSet').hidden=true;
+  const fp=fullPathOf(it);$('shPath').title=fp?fp+'\n(Shift+клик — изменить путь папки)':'Полный путь к самому файлу (оригиналу) — вставить в окно «Открыть» AutoCAD или PDF-редактора: Ctrl+O, Ctrl+V, Enter';
   $('shShare').hidden=!(navigator.canShare&&navigator.canShare({files:[new File([''],'a.pdf',{type:'application/pdf'})]}));menuFix(M,$('vShare'));}};
 document.addEventListener('click',e=>{if(!e.target.closest('#shareMenu')&&e.target.id!=='vShare')$('shareMenu').hidden=true;});
+/* 📋 Копировать путь: Chrome не знает, где папка лежит на диске, — путь папки указывается один раз и запоминается (для этой открытой папки) */
+function rootKeyOf(it){return it.rid?'rid:'+it.rid:'name:'+(it.path.includes('/')?it.path.split('/')[0]:'');}
+function fullPathOf(it){const base=(SET.rootPaths||{})[rootKeyOf(it)];if(!base)return null;
+  const rel=it.path.includes('/')?it.path.split('/').slice(1).join('\\'):it.path;return base.replace(/[\\/]+$/,'')+(rel?'\\'+rel:'');}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true;}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();let ok=false;try{ok=document.execCommand('copy');}catch(x){}ta.remove();return ok;}}
+async function shPathCopy(it){const f=fullPathOf(it);if(!f)return false;const ok=await copyText(f);$('shareMenu').hidden=true;
+  flash(ok?'Путь скопирован: '+f+' — в AutoCAD: Ctrl+O, Ctrl+V, Enter':'Не удалось скопировать: '+f);return true;}
+$('shPath').onclick=async e=>{e.stopPropagation();const it=curItem();if(!it)return;
+  if(!e.shiftKey&&await shPathCopy(it))return;   // Shift+клик — изменить путь папки
+  const root=it.path.includes('/')?it.path.split('/')[0]:'папка';
+  $('shPathQ').textContent='Где лежит папка «'+root+'»? Скопируйте путь из адресной строки Проводника (папка «'+root+'» целиком) и вставьте сюда. Один раз — программа запомнит.';
+  $('shPathIn').value=(SET.rootPaths||{})[rootKeyOf(it)]||'';$('shPathSet').hidden=false;$('shPathIn').focus();};
+$('shPathOk').onclick=async e=>{e.stopPropagation();const it=curItem();if(!it)return;let v=$('shPathIn').value.trim().replace(/^"|"$/g,'');if(!v){$('shPathIn').focus();return;}
+  SET.rootPaths=Object.assign({},SET.rootPaths||{},{[rootKeyOf(it)]:v});saveSet();$('shPathSet').hidden=true;await shPathCopy(it);};
+$('shPathCancel').onclick=e=>{e.stopPropagation();$('shPathSet').hidden=true;};
+$('shPathIn').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('shPathOk').click();}else if(e.key==='Escape'){e.stopPropagation();$('shPathSet').hidden=true;}e.stopPropagation();};
 $('shShare').onclick=async()=>{const it=curItem();$('shareMenu').hidden=true;if(!it)return;
   try{const f=new File([await it.file.arrayBuffer()],it.name,{type:mimeOf(it)});await navigator.share({files:[f],title:it.name});}
   catch(e){if(e&&e.name!=='AbortError')flash('Не удалось поделиться: '+(e.message||e));}};
@@ -1299,7 +1316,7 @@ function gridStage(){
 new ResizeObserver(()=>{if(VW.set.length>1)gridStage();}).observe($('stage'));
 
 function showSet(set,act=0){
-  if(OV&&(!OV.keep||!(set.length===2&&set.includes(OV.a)&&set.includes(OV.b))))ovClear();   // открыли другое — сравнение закончено
+  if(OV&&!OV.keep&&!(set.includes(OV.a)&&(set.length===1?OV.mode==='over':set.length===2&&set.includes(OV.b))))ovClear();   // открыли другое — сравнение закончено (пока ovStart раскладывает окна — keep)
   VW.set=set;layoutStage();VW.active=Math.max(0,Math.min(act,set.length-1));
   set.forEach((x,k)=>panes[k].show(x));
   panes.forEach((p,k)=>p.el.classList.toggle('active',set.length>1&&k===VW.active));
@@ -1876,6 +1893,9 @@ $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forE
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
 $('sHoles').value=holeMode();$('sHoles').onchange=e=>{SET.mhSmall=e.target.value;saveSet();panes.forEach(p=>p.draw());};
+const pickW=()=>['n','m','w','f'].includes(SET.pickW)?SET.pickW:'w';
+function applyPickW(){const P=$('pickPanel');P.classList.remove('pw-n','pw-m','pw-w','pw-f');P.classList.add('pw-'+pickW());}
+applyPickW();$('sPickW').value=pickW();$('sPickW').onchange=e=>{SET.pickW=e.target.value;saveSet();applyPickW();};
 $('sEdge').value=SET.edge===false?'0':'1';$('sEdge').onchange=e=>{SET.edge=e.target.value==='1';saveSet();};
 $('sRefr').value=refrMode();$('sRefr').onchange=e=>{SET.refr=e.target.value;saveSet();};
 $('sFlash').value=SET.flashT||(MUI?'4':'6');$('sFlash').onchange=e=>{SET.flashT=e.target.value;saveSet();if(SET.flashT!=='off')flash('Так подсказка будет держаться '+SET.flashT+' с');};
