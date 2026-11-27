@@ -2046,26 +2046,39 @@ function entText(e){
 }
 function measText(it){if(it.t==='ent')return entText(it.e);const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]),d=Math.hypot(dx,dy);
   return {main:fmm(d)+' мм',sub:measInfo(it)};}
-/* подписи Ø отверстий (режим «Размеры», кнопка Ø; ⚙ «Подписи отверстий»):
-   big — только крупные (от ~8 px на экране); all — все, подписи не налезают друг на друга; sum — все + сводка «Ø5 ×24 · Ø8 ×6» внизу окна */
+/* подписи Ø отверстий (режим «Размеры», кнопка Ø; ⚙ «Подписи Ø отверстий»):
+   sum — цвет по диаметру: каждое отверстие обведено цветом своего диаметра, внизу — сводка «● Ø4,2 ×18  ● Ø6,1 ×7»;
+         цифры — только у крупных отверстий (мелкие читаются по цвету, без россыпи подписей по контуру);
+   all — цифры у всех отверстий, всегда справа сверху от отверстия (что не помещается — пропускается);
+   big — цифры только у крупных */
 function holeMode(){return ['big','all','sum'].includes(SET.mhSmall)?SET.mhSmall:'sum';}
-function holeLabels(c,H,W,Hh,k){   // H: [{x,y,r(px),d(мм)}] в экранных px; k — масштаб надписи (лупа на HiDPI)
+const HOLE_PAL=['#ff6b6b','#4ea1ff','#ffd23f','#39d353','#c77dff','#ff9f43','#2ed3c6','#ff6bd5','#b5e655','#8fa8ff'];
+function holeColors(E){const ks=[...new Set(E.map(e=>fmm(e.r*2)))].sort((a,b)=>parseFloat(a.replace(',','.'))-parseFloat(b.replace(',','.')));
+  const m=new Map();ks.forEach((k,i)=>m.set(k,HOLE_PAL[i%HOLE_PAL.length]));return m;}
+function holeLabels(c,H,W,Hh,k,col,inL){   // H: [{x,y,r(px),d(мм)}] в экранных px; k — масштаб надписи (лупа на HiDPI); col — цвета по диаметру
   const mode=holeMode(),placed=[],fs=12*k,h=16*k;c.font=fs+'px system-ui,sans-serif';c.textAlign='left';c.textBaseline='middle';
-  const hit=(a)=>placed.some(b=>a[0]<b[0]+b[2]&&b[0]<a[0]+a[2]&&a[1]<b[1]+b[3]&&b[1]<a[1]+a[3]);
+  const hit=a=>placed.some(b=>a[0]<b[0]+b[2]&&b[0]<a[0]+a[2]&&a[1]<b[1]+b[3]&&b[1]<a[1]+a[3]);
+  if(col)for(const o of H){if(o.x<-20||o.y<-20||o.x>W+20||o.y>Hh+20)continue;const cc=col.get(fmm(o.d));if(!cc)continue;   // обводка цветом диаметра
+    c.strokeStyle=cc;c.lineWidth=2*k;c.beginPath();c.arc(o.x,o.y,Math.max(o.r,3.5*k),0,Math.PI*2);c.stroke();}
+  const big=(mode==='all'||inL)?0:mode==='sum'?10*k:4*k;   // в лупе (k>1) — цифры у всех, что в ней
   for(const o of H.slice().sort((a,b)=>b.r-a.r)){
-    if(o.x<-40||o.y<-40||o.x>W+40||o.y>Hh+40)continue;
-    if(o.r<4*k&&mode==='big')continue;
-    const t='Ø'+fmm(o.d),w=c.measureText(t).width+8*k,rr=Math.max(o.r,2*k);
-    const opts=[[o.x+rr*0.72+2*k,o.y-rr*0.72-h*0.62],[o.x+rr+3*k,o.y-h/2],[o.x+rr*0.72+2*k,o.y+rr*0.72-h*0.38],[o.x-rr*0.72-2*k-w,o.y-rr*0.72-h*0.62],[o.x-rr-3*k-w,o.y-h/2],[o.x-w/2,o.y-rr-h-2*k],[o.x-w/2,o.y+rr+2*k]];
-    let at=null;for(const q of opts){const a=[q[0],q[1],w,h];if(!hit(a)){at=a;break;}}
-    if(!at)continue;placed.push(at);
-    c.fillStyle='rgba(16,18,22,.8)';c.fillRect(at[0],at[1],w,h);c.fillStyle='#8fd3ff';c.fillText(t,at[0]+4*k,at[1]+h/2+0.5*k);}
+    if(o.x<-40||o.y<-40||o.x>W+40||o.y>Hh+40||o.r<big)continue;
+    const t='Ø'+fmm(o.d),w=c.measureText(t).width+8*k,rr=Math.max(o.r,3*k);
+    const at=2*o.r>w+6*k?[o.x-w/2,o.y-h/2]:[o.x+rr*0.72+2*k,o.y-rr*0.72-h*0.62];   // в крупном отверстии — внутри, иначе всегда справа сверху
+    const box=[at[0],at[1],w,h];if(hit(box))continue;placed.push(box);
+    c.fillStyle='rgba(16,18,22,.78)';c.fillRect(box[0],box[1],w,h);c.fillStyle=col&&col.get(fmm(o.d))||'#8fd3ff';c.fillText(t,box[0]+4*k,box[1]+h/2+0.5*k);}
 }
-function holeSummary(c,E,W,H){   // сводка по диаметрам — читается и при «весь лист на экране»
+function holeSummary(c,E,W,H,col){   // сводка: отдельные «плашки» по диаметрам с цветной точкой — группы не сливаются
   const m=new Map();for(const e of E){const k=fmm(e.r*2);m.set(k,(m.get(k)||0)+1);}if(!m.size)return;
-  const t='Отверстия: '+[...m].sort((a,b)=>parseFloat(a[0].replace(',','.'))-parseFloat(b[0].replace(',','.'))).map(([d,n])=>'Ø'+d+(n>1?' ×'+n:'')).join(' · ');
-  c.font='13px system-ui,sans-serif';c.textAlign='left';c.textBaseline='middle';const w=Math.min(W-16,c.measureText(t).width+14);
-  c.fillStyle='rgba(16,18,22,.86)';c.fillRect(8,H-34,w,24);c.fillStyle='#8fd3ff';c.save();c.beginPath();c.rect(8,H-34,w,24);c.clip();c.fillText(t,15,H-21.5);c.restore();}
+  const L=[...m].sort((a,b)=>parseFloat(a[0].replace(',','.'))-parseFloat(b[0].replace(',','.')));
+  c.font='13px system-ui,sans-serif';c.textAlign='left';c.textBaseline='middle';
+  const items=L.map(([d,n])=>{const t='Ø'+d+(n>1?'  ×'+n:'');return {t,d,w:c.measureText(t).width+30};});
+  const rows=[[]];let x=8;for(const it of items){if(x+it.w>W-8&&rows[rows.length-1].length){rows.push([]);x=8;}rows[rows.length-1].push(it);x+=it.w+8;}
+  let y=H-10-26*rows.length;
+  for(const r of rows){x=8;for(const it of r){c.fillStyle='rgba(16,18,22,.88)';c.strokeStyle='rgba(160,170,185,.35)';c.lineWidth=1;c.beginPath();c.roundRect?c.roundRect(x,y,it.w,22,11):c.rect(x,y,it.w,22);c.fill();c.stroke();
+      c.fillStyle=col&&col.get(it.d)||'#8fd3ff';c.beginPath();c.arc(x+12,y+11,5,0,Math.PI*2);c.fill();
+      c.fillStyle='#e6e6e6';c.fillText(it.t,x+22,y+11.5);x+=it.w+8;}y+=26;}
+}
 function measPaint(p,c,d){
   const M=msOf(p);c.save();c.setTransform(d,0,0,d,0,0);
   const COL='#ffd23f',SEL='#4fc3ff';let col=COL;const bg='rgba(16,18,22,.92)';
@@ -2121,8 +2134,9 @@ function measPaint(p,c,d){
   // диаметры всех отверстий — сразу при включении режима
   c.font='12px system-ui,sans-serif';
   if(SET.mholes!==false){const H=measEntP(p).E.filter(e=>e.t==='C');
-    holeLabels(c,H.map(e=>{const [x,y]=m2s(p,e.cx,e.cy);return {x,y,r:e.r*p.s,d:e.r*2};}),p.W,p.H,1);
-    if(holeMode()==='sum')holeSummary(c,H,p.W,p.H);}
+    const col=holeMode()==='sum'?holeColors(H):null;
+    holeLabels(c,H.map(e=>{const [x,y]=m2s(p,e.cx,e.cy);return {x,y,r:e.r*p.s,d:e.r*2};}),p.W,p.H,1,col);
+    if(col)holeSummary(c,H,p.W,p.H,col);}
   for(const it of M.items){
     col=it===M.sel?SEL:it===M.hit?'#ffe680':COL;
     if(it.t==='lin')drawDim(it,false);
@@ -2651,9 +2665,9 @@ function loupeDraw(){
   if(!has&&LC.want!==sig+'|'+Math.round(x/8)+'|'+Math.round(y/8)){LC.want=sig+'|'+Math.round(x/8)+'|'+Math.round(y/8);loupeBuild(p,x,y,k,d,sig,R,false);}
   else if(near&&!LC.tm2){LC.tm2=1;loupeBuild(p,x,y,k,d,sig,R,false);setTimeout(()=>LC.tm2=0,300);}
   if(SET.mholes!==false&&!p.isPdf&&p.doc.bbox){   // в лупе (с размерами и без) — по кнопке Ø и ⚙ «Подписи Ø отверстий»; — подписи Ø видимых в ней отверстий
-    const H=[];for(const e of measEntP(p).E){if(e.t!=='C')continue;const [sx,sy]=m2s(p,e.cx,e.cy),lx=(R+(sx-x)*k)*d,ly=(R+(sy-y)*k)*d,rr=e.r*p.s*k*d;
+    const H=[],EC=measEntP(p).E.filter(e=>e.t==='C'),col=holeMode()==='sum'?holeColors(EC):null;for(const e of EC){const [sx,sy]=m2s(p,e.cx,e.cy),lx=(R+(sx-x)*k)*d,ly=(R+(sy-y)*k)*d,rr=e.r*p.s*k*d;
       if(Math.hypot(lx-R*d,ly-R*d)<R*d+rr)H.push({x:lx,y:ly,r:rr,d:e.r*2});}
-    holeLabels(c,H,2*R*d,2*R*d,d);}
+    holeLabels(c,H,2*R*d,2*R*d,d,col,true);}
   c.restore();c.lineWidth=2*d;c.strokeStyle='#ffd23f';c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.stroke();
   c.strokeStyle=p.isPdf?'rgba(217,130,43,.8)':'rgba(255,210,63,.6)';c.lineWidth=d;c.beginPath();c.moveTo(R*d-8*d,R*d);c.lineTo(R*d+8*d,R*d);c.moveTo(R*d,R*d-8*d);c.lineTo(R*d,R*d+8*d);c.stroke();
   c.fillStyle='rgba(16,18,22,.8)';c.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);c.fillStyle='#ffd23f';c.font=(12*d)+'px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('×'+k,R*d,2*R*d-17*d);

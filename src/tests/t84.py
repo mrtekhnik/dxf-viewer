@@ -11,10 +11,13 @@ async def main():
     await pg.evaluate("SET.mholes=true;SET.mhSmall='sum';0"); await pg.keyboard.press('d'); await pg.wait_for_timeout(400)
     t=await pg.evaluate(CAP); lab=[x for x in t if x.startswith('Ø')]; summ=[x for x in t if x.startswith('Отверстия')]
     print('подписей',len(lab),'сводка',summ)
-    if len(lab)<30: errs.append('мало подписей мелких отверстий: '+str(len(lab)))
-    if not summ or 'Ø5,0 ×40' not in summ[0] or 'Ø46' not in summ[0]: errs.append('сводка: '+str(summ))
+    summ=[x for x in t if x.startswith('Ø') and '×' in x]
+    if len(lab)-len(summ)>4: errs.append('цвет по диаметру: лишние цифры у мелких: '+str(lab))
+    if 'Ø5,0  ×40' not in summ: errs.append('сводка: '+str(summ))
+    await pg.evaluate("SET.mhSmall='all';0"); t=await pg.evaluate(CAP); la=[x for x in t if x.startswith('Ø')]; print('цифры у всех',len(la))
+    if len(la)<30: errs.append('мало подписей в «у всех»: '+str(len(la)))
     await pg.evaluate("SET.mhSmall='big';0"); t=await pg.evaluate(CAP); lab2=[x for x in t if x.startswith('Ø')]; print('только крупные',lab2)
-    if len(lab2)>2 or any(x.startswith('Отверстия') for x in t): errs.append('«крупные»: '+str(t))
+    if len(lab2)>2: errs.append('«крупные»: '+str(t))
     # лупа над мелким отверстием
     await pg.evaluate("SET.mhSmall='sum';0")
     pos=await pg.evaluate("(()=>{const p=panes[0],e=measEntP(p).E.find(e=>e.t==='C'&&e.r<3),q=m2s(p,e.cx,e.cy),r=p.cv.getBoundingClientRect();return [r.left+q[0],r.top+q[1]]})()")
