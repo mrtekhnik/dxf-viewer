@@ -13,7 +13,7 @@ async def main():
     async def click(x,y):
       q=await sc(x,y); await pg.mouse.move(bb['x']+q[0],bb['y']+q[1]); await pg.wait_for_timeout(60); await pg.mouse.click(bb['x']+q[0],bb['y']+q[1]); await pg.wait_for_timeout(400)
     await click(0,0); print('pts',await pg.evaluate('panes[0].ms.pts.length'),await pg.evaluate('SET.mmode')); await click(250,60); print('pts',await pg.evaluate('panes[0].ms.pts.length')); await click(120,-6); print('after3',await pg.evaluate('panes[0].ms.items.length'),errs)
-    await pg.select_option('#measMode','dist'); await click(50,60); await click(150,150)
+    await pg.evaluate('rulerToggle(true);0'); await click(50,60); await click(150,150)
     print('items', await pg.evaluate("panes[0].ms.items.map(i=>i.t)"))
     # где размерная линия горизонтального размера
     G=await pg.evaluate("(()=>{const p=panes[0],it=p.ms.items[0],G=dimGeom(p,it);return [(G.a2[0]+G.b2[0])/2+40,G.a2[1],it.o[1]]})()")
@@ -30,7 +30,7 @@ async def main():
     print('dist selected', await pg.evaluate("panes[0].ms.sel&&panes[0].ms.sel.t"), 'items',await pg.evaluate("panes[0].ms.items.length"))
     await pg.keyboard.press('Delete'); await pg.wait_for_timeout(200); print('after delete', await pg.evaluate("panes[0].ms.items.map(i=>i.t)"))
     # пустое место — новый размер работает как прежде
-    await pg.select_option('#measMode','dim'); await click(0,0); await click(250,60); await click(130,-4); print('new items', await pg.evaluate("panes[0].ms.items.map(i=>i.t)"))
+    await pg.evaluate('rulerToggle(false);0'); await pg.select_option('#measMode','dim'); await click(0,0); await click(250,60); await click(130,-4); print('new items', await pg.evaluate("panes[0].ms.items.map(i=>i.t)"))
     # ✕ справа
     vb=await pg.locator('.vbar').bounding_box(); cb=await pg.locator('#vClose').bounding_box(); print('close at right', cb['x']+cb['width']>vb['x']+vb['width']-12, await pg.is_visible('#vClose'))
     print('errors',errs); await b.close()

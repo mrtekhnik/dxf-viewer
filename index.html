@@ -12,6 +12,8 @@
 :root{--prevw:480px;--treew:270px;--lthumb:76px;--bg:#1b1d21;--panel:#24272c;--line:#363a41;--line2:#2c2f35;--fg:#e6e6e6;--mut:#9aa0a8;--acc:#4ea1ff;--warn:#e5b54a;--err:#ff6b6b;
   --cv:#0f1012;--btn:#30343a;--btnh:#5a6069;--inp:#16181b;--on:#25425f;--hover:#2c3138;--pair:#3a2b2a;--pairb:#7a4a44;--ph:#5c626b;
   --tile:180px;--listw:380px}
+:root[data-theme=acad]{--bg:#2b313a;--panel:#3b4452;--line:#555f6e;--line2:#454e5b;--fg:#e9ecf0;--mut:#b0b8c3;--acc:#5aa6ef;--warn:#e8b84a;--err:#ff6b6b;
+  --cv:#212830;--btn:#4a5463;--btnh:#717c8c;--inp:#2c333d;--on:#2f5d8a;--hover:#4c5767;--pair:#4b3d3c;--pairb:#8c5d56;--ph:#6e7682}
 :root[data-theme=light]{--bg:#eef0f3;--panel:#ffffff;--line:#d3d7dd;--line2:#e7e9ed;--fg:#1d2024;--mut:#67707b;--acc:#1f6fd1;--warn:#c98a00;--err:#d93636;
   --cv:#f7f8fa;--btn:#f3f4f6;--btnh:#9aa1ab;--inp:#ffffff;--on:#dbe8fb;--hover:#edf3fb;--pair:#fbece9;--pairb:#d9a59c;--ph:#9aa0a8}
 *{box-sizing:border-box}
@@ -36,6 +38,7 @@ header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg b
 @media (max-width:1480px){header .lbl.b{display:none}header .szbox input{width:60px}header .grp{padding:0 7px}}
 @media (max-width:1250px){header .lbl{display:none}}
 #status a.crumb{color:var(--acc);cursor:pointer;text-decoration:none}#status a.crumb:hover{text-decoration:underline}#status a.crumb.here{color:inherit;font-weight:600;cursor:default;text-decoration:none}
+.sh-drag{margin:4px 8px;padding:9px 10px;border:1px dashed var(--btnh);border-radius:8px;cursor:grab;color:var(--fg);font-size:13px;user-select:none}.sh-drag:active{cursor:grabbing}.sh-note{padding:4px 10px 8px;color:var(--mut);font-size:11px;max-width:330px;line-height:1.35}#shareMenu small{color:var(--mut)}
 header.c1 .lbl.a{display:none}header.c2 .lbl.b{display:none}header.c2 .grp{padding:0 7px}header.c3 .lbl{display:none}header.c3 .szbox input{width:60px}header.c4 .grp{padding:0 4px}header.c4 .szbox{display:none}header.c4 .grp.grow{flex-basis:90px}header.c5 button{padding-left:6px;padding-right:6px}header.c5 .grp{gap:3px;padding:0 3px}header.c5 .grp.grow{flex-basis:60px}header.c5 #typeSel{max-width:62px}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
 .brand small{color:var(--mut);font-weight:400}
@@ -341,7 +344,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.8.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.9.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -412,7 +415,14 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
     <button id="vPrev" title="Предыдущий (←)">‹</button><button id="vNext" title="Следующий (→)">›</button>
     <span id="vName"></span>
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
-    <span class="vgrp"><span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span><button id="vPin" title="Добавить файл в ярлыки">★</button></span>
+    <span class="vgrp"><span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span><button id="vPin" title="Добавить файл в ярлыки">★</button><span class="mwrap"><button id="vShare" title="Открыть в другой программе, поделиться, сохранить копию">⤴</button>
+      <div id="shareMenu" class="menu" hidden style="min-width:320px">
+        <button id="shShare">📤 Поделиться… <small>(почта, Telegram, Teams)</small></button>
+        <button id="shSave">💾 Сохранить копию…</button>
+        <button id="shTab">🌐 Открыть PDF во вкладке Chrome</button>
+        <div id="shDrag" draggable="true" class="sh-drag" title="Перетащите в окно AutoCAD, в Проводник или на рабочий стол">⠿ Перетащите отсюда в AutoCAD, Проводник или на рабочий стол</div>
+        <div class="sh-note">Запустить AutoCAD или PDF-программу напрямую браузер не позволяет — перетащите файл или сохраните копию и откройте её.</div>
+      </div></span></span>
     <span class="vgrp"><button id="vFit" title="Показать всё — вписать в окно (F, двойной клик)">⤢</button><button id="vFitW" hidden title="Вписать по ширине окна (Shift+F)">⟷</button><button id="vLoupe" title="Лупа: включите, затем клик — показать лупу (колесо — её увеличение), ещё клик — убрать. Или удерживайте Z">🔍</button><button id="vLw" title="Толщина линий DXF (W — по кругу)">≡<span class="lbl"> Линии</span></button><span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span><button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button></span>
     <span class="vgrp"><span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vMirV" title="Зеркально сверху вниз (Shift+M)">⇅</button><span class="mwrap"><button id="vXfSave" title="Записать поворот / зеркало в файл DXF; произвольный угол">💾</button>
       <div id="xfMenu" class="menu" hidden style="min-width:290px">
@@ -423,7 +433,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
         <button id="xfGo">💾 Записать в файл</button>
         <div id="xfNote" class="xfm-n"></div>
       </div></span></span><button id="vPdfRot" hidden class="warn">⤾<span class="lbl"> Лист</span></button></span>
-    <span class="vgrp"><button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏<span class="lbl"> Размеры</span></button><span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option><option value="ang">Угол</option><option value="gap">Зазор</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span><button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓<span class="lbl"> Проверка</span></button><button id="vTxt" hidden title="Текст из PDF (T): обведите рамкой или щёлкните по надписи — текст скопируется">𝐓<span class="lbl"> Текст</span></button></span>
+    <span class="vgrp"><button id="vRuler" hidden title="Измерить (как «Измерить» в AutoCAD): две точки с привязкой — расстояние, ΔX, ΔY, угол. На деталь не ставится — показывается последнее измерение (U)">📐<span class="lbl"> Измерить</span></button><button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏<span class="lbl"> Размеры</span></button><span id="measBox" class="xfbox" hidden><select id="measMode" title="Вид размера — как в AutoCAD. Размер — авто: 2 точки и 3-й клик (выше/ниже — горизонтальный, левее/правее — вертикальный, между — параллельный); клик по линии, дуге, отверстию — L / R / Ø"><option value="dim">Размер (авто)</option><option value="lin">Линейный</option><option value="ali">Параллельный</option><option value="ang">Угловой</option><option value="arc">Длина дуги</option><option value="rad">Радиус</option><option value="dia">Диаметр</option><option value="gap">Зазор</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span><button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓<span class="lbl"> Проверка</span></button><button id="vTxt" hidden title="Текст из PDF (T): обведите рамкой или щёлкните по надписи — текст скопируется">𝐓<span class="lbl"> Текст</span></button></span>
     <span class="vgrp"><button id="vSide" title="Чертёж и все его развёртки одновременно (R)">⧉<span class="lbl"> Рядом</span></button><button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆<span class="lbl"> Сравнить</span></button><button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button><button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒</button></span>
     <span class="vgrp"><span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼</button>
       <div id="pngMenu" class="menu" hidden style="right:0;left:auto;min-width:240px">
@@ -514,7 +524,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 
 <div id="setPanel" class="pop" hidden>
   <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><button id="setUpd" title="Проверить, есть ли новая версия">Проверить обновления</button><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
-  <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option></select></div>
+  <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option><option value="acad">Как в AutoCAD (тёмная)</option></select></div>
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>
@@ -622,6 +632,8 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <li><b>📂 Открыть ▾ → Папка…</b> — открыть папку целиком со всеми вложенными (заказ, изделие). Работает и с сетевыми папками на сервере.</li>
 <li><b>🗗 Новое окно</b> (меню 📂 ▾) — ещё одно окно программы, пустое: откройте в нём другой проект и смотрите оба (рядом на одном экране — <kbd>Win+←</kbd> / <kbd>Win+→</kbd>, или на двух мониторах). Окна независимы, настройки общие.</li>
 <li>В строке состояния всегда видно, какая папка открыта: в корне — имя самой папки, в подпапке — путь к ней. Путь работает как в Проводнике: <b>клик по любой папке в пути</b> — перейти в неё. Там же — сколько <b>листов PDF</b> среди показанных файлов (многостраничные считаются по страницам; пока не все PDF прочитаны — «+ ещё N не прочитано»).</li>
+<li><b>⤴</b> в просмотре — <b>открыть в другой программе</b>. Запустить AutoCAD или PDF-программу сам браузер не позволяет, поэтому: <b>перетащите</b> строку «⠿ Перетащите отсюда…» в окно AutoCAD, в Проводник или на рабочий стол (файл скопируется туда); <b>📤 Поделиться</b> — окно Windows «Отправить» (почта, Telegram, Teams); <b>💾 Сохранить копию…</b> — в любую папку, откуда её можно открыть чем угодно; <b>🌐 Открыть PDF во вкладке Chrome</b> — встроенный просмотрщик Chrome (печать, поиск по тексту).</li>
+<li><b>Тема «Как в AutoCAD»</b> (⚙ «Тема») — цвета панелей и фон чертежа (#212830) как в тёмной теме AutoCAD.</li>
 <li><b>⟳ Обновить</b> (<kbd>F5</kbd>) — перечитать открытую папку: новые файлы добавятся, удалённые уберутся, изменённые перечитаются. Открытый файл, выбранная папка в дереве, фильтры и сравнение остаются. Программа может и сама тихо проверять папку — режим в ⚙ «Обновление списка файлов»: <i>только вручную</i>; <i>при возврате в окно программы</i> (по умолчанию: сохранили новый DXF в SolidWorks, переключились сюда — список уже новый); <i>при возврате + каждые 30 с / 1 мин / 5 мин</i> — ещё и по таймеру, пока окно программы видно на экране (удобно, если программа открыта на втором мониторе, а файлы кладут коллеги по сети). Если ничего не изменилось, проверку не видно; изменения — подсказкой внизу и в журнале. Папки больше 4000 файлов сами не проверяются — только ⟳ или F5. Перезагрузить программу целиком — <kbd>Ctrl+F5</kbd>.</li>
 <li>Если окно выбора папки закрылось само или Chrome прервал выбор — программа скажет об этом и предложит <b>Открыть другим способом</b> (обычное окно выбора) или перетащить папку из Проводника. Если какая-то подпапка или файл не читается (нет доступа, файл занят), остальное всё равно откроется, а программа покажет список непрочитанного. Если диск долго не отвечает на какой-то файл или папку (файл в облаке, сбой сети), в строке состояния видно, чего программа ждёт; через 30 с этот файл пропускается и попадает в список непрочитанного, остальное открывается. Все шаги — в <b>Журнале</b>, раздел «Открытие папок».</li>
 <li><b>📂 Открыть ▾ → Файлы…</b> — выбрать отдельные DXF и PDF.</li>
@@ -689,11 +701,12 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <section data-t="Размеры">
 <h2>Размеры (измерения) в DXF</h2>
 <p>Кнопка <b>📏 Размеры</b> в просмотре или клавиша <kbd>D</kbd>. Курсор становится крестиком. Рядом с кнопкой — режим, Ø, точность, ↶ и «Очистить».</p>
-<h3>Четыре режима</h3>
+<h3>Виды размеров</h3>
 <ul>
 <li><b>Размер</b> (как в CAD): клик по первой точке, по второй, <b>третий клик — где положить размерную линию</b>. Отвели курсор выше или ниже точек — <b>горизонтальный</b>, левее или правее — <b>вертикальный</b>, между точками — по прямой. Пока ведёте курсор, видна подсказка: по X, по Y, по прямой.</li>
-<li><b>Расстояние</b> (как «Расстояние» в AutoCAD): две точки — сразу пунктиром <b>по прямой, по X, по Y и угол</b>.</li>
-<li><b>Угол</b>: клик по одной прямой линии, затем по другой — угол между ними дугой (в сообщении внизу — и смежный). Параллельные линии угла не дают.</li>
+<li>Виды размеров — как в AutoCAD (список рядом с кнопкой): <b>Размер (авто)</b> — как описано выше; <b>Линейный</b> — только горизонтальный или вертикальный (по тому, куда отведён курсор); <b>Параллельный</b> — вдоль линии между точками; <b>Угловой</b>; <b>Длина дуги</b> — клик по дуге, второй — где поставить надпись «⌒»; <b>Радиус</b> и <b>Диаметр</b> — клик по дуге или окружности, второй — куда поставить надпись (R или Ø, независимо от того, дуга это или окружность); <b>Зазор</b>.</li>
+<li><b>📐 Измерить</b> (<kbd>U</kbd>) — отдельная линейка, как «Измерить» в AutoCAD: две точки с привязкой — расстояние по прямой, ΔX, ΔY и угол. На деталь не ставится: видно только последнее измерение, следующие две точки — новое. Выйти — <kbd>Esc</kbd> или 📐.</li>
+<li><b>Угловой</b>: клик по одной прямой линии, затем по другой — угол между ними дугой (в сообщении внизу — и смежный). Параллельные линии угла не дают.</li>
 <li><b>Зазор</b> (между контурами): клик по одному элементу — отверстию, дуге или линии, затем по другому — <b>кратчайшее расстояние между ними</b>: от края отверстия до края отверстия, от отверстия до кромки, ширина перемычки. Точки привязки не нужны — щёлкайте прямо по линии.</li>
 </ul>
 <ul>
@@ -2173,8 +2186,8 @@ const saveSet=()=>LS.set('set',SET);
 const mqLight=matchMedia('(prefers-color-scheme: light)');
 const effTheme=()=>SET.theme==='auto'?(mqLight.matches?'light':'dark'):SET.theme;
 const lum=h=>{const n=parseInt(h.slice(1),16);return 0.299*(n>>16&255)+0.587*(n>>8&255)+0.114*(n&255);};
-const dxfBg=()=>SET.bgDxf==='auto'?(effTheme()==='light'?'#ffffff':'#0f1012'):SET.bgDxf;
-const pdfBg=()=>SET.bgPdf==='auto'?(effTheme()==='light'?'#dfe2e6':'#0f1012'):SET.bgPdf;
+const dxfBg=()=>SET.bgDxf==='auto'?(effTheme()==='light'?'#ffffff':effTheme()==='acad'?'#212830':'#0f1012'):SET.bgDxf;   // AutoCAD: фон пространства модели
+const pdfBg=()=>SET.bgPdf==='auto'?(effTheme()==='light'?'#dfe2e6':effTheme()==='acad'?'#212830':'#0f1012'):SET.bgPdf;
 const bgKey=()=>dxfBg()+'|'+pdfBg()+'|'+(SET.pdfDark?1:0);
 const PDF_INV='invert(1) hue-rotate(180deg)';
 /* «тонкие линии темнее»: полутона сглаживания дотягиваются до чёрного (на белом листе), цвета почти не меняются */
@@ -2685,6 +2698,24 @@ async function xfReload(it,nf){   // файл перезаписан: переч
 }
 $('xfGo').onclick=xfWrite;
 $('btnRefr').onclick=()=>refreshFolder(false);
+/* ⤴ Открыть в…: браузер не запускает AutoCAD или PDF-программу сам — даём перетащить файл (в AutoCAD, Проводник, на рабочий стол),
+   поделиться через окно Windows «Отправить», сохранить копию, открыть PDF во вкладке Chrome */
+const mimeOf=it=>it.type==='pdf'?'application/pdf':'application/dxf';
+$('vShare').onclick=e=>{e.stopPropagation();const M=$('shareMenu'),it=curItem();if(!it)return;M.hidden=!M.hidden;if(!M.hidden){$('shTab').hidden=it.type!=='pdf';
+  $('shShare').hidden=!(navigator.canShare&&navigator.canShare({files:[new File([''],'a.pdf',{type:'application/pdf'})]}));menuFix(M,$('vShare'));}};
+document.addEventListener('click',e=>{if(!e.target.closest('#shareMenu')&&e.target.id!=='vShare')$('shareMenu').hidden=true;});
+$('shShare').onclick=async()=>{const it=curItem();$('shareMenu').hidden=true;if(!it)return;
+  try{const f=new File([await it.file.arrayBuffer()],it.name,{type:mimeOf(it)});await navigator.share({files:[f],title:it.name});}
+  catch(e){if(e&&e.name!=='AbortError')flash('Не удалось поделиться: '+(e.message||e));}};
+$('shSave').onclick=async()=>{const it=curItem();$('shareMenu').hidden=true;if(!it)return;
+  try{if(window.showSaveFilePicker){const h=await showSaveFilePicker({suggestedName:it.name});const w=await h.createWritable();await w.write(it.file);await w.close();flash('Копия сохранена: '+h.name);}
+    else{const a=document.createElement('a');a.href=URL.createObjectURL(it.file);a.download=it.name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}}
+  catch(e){if(e&&e.name!=='AbortError')flash('Не удалось сохранить: '+(e.message||e));}};
+$('shTab').onclick=()=>{const it=curItem();$('shareMenu').hidden=true;if(!it||it.type!=='pdf')return;
+  const u=URL.createObjectURL(new File([it.file],it.name,{type:'application/pdf'}));const w=window.open(u,'_blank');if(!w)flash('Chrome не дал открыть вкладку — разрешите всплывающие окна');setTimeout(()=>URL.revokeObjectURL(u),120000);};
+$('shDrag').addEventListener('dragstart',e=>{const it=curItem();if(!it){e.preventDefault();return;}
+  const u=URL.createObjectURL(it.file);setTimeout(()=>URL.revokeObjectURL(u),120000);
+  e.dataTransfer.effectAllowed='copy';e.dataTransfer.setData('DownloadURL',mimeOf(it)+':'+it.name+':'+u);e.dataTransfer.setData('text/plain',it.name);});
 /* панель кнопок — всегда в один ряд: если не помещается (появились «Журнал», «Сравнить», «Обновить»…), подписи прячутся по очереди, остаются значки */
 function hdrFit(){const H=document.querySelector('header');if(!H||document.body.classList.contains('mui'))return;
   const C=['c1','c2','c3','c4','c5'];H.classList.remove(...C);
@@ -2828,7 +2859,7 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
-const APP_VERSION='4.8.0',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
+const APP_VERSION='4.9.0',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
 $('verSet').textContent='Версия '+APP_VERSION+' от '+APP_DATE;
 $('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
 $('noteBox').addEventListener('click',e=>{if(e.target.id==='noteBox')$('noteBox').hidden=true;});
@@ -2984,9 +3015,10 @@ ts.oninput=setTile;setTile();
 $('szMinus').onclick=()=>bumpTile(1/1.15);$('szPlus').onclick=()=>bumpTile(1.15);
 $('gridWrap').addEventListener('wheel',e=>{if(!e.ctrlKey)return;e.preventDefault();bumpTile(e.deltaY<0?1.1:1/1.1);},{passive:false});
 
-document.addEventListener('dragover',e=>{e.preventDefault();document.body.classList.add('drag');});
+let OWNDRAG=false;document.addEventListener('dragstart',e=>{OWNDRAG=!!(e.target&&e.target.id==='shDrag');});document.addEventListener('dragend',()=>{OWNDRAG=false;});
+document.addEventListener('dragover',e=>{e.preventDefault();if(OWNDRAG)return;document.body.classList.add('drag');});   // свой файл тащат наружу — не «открыть папку»
 document.addEventListener('dragleave',e=>{if(!e.relatedTarget)document.body.classList.remove('drag');});
-document.addEventListener('drop',async e=>{
+document.addEventListener('drop',async e=>{if(OWNDRAG){e.preventDefault();OWNDRAG=false;return;}
   e.preventDefault();document.body.classList.remove('drag');
   const dt=[...e.dataTransfer.items].filter(i=>i.kind==='file');
   if(dt.length&&dt[0].getAsFileSystemHandle){
@@ -3509,7 +3541,7 @@ function updateBar(){if(MUI)setTimeout(muiSync,0);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
-  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
+  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf;$('vRuler').hidden=!anyDxf;$('measBox').hidden=!MEAS.on||MEAS.ruler||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vTxt').hidden=!anyPdf;$('vTxt').classList.toggle('on',TXT.on);if(!anyPdf&&TXT.on)txtToggle(false);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',MUI?!!SET.mCont:!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
@@ -4033,7 +4065,11 @@ function anyLw(){return panes.some(p=>p.doc&&!p.isPdf&&p.doc.hasLw);}
    Клик по линии без привязки — длина; по окружности — Ø и длина; по дуге — R, угол и длина дуги.
    Esc — убрать измерения, ещё раз Esc — выйти. Всё в координатах файла, с учётом поворота детали на экране.
    ===================================================================== */
-const MEAS={drag:null,on:false};
+const MEAS={drag:null,on:false,ruler:false};
+/* виды размеров — как в AutoCAD: dim — «Размер» (авто), lin — Линейный (гор./верт.), ali — Параллельный, ang — Угловой,
+   arc — Длина дуги, rad — Радиус, dia — Диаметр, gap — Зазор; dist — «Измерить» (линейка, отдельная кнопка) */
+const MMODES=['dim','lin','ali','ang','arc','rad','dia','gap'];
+function mmode(){return MEAS.ruler?'dist':MMODES.includes(SET.mmode)?SET.mmode:'dim';}
 function measEnt(doc){ // элементы и точки привязки детали (один раз на документ)
   if(doc._meas)return doc._meas;const E=[],S=[];
   const arcE=(cx,cy,r,a0,a1,ccw)=>{E.push({t:'A',cx,cy,r,a0,a1,ccw});S.push([cx,cy,'центр']);S.push([cx+r*Math.cos(a0),cy+r*Math.sin(a0),'конец'],[cx+r*Math.cos(a1),cy+r*Math.sin(a1),'конец']);
@@ -4078,8 +4114,8 @@ function measPick(p,x,y){ // что под курсором: точка прив
   for(const q of M.S){const d=Math.hypot(q[0]-mx,q[1]-my);if(d<bd||(best&&d<=bd+1e-9&&q[2]==='центр')){bd=d;best=q;}}
   let be=null,ed=7/p.s;for(const e of M.E){const d=entDist(e,mx,my);if(d<ed){ed=d;be=e;}}
   // маленькая дуга или отверстие (меньше ~20 px на экране): клик по ней — радиус / диаметр, а не точка середины или центра
-  if(best&&be&&be.t!=='L'&&be.r*p.s<20&&best[2]!=='конец'&&SET.mmode!=='ang')return {ent:be,pt:[mx,my]};
-  if(SET.mmode==='gap'&&be)return {ent:be,pt:[mx,my]};   // «зазор» — всегда по элементу, точки привязки не нужны
+  if(best&&be&&be.t!=='L'&&be.r*p.s<20&&best[2]!=='конец'&&mmode()!=='ang'&&mmode()!=='lin'&&mmode()!=='ali'&&mmode()!=='dist')return {ent:be,pt:[mx,my]};
+  if(['gap','rad','dia','arc'].includes(mmode())&&be)return {ent:be,pt:[mx,my]};   // «зазор» — всегда по элементу, точки привязки не нужны
   if(best)return {snap:best};
   return be?{ent:be,pt:[mx,my]}:{pt:[mx,my]};
 }
@@ -4097,6 +4133,8 @@ const w2s=(p,wx,wy)=>[p.W/2+(wx-p.cx)*p.s,p.H/2-(wy-p.cy)*p.s];
 const m2w=(p,x,y)=>mApply(xfMat(p.xf),x,y);
 function linDim(p,a,b,mw){ // какой размер ставить при курсоре mw (в координатах экрана-мира)
   const A=m2w(p,...a),B=m2w(p,...b),x0=Math.min(A[0],B[0]),x1=Math.max(A[0],B[0]),y0=Math.min(A[1],B[1]),y1=Math.max(A[1],B[1]),g=4/p.s;
+  if(mmode()==='ali')return 'al';   // Параллельный — всегда вдоль линии между точками
+  if(mmode()==='lin'){if(mw[1]>y1+g||mw[1]<y0-g)return 'h';if(mw[0]>x1+g||mw[0]<x0-g)return 'v';return x1-x0>=y1-y0?'h':'v';}   // Линейный — только гор./верт.
   if(mw[1]>y1+g||mw[1]<y0-g)return x1-x0>1e-9?'h':'v';
   if(mw[0]>x1+g||mw[0]<x0-g)return y1-y0>1e-9?'v':'h';
   return 'al';
@@ -4127,7 +4165,7 @@ function measHit(p,x,y){
     else if(it.t==='ang'){const V=m2s(p,...it.A.V),R=Math.max(24,it.A.r*p.s);chk(it,Math.abs(Math.hypot(x-V[0],y-V[1])-R),false,true);}
     else if(it.t==='ent'){const e=it.e;
       if(e.t==='L'){const a=m2s(p,e.x1,e.y1),b=m2s(p,e.x2,e.y2);chk(it,boxD(x,y,(a[0]+b[0])/2,(a[1]+b[1])/2-14,tw(entText(e).main),9),false);chk(it,segD(x,y,a,b),false,true);}
-      else{const o=it.o||[e.cx+e.r*1.3,e.cy+e.r*0.3],O=m2s(p,...o),C=m2s(p,e.cx,e.cy),w=tw(entText(e).main)*2,dir=O[0]>=C[0]?1:-1;
+      else{const o=it.o||[e.cx+e.r*1.3,e.cy+e.r*0.3],O=m2s(p,...o),C=m2s(p,e.cx,e.cy),w=tw(entText(e,it.k).main)*2,dir=O[0]>=C[0]?1:-1;
         chk(it,segD(x,y,O,[O[0]+dir*w,O[1]]),true);chk(it,boxD(x,y,O[0]+dir*w/2,O[1]-10,w/2,9),true);
         const a=Math.atan2(o[1]-e.cy,o[0]-e.cx),P=m2s(p,e.cx+e.r*Math.cos(a),e.cy+e.r*Math.sin(a));chk(it,segD(x,y,P,O),true);}}
   }
@@ -4174,36 +4212,45 @@ function measClick(p,x,y){
   if(MEAS.last&&MEAS.last.p===p&&now-MEAS.last.t<350&&Math.hypot(x-MEAS.last.x,y-MEAS.last.y)<8){M.pts=MEAS.last.pts;M.items.length=MEAS.last.n;M.rad=MEAS.last.rad;MEAS.last=null;p.fit();return;}
   MEAS.last={p,t:now,x,y,pts:M.pts.slice(),n:M.items.length,rad:M.rad||null};
   const h=measPick(p,x,y),mw=p.s2w(x,y);
-  if(SET.mmode==='gap'){ // зазор: клик по одному контуру (отверстие, дуга, линия), потом по другому — кратчайшее расстояние между ними
+  if(mmode()==='gap'){ // зазор: клик по одному контуру (отверстие, дуга, линия), потом по другому — кратчайшее расстояние между ними
     const e=h.ent||(h.snap&&measPickEnt(p,x,y));if(!e){flash('Зазор: щёлкните по линии, дуге или отверстию');return;}
     if(!M.gap){M.gap=e;flash('Первый контур. Щёлкните по второму');p.draw();return;}
     if(M.gap===e){flash('Это тот же элемент — щёлкните по другому');return;}
     const g=gapBetween(M.gap,e);M.gap=null;const it={t:'gap',a:g.p,b:g.q,d:g.d};M.items.push(it);flash('Зазор (кратчайшее расстояние) '+fmm(g.d)+' мм  ·  '+measInfo(it));p.draw();return;}
-  if(SET.mmode==='ang'){ // угол: клик по одной линии, потом по другой
+  if(mmode()==='ang'){ // угол: клик по одной линии, потом по другой
     const e=h.ent||(h.snap&&measPickLine(p,x,y));if(!e||e.t!=='L'){flash('Угол: щёлкните по прямой линии (отрезку)');return;}
     if(!M.ang){M.ang=e;flash('Первая линия. Щёлкните по второй');p.draw();return;}
     const A=angBetween(M.ang,e);M.ang=null;if(!A){flash('Линии параллельны — угла нет');p.draw();return;}
     M.items.push({t:'ang',e1:M.ang||null,A});flash('Угол '+fmm(A.deg)+'°  ·  смежный '+fmm(180-A.deg)+'°');p.draw();return;}
   if(M.pts.length===2){const a=M.pts[0],b=M.pts[1],it={t:'lin',a,b,dir:linDim(p,a,b,mw),o:s2m(p,x,y)};M.items.push(it);M.pts=[];
     flash((it.dir==='h'?'Горизонтальный ':it.dir==='v'?'Вертикальный ':'По прямой ')+fmm(dimGeom(p,it).val)+' мм  ·  '+measInfo(it));p.draw();return;}
-  if(M.rad){ // радиус / диаметр: второй клик — где поставить надпись (выноска от дуги к надписи)
-    const it={t:'ent',e:M.rad,o:s2m(p,x,y)};M.items.push(it);M.rad=null;const t=entText(it.e);flash(t.main+'  ·  '+t.sub);p.draw();return;}
+  if(M.rad){ // радиус / диаметр / длина дуги: второй клик — где поставить надпись (выноска от дуги к надписи)
+    const it={t:'ent',e:M.rad,o:s2m(p,x,y),k:M.radK||null};M.items.push(it);M.rad=null;M.radK=null;const t=entText(it.e,it.k);flash(t.main+'  ·  '+t.sub);p.draw();return;}
+  {const md=mmode();if(md==='rad'||md==='dia'||md==='arc'){   // Радиус / Диаметр / Длина дуги — как в AutoCAD: выбрать дугу или окружность
+    const e=h.ent||measPickEnt(p,x,y);
+    if(!e||e.t==='L'){flash(md==='arc'?'Длина дуги: щёлкните по дуге':'Щёлкните по дуге или окружности');return;}
+    if(md==='arc'&&e.t!=='A'){flash('Длина дуги: это окружность — щёлкните по дуге');return;}
+    M.rad=e;M.radK=md==='rad'?'R':md==='dia'?'D':'A';flash('Отведите курсор и щёлкните, где поставить надпись');p.draw();return;}}
   if(!M.pts.length&&h.ent&&!h.snap){
     if(h.ent.t==='L'){M.items.push({t:'ent',e:h.ent});const t=entText(h.ent);flash(t.main+'  ·  '+t.sub);p.draw();return;}
     M.rad=h.ent;flash((h.ent.t==='C'?'Диаметр':'Радиус')+': отведите курсор и щёлкните, где поставить надпись');p.draw();return;}
   if(!h.snap){flash('Наведите на конец, середину или центр — точка ставится только с привязкой (зелёный значок)');return;}
   M.pts.push([h.snap[0],h.snap[1]]);
-  if(M.pts.length===2&&SET.mmode==='dist'){const it={t:'dist',a:M.pts[0],b:M.pts[1]};M.items.push(it);M.pts=[];flash('Расстояние '+fmm(Math.hypot(it.b[0]-it.a[0],it.b[1]-it.a[1]))+' мм  ·  '+measInfo(it));p.draw();return;}
+  if(M.pts.length===2&&mmode()==='dist'){const it={t:'dist',a:M.pts[0],b:M.pts[1],ruler:MEAS.ruler};if(MEAS.ruler)M.items=M.items.filter(i=>!i.ruler);M.items.push(it);M.pts=[];flash('Расстояние '+fmm(Math.hypot(it.b[0]-it.a[0],it.b[1]-it.a[1]))+' мм  ·  '+measInfo(it));p.draw();return;}
   flash(M.pts.length===1?'Первая точка. Укажите вторую':'Теперь отведите курсор и щёлкните, где положить размер: выше/ниже — горизонтальный, левее/правее — вертикальный');
   p.draw();
 }
-function entText(e){
+function entText(e,k){
   if(e.t==='L')return {main:'L '+fmm(Math.hypot(e.x2-e.x1,e.y2-e.y1)),sub:'длина отрезка'};
+  if(k){let sw=Math.PI*2;if(e.t==='A'){sw=e.ccw?e.a1-e.a0:e.a0-e.a1;while(sw<=0)sw+=Math.PI*2;}
+    if(k==='R')return {main:'R'+fmm(e.r),sub:'Ø'+fmm(e.r*2)};
+    if(k==='D')return {main:'Ø'+fmm(e.r*2),sub:'R '+fmm(e.r)};
+    if(k==='A')return {main:'⌒'+fmm(e.r*sw),sub:'длина дуги · R'+fmm(e.r)+' · '+fmm(sw*180/Math.PI)+'°'};}
   if(e.t==='C')return {main:'Ø'+fmm(e.r*2),sub:'R '+fmm(e.r)+' · длина окружности '+fmm(2*Math.PI*e.r)};
   let sw=e.ccw?e.a1-e.a0:e.a0-e.a1;while(sw<=0)sw+=Math.PI*2;
   return {main:'R'+fmm(e.r),sub:'Ø'+fmm(e.r*2)+' · дуга '+fmm(sw*180/Math.PI)+'° · длина '+fmm(e.r*sw)};
 }
-function measText(it){if(it.t==='ent')return entText(it.e);const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]),d=Math.hypot(dx,dy);
+function measText(it){if(it.t==='ent')return entText(it.e,it.k);const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]),d=Math.hypot(dx,dy);
   return {main:fmm(d)+' мм',sub:measInfo(it)};}
 /* подписи Ø отверстий (режим «Размеры», кнопка Ø; ⚙ «Подписи Ø отверстий»):
    sum — цвет по диаметру: каждое отверстие обведено цветом своего диаметра, внизу — сводка «● Ø4,2 ×18  ● Ø6,1 ×7»;
@@ -4310,7 +4357,7 @@ function measPaint(p,c,d){
       c.strokeStyle=col;c.lineWidth=1.3;c.beginPath();c.arc(V[0],V[1],R,s0,s1,sd>0);c.stroke();
       c.fillStyle=col;c.beginPath();c.arc(V[0],V[1],3,0,Math.PI*2);c.fill();
       const am=(s0+s1)/2;tag(V[0]+(R+22)*Math.cos(am),V[1]+(R+14)*Math.sin(am),fmm(A.deg)+'°');}
-    else{const e=it.e,t=entText(e);if(e.t==='L'){hl(e);const a=m2s(p,e.x1,e.y1),b=m2s(p,e.x2,e.y2);tag((a[0]+b[0])/2,(a[1]+b[1])/2-14,t.main);}
+    else{const e=it.e,t=entText(e,it.k);if(e.t==='L'){hl(e);const a=m2s(p,e.x1,e.y1),b=m2s(p,e.x2,e.y2);tag((a[0]+b[0])/2,(a[1]+b[1])/2-14,t.main);}
       else radLeader(e,it.o||[e.cx+e.r*1.3,e.cy+e.r*0.3],t.main,false);}
   }
   col=COL;
@@ -4318,7 +4365,7 @@ function measPaint(p,c,d){
   const H=M.hover;
   if(M.pts.length){c.fillStyle=col;for(const q of M.pts){const s=m2s(p,...q);c.beginPath();c.arc(s[0],s[1],4,0,Math.PI*2);c.fill();}
     if(M.pts.length===1&&M.mouse){const b=H&&H.snap?[H.snap[0],H.snap[1]]:M.mouse,s0=m2s(p,...M.pts[0]),s1=m2s(p,...b);c.setLineDash([4,4]);c.strokeStyle=col;c.lineWidth=1;c.beginPath();c.moveTo(...s0);c.lineTo(...s1);c.stroke();c.setLineDash([]);}
-    if(M.pts.length===1&&M.mouse&&SET.mmode==='dist'&&H&&H.snap)drawDist({a:M.pts[0],b:[H.snap[0],H.snap[1]]},true);
+    if(M.pts.length===1&&M.mouse&&mmode()==='dist'&&H&&H.snap)drawDist({a:M.pts[0],b:[H.snap[0],H.snap[1]]},true);
     if(M.pts.length===2&&M.mw){const it={t:'lin',a:M.pts[0],b:M.pts[1],dir:linDim(p,M.pts[0],M.pts[1],M.mw),o:M.mouse};drawDim(it,true);}}
   if(H&&H.snap&&M.pts.length<2){const [x,y]=m2s(p,H.snap[0],H.snap[1]);c.strokeStyle='#39d353';c.lineWidth=2;c.beginPath();
     if(H.snap[2]==='центр'){c.arc(x,y,6,0,Math.PI*2);}else if(H.snap[2]==='середина'){c.moveTo(x,y-7);c.lineTo(x+7,y+5);c.lineTo(x-7,y+5);c.closePath();}else if(H.snap[2]==='квадрант'){c.moveTo(x,y-7);c.lineTo(x+7,y);c.lineTo(x,y+7);c.lineTo(x-7,y);c.closePath();}else c.rect(x-5,y-5,10,10);
@@ -4326,23 +4373,33 @@ function measPaint(p,c,d){
   else if(H&&H.ent&&!M.pts.length){hl(H.ent);}
   if(M.ang)hl(M.ang);
   if(M.gap)hl(M.gap);
-  if(M.rad&&M.mouse)radLeader(M.rad,M.mouse,entText(M.rad).main,true);
+  if(M.rad&&M.mouse)radLeader(M.rad,M.mouse,entText(M.rad,M.radK).main,true);
   c.restore();
 }
+function measUiSync(){$('vMeas').classList.toggle('on',MEAS.on&&!MEAS.ruler);$('vRuler').classList.toggle('on',MEAS.on&&MEAS.ruler);$('measBox').hidden=!MEAS.on||MEAS.ruler||$('vMeas').hidden;}
+function measPendClear(){for(const p of panes){const M=p.ms;if(M){M.pts=[];M.ang=null;M.rad=null;M.gap=null;p.draw();}}}
+function rulerToggle(on){   // «Измерить» — линейка: две точки, показывается только последнее измерение, на деталь не ставится; поставленные размеры не трогает
+  on=on===undefined?!(MEAS.on&&MEAS.ruler):on;
+  if(on){if(MEAS.on){MEAS.ruler=true;MEAS.rulerOnly=false;measUiSync();measPendClear();}else{MEAS.ruler=true;MEAS.rulerOnly=true;measToggle(true);}
+    flash('Измерить: две точки с привязкой — расстояние, ΔX, ΔY, угол. Следующие две точки — новое измерение. Esc или 📐 — выйти');return;}
+  if(!(MEAS.on&&MEAS.ruler))return;
+  for(const p of panes)if(p.ms)p.ms.items=p.ms.items.filter(i=>!i.ruler);
+  if(MEAS.rulerOnly){MEAS.rulerOnly=false;measToggle(false);}else{MEAS.ruler=false;measUiSync();measPendClear();}}
 function measToggle(on){
-  MEAS.on=on===undefined?!MEAS.on:on;if(MEAS.on&&LOUPE.on)loupeOff();   // лупа «по кнопке мыши» и размеры вместе не работают — включили одно, другое выключается
-  $('vMeas').classList.toggle('on',MEAS.on);$('measBox').hidden=!MEAS.on;
+  MEAS.on=on===undefined?!MEAS.on:on;if(!MEAS.on){MEAS.ruler=false;MEAS.rulerOnly=false;for(const p of panes)if(p.ms)p.ms.items=p.ms.items.filter(i=>!i.ruler);}if(MEAS.on&&LOUPE.on)loupeOff();   // лупа «по кнопке мыши» и размеры вместе не работают — включили одно, другое выключается
+  $('vMeas').classList.toggle('on',MEAS.on&&!MEAS.ruler);$('vRuler').classList.toggle('on',MEAS.on&&MEAS.ruler);$('measBox').hidden=!MEAS.on||MEAS.ruler;
   if(!MEAS.on&&SET.mkeep==='mode')MEAS.store.clear();
   for(const p of panes){p.ms=null;p.cv.style.cursor=MEAS.on?'crosshair':'';p.draw();}
-  if(MEAS.on)flash('Размеры: две точки (с привязкой) и третий клик — где положить размер. Клик по линии / отверстию — длина / Ø. Поставленный размер можно перетащить, клик — выбрать, Delete — удалить. Esc — отменить начатый, Backspace — убрать последний');
+  if(MEAS.on&&!MEAS.ruler)flash('Размеры: две точки (с привязкой) и третий клик — где положить размер. Клик по линии / отверстию — длина / Ø. Поставленный размер можно перетащить, клик — выбрать, Delete — удалить. Esc — отменить начатый, Backspace — убрать последний');
 }
 function measUndo(all){for(const p of panes){const M=p.ms;if(!M)continue;if((M.pts.length||M.ang||M.rad||M.gap)&&!all){M.pts=[];M.ang=null;M.rad=null;M.gap=null;}else if(all)M.items.length=0;else M.items.pop();M.sel=null;M.hit=null;p.draw();}}
-$('measMode').value=['dist','ang','gap'].includes(SET.mmode)?SET.mmode:'dim';$('measMode').onchange=e=>{SET.mmode=e.target.value;saveSet();for(const p of panes)if(p.ms){p.ms.pts=[];p.ms.ang=null;p.draw();}};
+$('measMode').value=MMODES.includes(SET.mmode)?SET.mmode:'dim';$('measMode').onchange=e=>{SET.mmode=e.target.value;saveSet();for(const p of panes)if(p.ms){p.ms.pts=[];p.ms.ang=null;p.draw();}};
 $('measHoles').classList.toggle('on',SET.mholes!==false);$('measHoles').onclick=()=>{SET.mholes=SET.mholes===false;saveSet();$('measHoles').classList.toggle('on',SET.mholes!==false);panes.forEach(p=>p.draw());};
 $('sMkeep').value=['view','proj'].includes(SET.mkeep)?SET.mkeep:'mode';$('sMkeep').onchange=e=>{SET.mkeep=e.target.value;saveSet();};
 $('measPrec').value=String(mDec());$('measPrec').onchange=e=>{SET.mprec=+e.target.value;saveSet();panes.forEach(p=>p.draw());};
 $('measUndo').onclick=()=>measUndo(false);$('measClear').onclick=()=>measUndo(true);
-$('vMeas').onclick=()=>measToggle();
+$('vMeas').onclick=()=>{if(MEAS.on&&MEAS.ruler){if(MEAS.rulerOnly){for(const p of panes)if(p.ms)p.ms.items=p.ms.items.filter(i=>!i.ruler);MEAS.ruler=false;MEAS.rulerOnly=false;measUiSync();measPendClear();}else rulerToggle(false);}else measToggle();};
+$('vRuler').onclick=()=>rulerToggle();
 /* =====================================================================
    ТАБЛИЦА DXF ПАПКИ и ПРОВЕРКА ПЕРЕД РЕЗКОЙ.
    Площадь, длина реза, врезки и замечания считает GEO.analyze (в отдельном потоке).
@@ -5570,7 +5627,7 @@ document.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.altKey||e.metaKey)return;   // Ctrl+R, Ctrl+F, Ctrl+L, Ctrl+0, Ctrl+Shift+B … — браузеру
   if(k==='Escape'){   // Esc закрывает верхнее всплывающее окно или меню
     if(MTM){MTM=false;const m=$('mtMenu');if(m)m.hidden=true;e.preventDefault();return;}
-    for(const id of ['noteBox','cmpPanel','onlyPanel','openMenu','pngMenu','tblColMenu','xfMenu']){const el=$(id);
+    for(const id of ['noteBox','cmpPanel','onlyPanel','openMenu','pngMenu','tblColMenu','xfMenu','shareMenu']){const el=$(id);
       if(el&&!el.hidden&&getComputedStyle(el).display!=='none'){el.hidden=true;e.preventDefault();return;}}}
   for(const id of ['logPanel','histPanel'])if(!$(id).hidden){if(k==='Escape')$(id).hidden=true;return;}
   if(k==='Escape'&&!$('setPanel').hidden){$('setPanel').hidden=true;return;}
@@ -5590,7 +5647,7 @@ document.addEventListener('keydown',e=>{
   if(MEAS.on&&viewerShown()){   // размеры: Esc — отменить начатый (остальные остаются), Backspace / Ctrl+Z — убрать последний
     if(k==='Escape'&&panes.some(p=>p.ms&&(p.ms.pts.length||p.ms.ang||p.ms.rad||p.ms.gap))){for(const p of panes)if(p.ms){p.ms.pts=[];p.ms.ang=null;p.ms.rad=null;p.ms.gap=null;p.draw();}return;}
     if(k==='Escape'&&panes.some(p=>p.ms&&p.ms.sel)){for(const p of panes)if(p.ms){p.ms.sel=null;p.draw();}return;}
-    if(k==='Escape'){measToggle(false);return;}
+    if(k==='Escape'){if(MEAS.ruler&&!MEAS.rulerOnly){rulerToggle(false);return;}measToggle(false);return;}
     if((k==='Delete'||k==='Backspace')&&panes.some(p=>p.ms&&p.ms.sel)){e.preventDefault();measDelSel();return;}
     if(k==='Backspace'||(e.ctrlKey&&/^[zZяЯ]$/.test(k))){e.preventDefault();measUndo(false);return;}
   }
@@ -5646,6 +5703,7 @@ document.addEventListener('keydown',e=>{
   else if(/^[rRкК]$/.test(k))$('vSide').click();
   else if(/^[wWцЦ]$/.test(k))cycleLineK();
   else if(/^[dDвВ]$/.test(k)&&!$('vMeas').hidden)measToggle();
+  else if(/^[uUгГ]$/.test(k)&&!$('vRuler').hidden)rulerToggle();
   else if(/^[tTеЕ]$/.test(k)&&!$('vTxt').hidden)txtToggle();
   else if(/^[cCсС]$/.test(k)&&!$('vChk').hidden)chkToggle();
   else if(k==='['||k==='х'||k==='Х')setContrast(SET.pdfLv-1);

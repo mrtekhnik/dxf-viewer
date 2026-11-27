@@ -9,6 +9,8 @@
 :root{--prevw:480px;--treew:270px;--lthumb:76px;--bg:#1b1d21;--panel:#24272c;--line:#363a41;--line2:#2c2f35;--fg:#e6e6e6;--mut:#9aa0a8;--acc:#4ea1ff;--warn:#e5b54a;--err:#ff6b6b;
   --cv:#0f1012;--btn:#30343a;--btnh:#5a6069;--inp:#16181b;--on:#25425f;--hover:#2c3138;--pair:#3a2b2a;--pairb:#7a4a44;--ph:#5c626b;
   --tile:180px;--listw:380px}
+:root[data-theme=acad]{--bg:#2b313a;--panel:#3b4452;--line:#555f6e;--line2:#454e5b;--fg:#e9ecf0;--mut:#b0b8c3;--acc:#5aa6ef;--warn:#e8b84a;--err:#ff6b6b;
+  --cv:#212830;--btn:#4a5463;--btnh:#717c8c;--inp:#2c333d;--on:#2f5d8a;--hover:#4c5767;--pair:#4b3d3c;--pairb:#8c5d56;--ph:#6e7682}
 :root[data-theme=light]{--bg:#eef0f3;--panel:#ffffff;--line:#d3d7dd;--line2:#e7e9ed;--fg:#1d2024;--mut:#67707b;--acc:#1f6fd1;--warn:#c98a00;--err:#d93636;
   --cv:#f7f8fa;--btn:#f3f4f6;--btnh:#9aa1ab;--inp:#ffffff;--on:#dbe8fb;--hover:#edf3fb;--pair:#fbece9;--pairb:#d9a59c;--ph:#9aa0a8}
 *{box-sizing:border-box}
@@ -33,6 +35,7 @@ header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg b
 @media (max-width:1480px){header .lbl.b{display:none}header .szbox input{width:60px}header .grp{padding:0 7px}}
 @media (max-width:1250px){header .lbl{display:none}}
 #status a.crumb{color:var(--acc);cursor:pointer;text-decoration:none}#status a.crumb:hover{text-decoration:underline}#status a.crumb.here{color:inherit;font-weight:600;cursor:default;text-decoration:none}
+.sh-drag{margin:4px 8px;padding:9px 10px;border:1px dashed var(--btnh);border-radius:8px;cursor:grab;color:var(--fg);font-size:13px;user-select:none}.sh-drag:active{cursor:grabbing}.sh-note{padding:4px 10px 8px;color:var(--mut);font-size:11px;max-width:330px;line-height:1.35}#shareMenu small{color:var(--mut)}
 header.c1 .lbl.a{display:none}header.c2 .lbl.b{display:none}header.c2 .grp{padding:0 7px}header.c3 .lbl{display:none}header.c3 .szbox input{width:60px}header.c4 .grp{padding:0 4px}header.c4 .szbox{display:none}header.c4 .grp.grow{flex-basis:90px}header.c5 button{padding-left:6px;padding-right:6px}header.c5 .grp{gap:3px;padding:0 3px}header.c5 .grp.grow{flex-basis:60px}header.c5 #typeSel{max-width:62px}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
 .brand small{color:var(--mut);font-weight:400}
@@ -338,7 +341,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.8.0</small></div>
+  <div class="brand">DXF <small>+PDF · v4.9.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -409,7 +412,14 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
     <button id="vPrev" title="Предыдущий (←)">‹</button><button id="vNext" title="Следующий (→)">›</button>
     <span id="vName"></span>
     <span id="vPages" hidden><button id="vPgPrev" title="Предыдущая страница (PgUp)">▲</button><span id="vPgNum"></span><button id="vPgNext" title="Следующая страница (PgDn)">▼</button></span>
-    <span class="vgrp"><span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span><button id="vPin" title="Добавить файл в ярлыки">★</button></span>
+    <span class="vgrp"><span class="pairbox"><button id="vPair" hidden></button><button id="vPairMenu" title="Связанные файлы, ручной выбор пары">▾</button></span><button id="vPin" title="Добавить файл в ярлыки">★</button><span class="mwrap"><button id="vShare" title="Открыть в другой программе, поделиться, сохранить копию">⤴</button>
+      <div id="shareMenu" class="menu" hidden style="min-width:320px">
+        <button id="shShare">📤 Поделиться… <small>(почта, Telegram, Teams)</small></button>
+        <button id="shSave">💾 Сохранить копию…</button>
+        <button id="shTab">🌐 Открыть PDF во вкладке Chrome</button>
+        <div id="shDrag" draggable="true" class="sh-drag" title="Перетащите в окно AutoCAD, в Проводник или на рабочий стол">⠿ Перетащите отсюда в AutoCAD, Проводник или на рабочий стол</div>
+        <div class="sh-note">Запустить AutoCAD или PDF-программу напрямую браузер не позволяет — перетащите файл или сохраните копию и откройте её.</div>
+      </div></span></span>
     <span class="vgrp"><button id="vFit" title="Показать всё — вписать в окно (F, двойной клик)">⤢</button><button id="vFitW" hidden title="Вписать по ширине окна (Shift+F)">⟷</button><button id="vLoupe" title="Лупа: включите, затем клик — показать лупу (колесо — её увеличение), ещё клик — убрать. Или удерживайте Z">🔍</button><button id="vLw" title="Толщина линий DXF (W — по кругу)">≡<span class="lbl"> Линии</span></button><span id="vCt" class="xfbox" hidden><button id="vCtM" title="Линии PDF светлее ( [ )">−</button><span id="vCtN" title="Насыщенность линий PDF, от −2 до +4 (0 — как в файле)">линии 0</span><button id="vCtP" title="Линии PDF темнее ( ] )">+</button></span><button id="vCont" hidden title="Все страницы подряд / по одной">⇕</button></span>
     <span class="vgrp"><span id="vXf" class="xfbox"><button id="vRotL" title="Повернуть на 90° против часовой (Q)">⟲</button><button id="vRotR" title="Повернуть на 90° по часовой (E)">⟳</button><button id="vMir" title="Зеркально слева направо (M)">⇋</button><button id="vMirV" title="Зеркально сверху вниз (Shift+M)">⇅</button><span class="mwrap"><button id="vXfSave" title="Записать поворот / зеркало в файл DXF; произвольный угол">💾</button>
       <div id="xfMenu" class="menu" hidden style="min-width:290px">
@@ -420,7 +430,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
         <button id="xfGo">💾 Записать в файл</button>
         <div id="xfNote" class="xfm-n"></div>
       </div></span></span><button id="vPdfRot" hidden class="warn">⤾<span class="lbl"> Лист</span></button></span>
-    <span class="vgrp"><button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏<span class="lbl"> Размеры</span></button><span id="measBox" class="xfbox" hidden><select id="measMode" title="Размер — как в CAD: 2 точки и 3-й клик — где положить (горизонтальный / вертикальный / по прямой). Расстояние — как в AutoCAD: 2 точки, сразу по прямой, по X, по Y и угол"><option value="dim">Размер</option><option value="dist">Расстояние</option><option value="ang">Угол</option><option value="gap">Зазор</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span><button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓<span class="lbl"> Проверка</span></button><button id="vTxt" hidden title="Текст из PDF (T): обведите рамкой или щёлкните по надписи — текст скопируется">𝐓<span class="lbl"> Текст</span></button></span>
+    <span class="vgrp"><button id="vRuler" hidden title="Измерить (как «Измерить» в AutoCAD): две точки с привязкой — расстояние, ΔX, ΔY, угол. На деталь не ставится — показывается последнее измерение (U)">📐<span class="lbl"> Измерить</span></button><button id="vMeas" hidden title="Размеры: две точки с привязкой и третий клик — где положить размер (выше/ниже — горизонтальный, левее/правее — вертикальный); клик по линии, дуге, отверстию — L / R / Ø (D)">📏<span class="lbl"> Размеры</span></button><span id="measBox" class="xfbox" hidden><select id="measMode" title="Вид размера — как в AutoCAD. Размер — авто: 2 точки и 3-й клик (выше/ниже — горизонтальный, левее/правее — вертикальный, между — параллельный); клик по линии, дуге, отверстию — L / R / Ø"><option value="dim">Размер (авто)</option><option value="lin">Линейный</option><option value="ali">Параллельный</option><option value="ang">Угловой</option><option value="arc">Длина дуги</option><option value="rad">Радиус</option><option value="dia">Диаметр</option><option value="gap">Зазор</option></select><button id="measHoles" title="Подписывать диаметры всех отверстий">Ø</button><select id="measPrec" title="Точность размеров"><option value="0">1</option><option value="1">0,1</option><option value="2">0,01</option><option value="3">0,001</option></select><button id="measUndo" title="Убрать последний размер (Backspace)">↶</button><button id="measClear" title="Убрать все размеры">Очистить</button></span><button id="vChk" hidden title="Проверка перед резкой: незамкнутые контуры, двойные линии, малые отверстия, узкие перемычки… (C)">✓<span class="lbl"> Проверка</span></button><button id="vTxt" hidden title="Текст из PDF (T): обведите рамкой или щёлкните по надписи — текст скопируется">𝐓<span class="lbl"> Текст</span></button></span>
     <span class="vgrp"><button id="vSide" title="Чертёж и все его развёртки одновременно (R)">⧉<span class="lbl"> Рядом</span></button><button id="vWith" hidden title="Сравнить эту деталь с другим DXF — из списка похожих по габариту или файлом с диска (V)">⇆<span class="lbl"> Сравнить</span></button><button id="vOv" hidden title="Наложить две детали друг на друга и показать отличия (N)">Наложение</button><button id="vSync" hidden title="Синхронный масштаб и сдвиг (L)">🔒</button></span>
     <span class="vgrp"><span class="mwrap"><button id="vPng" title="Сохранить вид картинкой (PNG)">🖼</button>
       <div id="pngMenu" class="menu" hidden style="right:0;left:auto;min-width:240px">
@@ -511,7 +521,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 
 <div id="setPanel" class="pop" hidden>
   <div class="pp-h"><b>Настройки</b>&nbsp;<small id="verSet" style="color:var(--mut)"></small><button id="setUpd" title="Проверить, есть ли новая версия">Проверить обновления</button><span class="sp"></span><button id="setLog" title="Замечания при чтении файлов, проверить все, очистить кэш миниатюр">Журнал…</button><button id="setClose">✕</button></div>
-  <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option></select></div>
+  <div class="set-row"><span>Тема</span><select id="sTheme"><option value="dark">Тёмная</option><option value="light">Светлая</option><option value="auto">Как в системе</option><option value="acad">Как в AutoCAD (тёмная)</option></select></div>
   <div class="set-sec">Фон</div>
   <div class="set-row"><span>DXF</span><span><select id="sBgDxf"></select> <input type="color" id="cBgDxf" hidden></span></div>
   <div class="set-row"><span>PDF — вокруг листа</span><span><select id="sBgPdf"></select> <input type="color" id="cBgPdf" hidden></span></div>

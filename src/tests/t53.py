@@ -12,7 +12,7 @@ async def main():
     async def click(x,y):
       q=await sc(x,y); await pg.mouse.move(bb['x']+q[0],bb['y']+q[1]); await pg.wait_for_timeout(60); await pg.mouse.click(bb['x']+q[0],bb['y']+q[1]); await pg.wait_for_timeout(400)
     await click(0,0); await click(250,60); await click(120,-6)
-    await pg.select_option('#measMode','dist'); await click(50,60); await click(150,150)
+    await pg.evaluate('rulerToggle(true);0'); await click(50,60); await click(150,150)
     print('items', await pg.evaluate("panes[0].ms.items.map(i=>i.t)"))
     await pg.screenshot(path='t53a.png')
     # двойной клик — вписать, без новых точек
