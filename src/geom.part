@@ -155,7 +155,7 @@ function GEOCORE(){
     // лучшие из обеих групп — на уточнение
     const top=[...cand.filter(c=>c.src==='pca'||c.src==='axis').slice(0,3),...cand.filter(c=>c.src.startsWith('feat')).slice(0,6)];
     let best=null;
-    for(const C of top){const M=icp(IA,B,C.M,C.src.startsWith('feat')?r0*3:size*0.05,Math.max(tol,size*1e-5),40);const sc=sym(M,Math.max(tol*3,size*0.002),1500);
+    for(const C of top){const M=icp(IA,B,C.M,C.src.startsWith('feat')?r0*3:size*0.05,Math.max(Math.min(tol,size*1e-5),tol*0.5,size*1e-7),40);const sc=sym(M,Math.max(tol*3,size*0.002),1500);
       if(!best||sc>best.sc)best={M,sc,mir:C.mir};}
     return best;
   }
@@ -236,7 +236,8 @@ function GEOCORE(){
     const A=prep(docA,tol),B=prep(docB,tol);
     if(!A.n||!B.n)return {A,B,M:[1,0,0,1,0,0],fail:'Нет геометрии для сравнения'};
     const al=M0?{M:M0,mir:M0[0]*M0[3]-M0[1]*M0[2]<0}:align(A,B,tol);const M=al?al.M:[1,0,0,1,0,0];
-    const d=diff(A,B,M,tol);let desc=[];try{desc=describe(A,B,M,d,tol);}catch(e){desc=d.clusters.map(bb=>({bb,text:'отличие'}));}
+    const T=tol*(1+1e-6)+1e-9;   // допуск включительно: расхождение, равное допуску, — совпадение (запас на погрешность вычислений)
+    const d=diff(A,B,M,T);let desc=[];try{desc=describe(A,B,M,d,T);}catch(e){desc=d.clusters.map(bb=>({bb,text:'отличие'}));}
     return Object.assign({A,B,M,mir:al&&al.mir,sizeA:[A.bbox[2]-A.bbox[0],A.bbox[3]-A.bbox[1]],sizeB:[B.bbox[2]-B.bbox[0],B.bbox[3]-B.bbox[1]],desc},d);
   }
   /* =====================================================================

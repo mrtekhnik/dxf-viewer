@@ -32,6 +32,8 @@ header .seg{display:inline-flex}header .seg button{border-radius:0}header .seg b
 /* название программы в шапке видно всегда */
 @media (max-width:1480px){header .lbl.b{display:none}header .szbox input{width:60px}header .grp{padding:0 7px}}
 @media (max-width:1250px){header .lbl{display:none}}
+#status a.crumb{color:var(--acc);cursor:pointer;text-decoration:none}#status a.crumb:hover{text-decoration:underline}#status a.crumb.here{color:inherit;font-weight:600;cursor:default;text-decoration:none}
+header.c1 .lbl.a{display:none}header.c2 .lbl.b{display:none}header.c2 .grp{padding:0 7px}header.c3 .lbl{display:none}header.c3 .szbox input{width:60px}header.c4 .grp{padding:0 4px}header.c4 .szbox{display:none}header.c4 .grp.grow{flex-basis:90px}header.c5 button{padding-left:6px;padding-right:6px}header.c5 .grp{gap:3px;padding:0 3px}header.c5 .grp.grow{flex-basis:60px}header.c5 #typeSel{max-width:62px}
 .brand{font-weight:700;letter-spacing:.5px;margin-right:4px}
 .brand small{color:var(--mut);font-weight:400}
 button{background:var(--btn);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:7px 11px;font:inherit;cursor:pointer;white-space:nowrap}
@@ -174,6 +176,8 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 #vPairMenu{border-radius:0 6px 6px 0;border-left:none;padding:7px 8px}
 #stageWrap{flex:1;position:relative;min-height:0}
 #stage{position:absolute;inset:0;display:grid;gap:3px;background:var(--line)}
+.edgeNav{position:absolute;top:50%;margin-top:-50px;height:100px;width:34px;z-index:6;border:1px solid var(--line);background:rgba(36,39,44,.82);color:#e6e6e6;font-size:28px;line-height:1;padding:0;border-radius:8px;display:none;cursor:pointer}
+.edgeNav:hover{background:rgba(78,161,255,.85);color:#fff}#edgeL{left:6px}#edgeR{right:6px}#stageWrap.edgeL #edgeL,#stageWrap.edgeR #edgeR{display:block}body.mui .edgeNav{display:none!important}
 #stageMsg{position:absolute;inset:0;display:grid;place-items:center;color:var(--mut);background:var(--cv);text-align:center;padding:20px}
 .pane{position:relative;min-width:0;min-height:0;overflow:hidden}
 .pane canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
@@ -211,6 +215,9 @@ body.kbd #grid.list .tile:hover:not(.cur){background:transparent;border-color:tr
 #mtBar .mt-c{padding:2px 9px;font-size:12px;border-radius:12px;white-space:pre}
 #mtBar .mt-c.on{background:var(--acc);color:#fff;border-color:var(--acc)}
 #mtBar .mt-s{margin-left:auto;color:var(--mut);display:flex;gap:5px;align-items:center}
+#mtBar .mt-dd>button{padding:2px 10px;font-size:12px;border-radius:12px;max-width:420px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#mtBar .mt-dd>button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+#mtBar .mt-l2{margin-left:14px}
+.mt-menu{min-width:220px;max-height:60vh;overflow:auto;padding:4px 0}.mt-menu .mt-o{display:flex;align-items:center;gap:8px;padding:5px 12px;cursor:pointer;white-space:nowrap;font-size:13px}.mt-menu .mt-o:hover{background:var(--line2)}.mt-menu .mt-o i{margin-left:auto;padding-left:14px;color:var(--mut);font-style:normal}.mt-menu .mt-all{border-bottom:1px solid var(--line)}
 #tblPanel{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.45);display:flex;padding:20px}
 #tblPanel[hidden]{display:none}
 #tblBox{background:var(--panel);border:1px solid var(--line);border-radius:12px;flex:1;display:flex;flex-direction:column;overflow:hidden}
@@ -331,13 +338,14 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.6.1</small></div>
+  <div class="brand">DXF <small>+PDF · v4.7.0</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
       <div id="openMenu" class="menu" hidden>
         <button id="btnFolder" title="Открыть папку целиком (с подпапками) — заказ, изделие, папка на сервере">📂 Папка…</button>
         <button id="btnFiles" title="Выбрать отдельные DXF и PDF">📄 Файлы…</button>
+        <button id="btnNewWin" title="Ещё одно окно программы — открыть в нём другой проект и смотреть оба рядом (на одном экране или на двух мониторах)">🗗 Новое окно</button>
       </div></span>
     <button id="btnPins" title="Ярлыки — закреплённые папки и файлы">★ <span class="lbl a">Ярлыки</span></button>
     <button id="btnHist" title="История просмотров">🕘 <span class="lbl a">История</span></button>
@@ -432,11 +440,11 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
     <button id="ovMode" title="Две панели рядом или обе детали в одном окне (N)">Наложение</button>
     <span class="sp"></span>
     <span class="ovh" title="Сдвинуть вторую деталь: Shift + перетаскивание мышью">вторая (Shift+мышь):</span><span class="xfbox" title="Положение второй детали: Shift+перетаскивание — сдвиг"><button id="ovRotL" title="Вторую деталь на 90° против часовой">⟲</button><button id="ovRotR" title="Вторую деталь на 90° по часовой">⟳</button><button id="ovMir" title="Отразить вторую деталь">⇋</button><button id="ovAuto" title="Подобрать положение заново">Авто</button></span>
-    <label title="Расхождение меньше допуска считается совпадением">допуск <select id="ovTol"><option>0.01</option><option>0.05</option><option>0.1</option><option>0.2</option><option>0.5</option><option>1</option></select> мм</label>
+    <label title="Расхождение не больше допуска (включительно) считается совпадением">допуск <select id="ovTol"><option>0.001</option><option>0.005</option><option>0.01</option><option>0.02</option><option>0.05</option><option>0.1</option><option>0.2</option><option>0.5</option><option>1</option></select> мм</label>
     <button id="ovEnd" title="Показать файлы как есть, без сравнения контуров (Esc)">✕</button>
   </div>
   <div id="ovList" class="pop" hidden></div>
-  <div id="stageWrap"><div id="stage"></div><div id="stageMsg" hidden></div></div>
+  <div id="stageWrap"><div id="stage"></div><div id="stageMsg" hidden></div><button class="edgeNav" id="edgeL" title="Предыдущий файл (←, боковая кнопка мыши «назад»)">‹</button><button class="edgeNav" id="edgeR" title="Следующий файл (→, боковая кнопка мыши «вперёд»)">›</button></div>
   <div id="txtBox" hidden><div class="txt-h"><b>Текст из PDF</b> <span id="txtInfo"></span><span style="flex:1"></span><button id="txtCopy">⧉ Копировать</button><button id="txtX" title="Закрыть (Esc)">✕</button></div><textarea id="txtArea" rows="4" spellcheck="false"></textarea></div>
   <div class="vinfo"><span id="vDims"></span><span id="vCoord"></span><span class="sp"></span><button id="vWarn" hidden></button></div>
 </div>
@@ -512,6 +520,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Стрелки ‹ › по краям просмотра</span><select id="sEdge"><option value="1">показывать, когда курсор у края</option><option value="0">не показывать</option></select></div>
   <div class="set-row"><span>Обновление списка файлов</span><select id="sRefr"><option value="off">только вручную (⟳, F5)</option><option value="focus">при возврате в окно программы</option><option value="30">при возврате + каждые 30 с</option><option value="60">при возврате + каждую минуту</option><option value="300">при возврате + каждые 5 мин</option></select></div>
   <div class="set-row"><span>Всплывающие подсказки</span><select id="sFlash"><option value="2">2 с</option><option value="4">4 с</option><option value="6">6 с</option><option value="10">10 с</option><option value="off">не показывать</option></select></div>
   <div class="set-row"><span>Интерфейс</span><select id="sUi"><option value="auto">авто (телефон — свой)</option><option value="mob">как на телефоне</option><option value="pc">как на компьютере</option></select></div>

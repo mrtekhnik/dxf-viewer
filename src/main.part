@@ -137,7 +137,8 @@ function renderDoc(ctx,doc,o){
   ctx.restore();
   if(o.texts!==false)renderTexts(ctx,doc,o);
 }
-/* надписи рисуются в экранных координатах: всегда читаемо, мелкие (< 3 px) пропускаются */
+/* надписи рисуются в экранных координатах: всегда читаемо, мелкие (< 3 px) пропускаются;
+   в просмотре (o.minDim) текст размеров не меньше 7 px — размеры мелких отверстий видны и без увеличения */
 function renderTexts(ctx,doc,o){
   const d=o.dpr||1,V=[o.s*d,(o.W/2-o.cx*o.s)*d,-o.s*d,(o.H/2+o.cy*o.s)*d],X=isId(o.xf)?null:xfMat(o.xf);
   ctx.save();
@@ -145,7 +146,9 @@ function renderTexts(ctx,doc,o){
     if(!G.texts||G.off||(o.hidden&&o.hidden.has(G.layer)))continue;
     ctx.fillStyle=o.color||mapCol(G.color);
     for(const T of G.texts){
-      const hp=T.h*o.s*d;if(hp<3)continue;
+      let hp=T.h*o.s*d;
+      if(G.dim){if(SET.dims===false)continue;if(o.minDim&&hp>=0.3&&hp<7*d)hp=7*d;}
+      if(hp<3)continue;
       let px=T.x,py=T.y,ux=Math.cos(T.r),uy=Math.sin(T.r),vx=-uy,vy=ux,ha=T.ha,va=T.va;
       if(T.bk){ux=-ux;uy=-uy;}if(T.ud){vx=-vx;vy=-vy;}
       if(X){[px,py]=mApply(X,px,py);[ux,uy]=[X[0]*ux+X[2]*uy,X[1]*ux+X[3]*uy];[vx,vy]=[X[0]*vx+X[2]*vy,X[1]*vx+X[3]*vy];
@@ -265,7 +268,7 @@ function setFiles(arr,src={}){
     .sort((a,b)=>a.path.localeCompare(b.path,'ru',{numeric:true,sensitivity:'base'}))
     .map(x=>{const it=makeItem(x.file,x.path,x.rid||src.rid||null,src.rootName!=null?src.rootName:(x.path.includes('/')?x.path.split('/')[0]:''));it.h=x.h||null;it.dh=x.dh||null;return it;});
   $('empty').hidden=items.length>0;$('btnClose').hidden=!items.length;updRefr();$('btnCmp').hidden=!items.length||FOLLOW;
-  if(CMP&&!src.keepCmp){CMP=null;}MTF="";if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;document.body.classList.remove('selmode');
+  if(CMP&&!src.keepCmp){CMP=null;}MTF.clear();if(typeof SEL!=='undefined')SEL.clear();$('selBar').hidden=true;document.body.classList.remove('selmode');
   if(!arr.length)$('empty').innerHTML=EMPTY_HTML;
   if(!items.length&&arr.length)$('empty').innerHTML='DXF и PDF не найдены среди выбранных ('+arr.length+' файл.).<br>Выберите другую папку.';
   if(src.folder)histAddFolder(src.rid||null,src.rootName||'',items.length);
@@ -376,7 +379,8 @@ $('btnBrowse').onclick=()=>{SET.browse=SET.browse==='folders'?'all':'folders';sa
   flash(SET.browse==='folders'?'Показ по папкам: вложенные папки плитками, файлы — только этой папки (Backspace — наверх)':'Показ всех файлов выбранной папки со вложенными');};
 $('btnBrowse').classList.toggle('on',SET.browse==='folders');
 /* ---------- материал и толщина (из имени DXF): фильтр-строка над сеткой и сортировка ---------- */
-let MTF='';   // выбранная группа «материал|толщина» ('' — все)
+const MTF=new Set();   // выбранные группы «материал|толщина» (пусто — все); можно несколько
+let MTM=false;         // открыт ли раскрывающийся список толщин
 function mtInfo(it){if(it.type!=='dxf')return null;if(it._mt!==undefined)return it._mt;const p=nameParts(it);
   return it._mt=(p.mat||p.thk)?{mat:p.mat||'?',thk:p.thk||'',qty:+p.qty||0}:null;}
 const mtKey=it=>{const m=mtInfo(it);return m?(m.mat.toLowerCase()+'|'+m.thk):'';};
@@ -396,19 +400,36 @@ function mtBar(list){
   for(const it of list){const m=mtInfo(it);if(!m)continue;const k=mtKey(it);const g=G.get(k)||{m,n:0,q:0,p:new Set()};g.n++;g.q+=m.qty||0;G.set(k,g);}
   if(md!=='dxf')for(const it of list)if(it.type==='pdf')for(const k of mtKeys(it)){const g=G.get(k);if(g)g.p.add(it);}
   const B=$('mtBar');B.textContent='';
-  if(G.size<1){B.hidden=true;if(MTF){MTF='';}return;}
-  B.hidden=false;if(MTF&&!G.has(MTF))MTF='';
+  if(G.size<1){B.hidden=true;MTF.clear();MTM=false;return;}
+  B.hidden=false;for(const k of [...MTF])if(!G.has(k))MTF.delete(k);
+  const groups=[...G].sort((a,b)=>a[1].m.mat.localeCompare(b[1].m.mat,'ru')||mtNum(a[1].m.thk)-mtNum(b[1].m.thk));
+  const cnt=g=>md==='dxf'?String(g.n):md==='pdf'?String(g.p.size):g.n+' + '+g.p.size;
   const lab=document.createElement('span');lab.className='mt-l';lab.textContent='Материал · толщина:';B.appendChild(lab);
-  const chip=(k,t,tip)=>{const c=document.createElement('button');c.className='mt-c'+(MTF===k?' on':'');c.textContent=t;c.title=tip;c.onclick=()=>{MTF=MTF===k&&k?'':k;VW.idx=-1;applyFilter();};B.appendChild(c);};
-  chip('','все','Показать все файлы');
-  for(const [k,g] of [...G].sort((a,b)=>a[1].m.mat.localeCompare(b[1].m.mat,'ru')||mtNum(a[1].m.thk)-mtNum(b[1].m.thk)))
-    chip(k,mtLabel(g.m)+'  ('+(md==='dxf'?g.n:md==='pdf'?g.p.size:g.n+' + '+g.p.size)+')',g.n+' DXF'+(g.p.size?', '+g.p.size+' PDF':'')+(g.q?', деталей по количеству в имени: '+g.q:'')+' — клик: показать только их');
+  // раскрывающийся список: можно отметить несколько толщин
+  const W=document.createElement('span');W.className='mwrap mt-dd';
+  const btn=document.createElement('button');btn.id='mtBtn';btn.className=MTF.size?'on':'';
+  const sel=groups.filter(([k])=>MTF.has(k)).map(([,g])=>mtLabel(g.m));
+  btn.textContent=(sel.length?sel.slice(0,2).join(', ')+(sel.length>2?' и ещё '+(sel.length-2):''):'все ('+groups.length+')')+' ▾';
+  btn.title='Выбрать одну или несколько толщин';
+  btn.onclick=e=>{e.stopPropagation();MTM=!MTM;M.hidden=!MTM;if(MTM)menuFix(M,btn);};
+  const M=document.createElement('div');M.id='mtMenu';M.className='menu mt-menu';M.hidden=!MTM;M.onclick=e=>e.stopPropagation();
+  const all=document.createElement('label');all.className='mt-o mt-all';all.innerHTML='<input type="checkbox"> <b>все</b>';all.querySelector('input').checked=!MTF.size;
+  all.querySelector('input').onchange=()=>{MTF.clear();VW.idx=-1;applyFilter();};M.appendChild(all);
+  for(const [k,g] of groups){const o=document.createElement('label');o.className='mt-o';o.innerHTML='<input type="checkbox"> <span></span><i></i>';
+    o.querySelector('span').textContent=mtLabel(g.m);o.querySelector('i').textContent=cnt(g);
+    o.title=g.n+' DXF'+(g.p.size?', '+g.p.size+' PDF':'')+(g.q?', деталей по количеству в имени: '+g.q:'');
+    const cb=o.querySelector('input');cb.checked=MTF.has(k);cb.onchange=()=>{if(cb.checked)MTF.add(k);else MTF.delete(k);VW.idx=-1;applyFilter();};M.appendChild(o);}
+  W.appendChild(btn);W.appendChild(M);B.appendChild(W);
+  if(MTM)requestAnimationFrame(()=>{if(!M.hidden)menuFix(M,btn);});
+  // что показывать — отдельно, со своей подписью, чтобы не сливалось с толщинами
+  const l2=document.createElement('span');l2.className='mt-l mt-l2';l2.textContent='Показывать:';B.appendChild(l2);
   const sw=document.createElement('span');sw.className='seg mt-w';sw.title='Что показывать по выбранной толщине: только развёртки DXF, только чертежи PDF (материал — от их развёрток) или всё вместе';
   for(const [v,t] of [['dxf','DXF'],['pdf','PDF'],['all','вместе']]){const b=document.createElement('button');b.textContent=t;b.className=md===v?'on':'';b.onclick=()=>{SET.mtShow=v;saveSet();applyFilter();};sw.appendChild(b);}
   B.appendChild(sw);
   const so=document.createElement('label');so.className='mt-s';so.innerHTML='<input type="checkbox"> сортировать по материалу и толщине';
   so.querySelector('input').checked=!!SET.sortMt;so.querySelector('input').onchange=e=>{SET.sortMt=e.target.checked;saveSet();applyFilter();};B.appendChild(so);
 }
+document.addEventListener('click',e=>{if(MTM&&!e.target.closest('.mt-dd')){MTM=false;const m=$('mtMenu');if(m)m.hidden=true;}});
 function applyFilter(){
   const cur=view[VW.idx];
   const q=$('filter').value.trim().toLowerCase(),ty=$('typeSel').value;
@@ -417,7 +438,7 @@ function applyFilter(){
   const inDir=it=>fm?dirPath(it.path)===eff:(!curDir||it.path.startsWith(curDir+'/'));
   view=items.filter(it=>(!cf||cmpMatch(it,cf))&&inDir(it)&&(!q||it.path.toLowerCase().includes(q))&&(!ty||it.type===ty));
   mtBar(view);                                       // строка «материал · толщина» — по файлам, видимым до этого фильтра
-  if(MTF)view=view.filter(it=>mtPass(it)&&mtKeys(it).includes(MTF));   // DXF, PDF (по их развёрткам) или всё вместе
+  if(MTF.size)view=view.filter(it=>mtPass(it)&&mtKeys(it).some(k=>MTF.has(k)));   // DXF, PDF (по их развёрткам) или всё вместе
   if(SET.sortMt)view=view.slice().sort((a,b)=>mtCmp(a,b));
   VW.idx=cur?view.indexOf(cur):-1;
   const g=$('grid');io.disconnect();g.textContent='';
@@ -508,6 +529,15 @@ async function xfReload(it,nf){   // файл перезаписан: переч
 }
 $('xfGo').onclick=xfWrite;
 $('btnRefr').onclick=()=>refreshFolder(false);
+/* панель кнопок — всегда в один ряд: если не помещается (появились «Журнал», «Сравнить», «Обновить»…), подписи прячутся по очереди, остаются значки */
+function hdrFit(){const H=document.querySelector('header');if(!H||document.body.classList.contains('mui'))return;
+  const C=['c1','c2','c3','c4','c5'];H.classList.remove(...C);
+  const wrapped=()=>{const g=[...H.children].filter(x=>x.offsetParent!==null&&x.tagName!=='INPUT');return g.some(x=>x.offsetTop>g[0].offsetTop+8);};
+  for(const c of C){if(!wrapped())break;H.classList.add(c);}}
+addEventListener('resize',()=>requestAnimationFrame(hdrFit));
+new MutationObserver(()=>requestAnimationFrame(hdrFit)).observe(document.querySelector('header'),{subtree:true,attributes:true,attributeFilter:['hidden']});
+requestAnimationFrame(hdrFit);
+$('btnNewWin').onclick=()=>{$('openMenu').hidden=true;const w=window.open(location.pathname+'?new='+Date.now(),'_blank');if(!w)flash('Chrome не дал открыть окно — разрешите всплывающие окна для этого сайта');};
 
 /* подписи под миниатюрами: свои настройки для сетки и для списка */
 function capText(it,c){const p=[];if(c.type)p.push(it.type.toUpperCase());if(c.size)p.push(fmtSize(it.file.size));if(c.date)p.push(fmtDate(it.file.lastModified));
@@ -582,6 +612,7 @@ async function pdfThumb(doc){
 function applyThumb(it,rec){
   it.state=2;it.size=rec.size;setLog(it,rec.log||[]);
   if(it.tag)it.tag.textContent=rec.pages>1?'PDF · '+rec.pages+' стр.':'PDF';
+  if(it.type==='pdf'&&rec.pages)it.np=rec.pages;   // число листов — для строки состояния
   if(rec.blob){if(it.url)URL.revokeObjectURL(it.url);it.url=URL.createObjectURL(rec.blob);it.img.src=it.url;it.img.hidden=false;it.ph.hidden=true;}
   else{it.img.hidden=true;it.ph.hidden=false;it.ph.textContent=it.err?'ошибка':'нет геометрии';}
 }
@@ -597,10 +628,22 @@ function scheduleStatus(){if(!stTimer)stTimer=setTimeout(updateStatus,120);}
 function updateStatus(){
   stTimer=0;
   const done=items.filter(i=>i.log).length,bad=items.filter(i=>i.issues).length;
-  if(!flashT)$('status').textContent=items.length?`${curDir?'Папка: '+curDir.split('/').join(' / ')+' · ':''}Файлов: ${items.length}${view.length!==items.length?' (показано '+view.length+')':''} · проверено: ${done} · с замечаниями: ${bad}`:'';
+  if(!flashT){const S=$('status');S.textContent='';
+    if(items.length){
+      // путь как в Проводнике: клик по папке — перейти в неё
+      const segs=curDir?curDir.split('/'):(rootLabel()?[items.find(it=>it.path.includes('/'))?.path.split('/')[0]].filter(Boolean):[]);
+      const multi=!curDir&&rootLabel().startsWith('Папки');
+      if(multi)S.append(rootLabel());
+      else if(segs.length){S.append('Папка: ');segs.forEach((g,i)=>{if(i)S.append(' / ');const a=document.createElement('a');a.className='crumb';a.textContent=g;
+        const d=segs.slice(0,i+1).join('/');a.title='Перейти в «'+g+'»';if(d===curDir||(!curDir&&i===segs.length-1))a.classList.add('here');a.onclick=()=>{if(d!==curDir)setDir(d);};S.append(a);});S.append(' · ');}
+      const pdfs=view.filter(it=>it.type==='pdf'),known=pdfs.filter(it=>it.np),sh=known.reduce((a,it)=>a+it.np,0),unk=pdfs.length-known.length;
+      S.append(`Файлов: ${items.length}${view.length!==items.length?' (показано '+view.length+')':''}`+(pdfs.length?` · листов PDF: ${sh}${unk?' + ещё '+unk+' не прочитано':''}`:'')+` · проверено: ${done} · с замечаниями: ${bad}`);}}
   const ob=OPENLOG.bad||0;$('logBadge').hidden=!(bad+ob);$('logBadge').textContent=bad+ob;$('btnLog').hidden=!(bad+ob);
   if(!$('logPanel').hidden)renderLog();
 }
+function rootLabel(){   // в корне — имя открытой папки (несколько перетащенных — перечислить)
+  const r=[...new Set(items.slice(0,2000).filter(it=>it.path.includes('/')).map(it=>it.path.split('/')[0]))];if(!r.length)return '';
+  return (r.length>1?'Папки: '+r.slice(0,3).join(', ')+(r.length>3?' и ещё '+(r.length-3):''):'Папка: '+r[0])+' · ';}
 function flash(msg){const s=$('status'),t=SET.flashT||(typeof MUI!=='undefined'&&MUI?'4':'6');clearTimeout(flashT);
   if(t==='off'){s.classList.remove('flash');s.textContent=msg;flashT=setTimeout(()=>{flashT=0;updateStatus();},4000);return;}   // подсказки выключены — только строка состояния, без всплывающего окошка
   s.textContent=msg;s.classList.add('flash');
@@ -898,8 +941,8 @@ class Pane{
     const bg=this.it&&this.it.type==='pdf'?pdfBg():dxfBg();
     c.setTransform(1,0,0,1,0,0);c.fillStyle=bg;c.fillRect(0,0,this.cv.width,this.cv.height);
     if(this.isPdf&&this.pg.length&&!this.loading){this.paintPdf();if(TXT.on||(this.tsel&&this.tsel.length))txtPaint(this);return;}
-    if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);return;}
-    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK});if(this.chk)chkPaint(this,c,d);if(MEAS.on&&this.it)measPaint(this,c,d);return;}
+    if(this.ov&&this.ov.res&&!this.loading){ovPaint(this,c,d);if(MEAS.on&&this.it)measPaint(this,c,d);return;}
+    if(this.doc&&!this.isPdf&&this.doc.bbox&&!this.loading){renderDoc(c,this.doc,{s:this.s,cx:this.cx,cy:this.cy,W:this.W,H:this.H,dpr:d,xf:this.xf,hidden:this.hidden,lw:SET.lw,texts:SET.texts,k:SET.lineK,minDim:true});if(this.chk)chkPaint(this,c,d);if(MEAS.on&&this.it)measPaint(this,c,d);return;}
     c.setTransform(d,0,0,d,0,0);c.fillStyle='#7b818a';c.font='14px system-ui,sans-serif';c.textAlign='center';
     const t=this.loading?'Загрузка…':this.doc?(this.doc.log.some(l=>l[0]==='error')?'Файл не открылся — см. журнал':'Нет отрисовываемой геометрии — см. журнал'):'';
     c.fillText(t,this.W/2,this.H/2);
@@ -1112,7 +1155,7 @@ class Pane{
     cv.addEventListener('pointerdown',e=>{
       setActive(this);try{cv.setPointerCapture(e.pointerId);}catch(x){}const [x,y]=pos(e);ptrs.set(e.pointerId,{x,y});
       if(ptrs.size===1){downT=performance.now();downX=x;downY=y;moved=false;multi=false;fitDown=this.fitted;sv0={s:this.s,cx:this.cx,cy:this.cy};
-        MEAS.drag=null;if(MEAS.on&&e.button===0&&!loupeOn()&&this.doc&&!this.isPdf&&!this.ov)measGrab(this,x,y);
+        MEAS.drag=null;if(MEAS.on&&e.button===0&&!loupeOn()&&this.doc&&!this.isPdf&&(!this.ov||this.ov.res))measGrab(this,x,y);
         if(MUI){cancelAnimationFrame(MT.fl);MT.fl=0;MT.vx=MT.vy=0;MT.pt=0;}
         TXT.drag=null;if(TXT.on&&e.button===0&&this.isPdf&&this.pg.length&&!loupeOn())TXT.drag={p:this,x0:x,y0:y,x1:x,y1:y,add:e.ctrlKey||e.shiftKey};}else{moved=true;multi=true;MEAS.drag=null;TXT.drag=null;}
     });
@@ -1165,7 +1208,7 @@ class Pane{
       if(TXT.drag&&TXT.drag.p===this&&ptrs.size===0){const D=TXT.drag;TXT.drag=null;if(e.type==='pointerup')txtSelect(this,D);else this.draw();return;}
       if(MEAS.drag&&MEAS.drag.p===this&&ptrs.size===0){const D=MEAS.drag;MEAS.drag=null;msOf(this).sel=D.h.it;MEAS.last=null;this.draw();
         if(e.type==='pointerup'&&!moved)flash('Размер выбран: Delete — удалить, перетащите — передвинуть'+(D.h.drag?'':' (этот размер не двигается)'));return;}
-      if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&!(e.pointerType==='mouse'&&e.button!==0)&&this.doc&&!this.isPdf&&!this.ov){const [x,y]=pos(e);measClick(this,x,y);return;}
+      if(MEAS.on&&ptrs.size===0&&!moved&&!multi&&e.type==='pointerup'&&!(e.pointerType==='mouse'&&e.button!==0)&&this.doc&&!this.isPdf&&(!this.ov||this.ov.res)){const [x,y]=pos(e);measClick(this,x,y);return;}
       if(ptrs.size===0&&!moved&&performance.now()-downT<300){
         const t=performance.now();
         if(t-tapT<350&&Math.hypot(downX-tapX,downY-tapY)<30){if(VW.set.length>1&&(SET.sync||this.ov))$('vFit').click();else this.fit();tapT=0;}else{tapT=t;tapX=downX;tapY=downY;}   // окна связаны — вписать все разом, как кнопкой ⤢
@@ -1279,7 +1322,8 @@ const curItem=()=>{const ap=panes[VW.active],v=view[VW.idx];return ap&&ap.it&&VW
 function step(d){
   if(!view.length)return;
   if(VW.cmp&&!VW.cmp.manual&&CMP){ // сравнение папок: к следующему файлу, у которого есть версия
-    let i=VW.idx;for(let k=0;k<view.length;k++){i=(i+d+view.length)%view.length;const c=CMP.map.get(view[i]);if(c&&c.b){cmpOpen(view[i],c.b);return;}}return;}
+    const ty=VW.cmp.a&&VW.cmp.a.type;   // листаем парами того же вида: PDF ⇄ PDF, DXF ⇄ DXF
+    let i=VW.idx;for(let k=0;k<view.length;k++){i=(i+d+view.length)%view.length;const c=CMP.map.get(view[i]);if(c&&c.b&&view[i].type===ty){cmpOpen(view[i],c.b);return;}}return;}
   if(VW.idx<0){showItem(d>0?0:view.length-1);return;}
   if(VW.set.length<2&&!(VW.kit&&VW.kit.length>1)){showItem(VW.idx+d);return;}
   const cur=new Set(VW.kit||VW.set);let i=VW.idx;
@@ -1307,7 +1351,7 @@ function updateBar(){if(MUI)setTimeout(muiSync,0);
   $('vName').textContent=has?(VW.idx>=0?`${VW.idx+1} / ${view.length} · `:'')+cur.path:'';$('vName').title=has?cur.path:'';
   $('vPrev').hidden=$('vNext').hidden=!view.length;
   const anyDxf=VW.set.some((x,k)=>x.type==='dxf'&&panes[k]&&panes[k].doc&&!panes[k].isPdf);
-  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf||!!OV;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
+  $('vLw').hidden=!anyDxf;$('vChk').hidden=!anyDxf||!!OV;$('vMeas').hidden=!anyDxf;$('measBox').hidden=!MEAS.on||$('vMeas').hidden;$('vLw').title='Толщина линий: '+lineMode()[0]+' (W — по кругу)';$('vLw').classList.toggle('on',SET.lw);
   const anyPdf=VW.set.some((x,k)=>panes[k]&&panes[k].isPdf);$('vTxt').hidden=!anyPdf;$('vTxt').classList.toggle('on',TXT.on);if(!anyPdf&&TXT.on)txtToggle(false);$('vCt').hidden=!anyPdf;$('vCtN').textContent='линии '+lvTxt(SET.pdfLv);
   $('vCont').hidden=!(has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1);$('vCont').classList.toggle('on',MUI?!!SET.mCont:!!SET.pdfCont);
   const pg=has&&ap&&ap.isPdf&&ap.doc.pdf&&ap.doc.pages>1;
@@ -1382,13 +1426,24 @@ $('vClose').onclick=()=>{if(docked()&&!VW.full)$('btnPreview').click();else setF
 $('vFull').onclick=()=>setFull(!VW.full);
 $('vPrev').onclick=()=>step(-1);
 $('vNext').onclick=()=>step(1);
+/* листать мышью: боковые кнопки «назад/вперёд» и стрелки ‹ › у краёв окна просмотра (появляются, когда курсор подходит к краю) */
+$('edgeL').onclick=()=>$('vPrev').click();$('edgeR').onclick=()=>$('vNext').click();
+document.addEventListener('mousedown',e=>{if(e.button===3||e.button===4)e.preventDefault();});
+document.addEventListener('mouseup',e=>{if((e.button!==3&&e.button!==4)||!viewerShown())return;e.preventDefault();$(e.button===4?'vNext':'vPrev').click();});
+$('stageWrap').addEventListener('mousemove',e=>{const w=$('stageWrap'),r=w.getBoundingClientRect(),on=SET.edge!==false&&!MUI&&view.length>1&&!MEAS.drag;
+  const L=on&&e.clientX-r.left<70,Rr=on&&r.right-e.clientX<70;if(w.classList.contains('edgeL')!==L)w.classList.toggle('edgeL',L);if(w.classList.contains('edgeR')!==Rr)w.classList.toggle('edgeR',Rr);});
+$('stageWrap').addEventListener('mouseleave',()=>$('stageWrap').classList.remove('edgeL','edgeR'));
 $('vFit').onclick=()=>{for(let k=0;k<VW.set.length;k++)panes[k].fit();};
 $('vSide').onclick=()=>{if(FOLLOW)return;SET.side=!SET.side;saveSet();if(VW.idx>=0)showItem(VW.idx);else updateBar();};
 $('vPair').onclick=()=>{if(FOLLOW)followerSend({t:'swap'});else if(monOn())monSwap();else cyclePair(1);};
 $('vSync').onclick=()=>{SET.sync=!SET.sync;saveSet();updateBar();if(SET.sync){const p=panes[VW.active];p&&p.changed();}};
 $('vMon').onclick=()=>openSecond();
-$('vPgPrev').onclick=()=>{const p=panes[VW.active];p&&p.pageGo(-1);};
-$('vPgNext').onclick=()=>{const p=panes[VW.active];p&&p.pageGo(1);};
+/* страницы PDF; в сравнении двух PDF при 🔒 — листаются обе версии вместе (лист 2 слева — лист 2 справа) */
+function pagesGo(d){const ap=panes[VW.active];if(!ap)return false;
+  if(VW.cmp&&SET.sync&&VW.set.length===2&&ap.isPdf){const ps=panes.slice(0,2).filter(p=>p.isPdf&&p.doc&&p.doc.pdf);if(ps.length===2){const n=ap.pageNo;const r=ap.pageGo(d);const t=ap.pageNo;for(const p of ps)if(p!==ap&&t!==n)p.pageGo(t-p.pageNo);return r;}}
+  return ap.pageGo(d);}
+$('vPgPrev').onclick=()=>pagesGo(-1);
+$('vPgNext').onclick=()=>pagesGo(1);
 const apDo=f=>{const p=panes[VW.active];if(p&&VW.set.length)f(p);};
 $('vRotL').onclick=()=>apDo(p=>p.rotate(90));
 $('vRotR').onclick=()=>apDo(p=>p.rotate(-90));
@@ -1796,6 +1851,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sEdge').value=SET.edge===false?'0':'1';$('sEdge').onchange=e=>{SET.edge=e.target.value==='1';saveSet();};
 $('sRefr').value=refrMode();$('sRefr').onchange=e=>{SET.refr=e.target.value;saveSet();};
 $('sFlash').value=SET.flashT||(MUI?'4':'6');$('sFlash').onchange=e=>{SET.flashT=e.target.value;saveSet();if(SET.flashT!=='off')flash('Так подсказка будет держаться '+SET.flashT+' с');};
 $('sUi').value=['mob','pc'].includes(SET.ui)?SET.ui:'auto';$('sUi').onchange=e=>{SET.ui=e.target.value;saveSet();if(confirm('Интерфейс поменяется после перезапуска. Перезапустить сейчас?'))location.reload();};
@@ -1832,17 +1888,31 @@ function measEnt(doc){ // элементы и точки привязки дет
     }}
   return doc._meas={E,S};
 }
-const m2s=(p,x,y)=>{const [wx,wy]=mApply(xfMat(p.xf),x,y);return [p.W/2+(wx-p.cx)*p.s,p.H/2-(wy-p.cy)*p.s];};
-const s2m=(p,x,y)=>mApply(mInv(xfMat(p.xf)),...p.s2w(x,y));
+// в сравнении (p.ov) мерим в системе левой детали: правая уже поставлена на неё (как нарисована на экране)
+const m2s=(p,x,y)=>{const [wx,wy]=p.ov?[x,y]:mApply(xfMat(p.xf),x,y);return [p.W/2+(wx-p.cx)*p.s,p.H/2-(wy-p.cy)*p.s];};
+const s2m=(p,x,y)=>p.ov?p.s2w(x,y):mApply(mInv(xfMat(p.xf)),...p.s2w(x,y));
+/* привязки для измерений в окне сравнения: слева — деталь A как есть, справа — деталь B, перенесённая так, как она лежит на экране (M, ручная подгонка D) */
+function measEntX(src,M){const det=M[0]*M[3]-M[1]*M[2],sc=Math.sqrt(Math.abs(det)),ap=(x,y)=>[M[0]*x+M[2]*y+M[4],M[1]*x+M[3]*y+M[5]];
+  const ang=a=>{const v=[M[0]*Math.cos(a)+M[2]*Math.sin(a),M[1]*Math.cos(a)+M[3]*Math.sin(a)];return Math.atan2(v[1],v[0]);};
+  const E=src.E.map(e=>{if(e.t==='L'){const [x1,y1]=ap(e.x1,e.y1),[x2,y2]=ap(e.x2,e.y2);return {t:'L',x1,y1,x2,y2};}
+    const [cx,cy]=ap(e.cx,e.cy);if(e.t==='C')return {t:'C',cx,cy,r:e.r*sc};return {t:'A',cx,cy,r:e.r*sc,a0:ang(e.a0),a1:ang(e.a1),ccw:det<0?!e.ccw:e.ccw};});
+  return {E,S:src.S.map(q=>[...ap(q[0],q[1]),q[2]])};}
+function measEntP(p){
+  if(!p.ov||!OV||!OV.res)return measEnt(p.doc);
+  const r=OV.res,Mb=OV.D?GEO.mul(OV.D,r.M):r.M,key=p.ov.side+'|'+Mb.join(',');
+  if(p._mx&&p._mx.key===key&&p._mx.res===r)return p._mx.v;
+  const A=OV.da?measEnt(OV.da):{E:[],S:[]},B=OV.db?measEntX(measEnt(OV.db),Mb):{E:[],S:[]};
+  const v=p.ov.side==='a'?A:p.ov.side==='b'?B:{E:A.E.concat(B.E),S:A.S.concat(B.S)};
+  p._mx={key,res:r,v};return v;}
 function onArc(e,x,y){let a=Math.atan2(y-e.cy,x-e.cx),sw=e.ccw?e.a1-e.a0:e.a0-e.a1;while(sw<=0)sw+=Math.PI*2;let t=e.ccw?a-e.a0:e.a0-a;while(t<0)t+=Math.PI*2;return t<=sw+1e-9;}
 function entDist(e,x,y){
   if(e.t==='L'){const dx=e.x2-e.x1,dy=e.y2-e.y1,l=dx*dx+dy*dy;let t=l?((x-e.x1)*dx+(y-e.y1)*dy)/l:0;t=Math.max(0,Math.min(1,t));return Math.hypot(x-e.x1-t*dx,y-e.y1-t*dy);}
   const d=Math.abs(Math.hypot(x-e.cx,y-e.cy)-e.r);if(e.t==='C')return d;return onArc(e,x,y)?d:Infinity;
 }
-function measPickEnt(p,x,y){const M=measEnt(p.doc),[mx,my]=s2m(p,x,y);let be=null,ed=8/p.s;for(const e of M.E){const d=entDist(e,mx,my);if(d<ed){ed=d;be=e;}}return be;}
-function measPickLine(p,x,y){const M=measEnt(p.doc),[mx,my]=s2m(p,x,y);let be=null,ed=7/p.s;for(const e of M.E){if(e.t!=='L')continue;const d=entDist(e,mx,my);if(d<ed){ed=d;be=e;}}return be;}
+function measPickEnt(p,x,y){const M=measEntP(p),[mx,my]=s2m(p,x,y);let be=null,ed=8/p.s;for(const e of M.E){const d=entDist(e,mx,my);if(d<ed){ed=d;be=e;}}return be;}
+function measPickLine(p,x,y){const M=measEntP(p),[mx,my]=s2m(p,x,y);let be=null,ed=7/p.s;for(const e of M.E){if(e.t!=='L')continue;const d=entDist(e,mx,my);if(d<ed){ed=d;be=e;}}return be;}
 function measPick(p,x,y){ // что под курсором: точка привязки или элемент
-  const M=measEnt(p.doc),[mx,my]=s2m(p,x,y),tol=10/p.s;let best=null,bd=tol;
+  const M=measEntP(p),[mx,my]=s2m(p,x,y),tol=10/p.s;let best=null,bd=tol;
   for(const q of M.S){const d=Math.hypot(q[0]-mx,q[1]-my);if(d<bd||(best&&d<=bd+1e-9&&q[2]==='центр')){bd=d;best=q;}}
   let be=null,ed=7/p.s;for(const e of M.E){const d=entDist(e,mx,my);if(d<ed){ed=d;be=e;}}
   // маленькая дуга или отверстие (меньше ~20 px на экране): клик по ней — радиус / диаметр, а не точка середины или центра
@@ -1878,7 +1948,7 @@ function dimGeom(p,it){ // экранная геометрия размера: �
 }
 function measInfo(it){ // все величины для подсказки
   const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]);return 'по X '+fmm(dx)+' · по Y '+fmm(dy)+' · по прямой '+fmm(Math.hypot(dx,dy));}
-function measHover(p,x,y){if(!p.doc||p.isPdf||p.ov)return;const M=msOf(p);M.hover=measPick(p,x,y);M.mouse=s2m(p,x,y);M.mw=p.s2w(x,y);
+function measHover(p,x,y){if(!p.doc||p.isPdf||(p.ov&&!p.ov.res))return;const M=msOf(p);M.hover=measPick(p,x,y);M.mouse=s2m(p,x,y);M.mw=p.s2w(x,y);
   const h=measHit(p,x,y);p.cv.style.cursor=h?(h.drag?'move':'pointer'):'crosshair';M.hit=h&&h.it;p.draw();}
 /* поставленные размеры: выбрать (клик), передвинуть (перетащить), удалить (Delete) */
 function segD(x,y,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],L=dx*dx+dy*dy;let t=L?((x-a[0])*dx+(y-a[1])*dy)/L:0;t=Math.max(0,Math.min(1,t));return Math.hypot(x-a[0]-dx*t,y-a[1]-dy*t);}
@@ -2027,7 +2097,7 @@ function measPaint(p,c,d){
     c.stroke();};
   // диаметры всех отверстий — сразу при включении режима
   c.font='12px system-ui,sans-serif';
-  if(SET.mholes!==false)for(const e of measEnt(p.doc).E){if(e.t!=='C')continue;const r=e.r*p.s;if(r<4)continue;const [x,y]=m2s(p,e.cx,e.cy),t='Ø'+fmm(e.r*2);
+  if(SET.mholes!==false)for(const e of measEntP(p).E){if(e.t!=='C')continue;const r=e.r*p.s;if(r<4)continue;const [x,y]=m2s(p,e.cx,e.cy),t='Ø'+fmm(e.r*2);
     const w=c.measureText(t).width+8,lx=x+r*0.72+2,ly=y-r*0.72-10;if(lx>p.W||ly<-10||lx+w<0||ly>p.H)continue;
     c.fillStyle='rgba(16,18,22,.8)';c.fillRect(lx,ly,w,16);c.fillStyle='#8fd3ff';c.textAlign='left';c.textBaseline='middle';c.fillText(t,lx+4,ly+8.5);}
   for(const it of M.items){
@@ -2133,7 +2203,7 @@ const TBL={rows:[],sort:null,dir:1,tok:0};
 function tblItems(){return view.filter(it=>it.type==='dxf');}
 async function tblOpen(){
   const P=$('tblPanel');P.hidden=false;const L=tblItems();
-  $('tblTitle').textContent='Таблица DXF'+(curDir?' — '+curDir.split('/').pop():'')+' · файлов: '+L.length+(MTF?' · фильтр: '+MTF.replace('|',' · '):'');
+  $('tblTitle').textContent='Таблица DXF'+(curDir?' — '+curDir.split('/').pop():'')+' · файлов: '+L.length+(MTF.size?' · фильтр: '+[...MTF].map(k=>k.replace('|',' · ')).join(', '):'');
   $('tblMachine').value=rules().m;
   TBL.rows=L.map(it=>({it,r:(ANA.get(it.key)||{}).r||null}));tblRender();
   const tok=++TBL.tok;let n=0;
@@ -2692,6 +2762,7 @@ $('vPin').onclick=()=>{const it=curItem();if(it)pinAdd({kind:'file',root:it.rid,
    «⇄ поменять» (Tab) — основное окно переходит к паре, второе показывает противоположное.
    ===================================================================== */
 const FOLLOW=location.hash==='#second';
+const NEWWIN=/[?&]new=/.test(location.search);   // новое окно: последнюю папку не открывать само — пустое окно под другой проект
 const MON={win:null,timer:0};
 const monOn=()=>!FOLLOW&&!!MON.win&&!MON.win.closed;
 function monSwap(){SET.monMain=SET.monMain==='pdf'?'dxf':'pdf';saveSet();if(VW.idx>=0)showItem(VW.idx);
@@ -2994,7 +3065,7 @@ async function ovStart(M,keepView){
   if(!OV||OV.tok!==tok)return;
   if(r.fail){$('ovRes').textContent=r.fail;return;}
   if(M&&OV.M!==M)return;   // пока считали, деталь сдвинули ещё — дождаться следующего пересчёта
-  OV.res=r;OV.M=r.M;OV.D=null;OV.cur=-1;OV.ms=Math.round(performance.now()-t0);
+  OV.res=r;OV.M=r.M;OV.D=null;OV.da=da;OV.db=db;OV.cur=-1;OV.ms=Math.round(performance.now()-t0);
   const bb=r.bbA.slice();for(const o of r.LB)for(let i=0;i<o.length;i+=2){bb[0]=Math.min(bb[0],o[i]);bb[1]=Math.min(bb[1],o[i+1]);bb[2]=Math.max(bb[2],o[i]);bb[3]=Math.max(bb[3],o[i+1]);}
   const sides=OV.mode==='over'?['both']:['a','b'];
   sides.forEach((sd,i)=>{const p=panes[i];if(!p)return;p.ov={res:r,bb,side:sd};if(!keepView){p.fitted=true;p.applyView('fit');}else p.draw();});
@@ -3190,7 +3261,9 @@ async function renderCmpPanel(){
   for(const e of HIST)if(e.kind==='folder'&&e.root&&!seen.has(e.root)&&!seen.has(e.root+'|'+e.rootName)&&list.length<16){seen.add(e.root+'|'+e.rootName);list.push({label:e.rootName,root:e.root,dir:e.rootName,rootName:e.rootName});}
   const cur=await withTO(curDirHandle(),3000).catch(()=>null),roots=((await withTO(IDB.all('roots'),3000).catch(()=>[]))||[]).filter(r=>r&&r.h&&r.kind==='directory').sort((a,b)=>(b.t||0)-(a.t||0)).slice(0,30);
   const fmtT=t=>{const d=new Date(t);return d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});};
+  const myRid=items[0]&&items[0].rid,myDir=curDir||(items[0]?items[0].path.split('/')[0]:'');
   for(const x of list){
+    if(myRid&&x.root===myRid&&x.dir===myDir)continue;   // открытую сейчас папку для сравнения не предлагаем
     const r=document.createElement('div');r.className='pin';r.innerHTML='<span class="pi">📁</span><span class="pt"><div class="pl"></div><div class="pp"></div></span>';
     r.querySelector('.pl').textContent=x.label;
     const info=[x.path||x.dir.split('/').join(' / ')];if(x.n!=null)info.push('файлов: '+x.n);if(x.t)info.push('сравнивали '+fmtT(x.t));
@@ -3200,7 +3273,7 @@ async function renderCmpPanel(){
       let h=null;try{const rr=await IDB.get(x.root,'roots');h=rr&&rr.h;if(h&&x.dir&&x.dir!==x.rootName){for(const seg of x.dir.split('/').slice(1))h=await h.getDirectoryHandle(seg);}}catch(e){h=null;}
       if(!h||!cur)return;
       let self=false;try{self=await withTO(h.isSameEntry(cur),1500)||!!(await withTO(cur.resolve(h),1500));}catch(e){}
-      if(self){r.classList.add('dis');r.title='Эта папка открыта сейчас — с ней сравнивать нечего';r.querySelector('.pl').textContent=x.label+' — открыта сейчас';return;}
+      if(self){r.remove();if(!R.children.length)R.innerHTML='<div class="pp-empty">Других папок пока нет — «Выбрать папку…».</div>';return;}   // та же папка (или вложенная в открытую) — не предлагаем
       let best=null;const res=await Promise.all(roots.map(async rt=>{try{if(await withTO(rt.h.isSameEntry(h),1500))return null;const p=await withTO(rt.h.resolve(h),1500);return p&&p.length?[rt.name,...p]:null;}catch(e){return null;}}));
       for(const b of res)if(b&&(!best||b.length>best.length))best=b;
       if(best){x.path=best.join(' / ');r.querySelector('.pp').textContent=[x.path].concat(info.slice(1)).join(' · ');}
@@ -3274,6 +3347,10 @@ document.addEventListener('keydown',e=>{
     if(/^[cCсС]$/.test(k)&&panes.some(p=>p.tsel&&p.tsel.length)){e.preventDefault();txtCopy();return;}
     if(/^[aAфФ]$/.test(k)){e.preventDefault();txtAll();return;}}
   if(e.ctrlKey||e.altKey||e.metaKey)return;   // Ctrl+R, Ctrl+F, Ctrl+L, Ctrl+0, Ctrl+Shift+B … — браузеру
+  if(k==='Escape'){   // Esc закрывает верхнее всплывающее окно или меню
+    if(MTM){MTM=false;const m=$('mtMenu');if(m)m.hidden=true;e.preventDefault();return;}
+    for(const id of ['noteBox','cmpPanel','onlyPanel','openMenu','pngMenu','tblColMenu','xfMenu']){const el=$(id);
+      if(el&&!el.hidden&&getComputedStyle(el).display!=='none'){el.hidden=true;e.preventDefault();return;}}}
   for(const id of ['logPanel','histPanel'])if(!$(id).hidden){if(k==='Escape')$(id).hidden=true;return;}
   if(k==='Escape'&&!$('setPanel').hidden){$('setPanel').hidden=true;return;}
   if(k==='Escape'&&!$('pinPanel').hidden){$('pinPanel').hidden=true;return;}
@@ -3297,6 +3374,7 @@ document.addEventListener('keydown',e=>{
     if(k==='Backspace'||(e.ctrlKey&&/^[zZяЯ]$/.test(k))){e.preventDefault();measUndo(false);return;}
   }
   if(k==='Escape'&&SEL.size&&!VW.full){clearSel();return;}
+  if(k==='Escape'&&CMP&&(!viewerShown()||(!VW.full&&!VW.cmp&&!OV))){cmpEnd();return;}   // в сетке: Esc — выйти из сравнения папок
   if(FOLLOW){ // второй монитор: листание передаётся в основное окно
     if(/^(ArrowRight|ArrowLeft|ArrowUp|ArrowDown| |Tab)$/.test(k)||((k==='PageDown'||k==='PageUp')&&!(panes[VW.active]&&panes[VW.active].isPdf&&panes[VW.active].doc.pages>1))){
       e.preventDefault();followerSend({t:'key',key:k,shift:e.shiftKey});return;}
@@ -3330,8 +3408,8 @@ document.addEventListener('keydown',e=>{
   else if(k==='ArrowLeft'){if(docked()&&!VW.full&&SET.layout==='list'&&VW.idx<=0&&toTree());else step(-1);}
   else if(k==='ArrowDown'||k==='ArrowUp'){const d=k==='ArrowDown'?1:-1;
     if(gridDock)showItem(Math.min(Math.max((VW.idx<0?0:VW.idx)+d*gridCols(),0),view.length-1));else step(d);}
-  else if(k==='PageDown'){if(!(ap&&ap.pageGo(1)))step(1);}
-  else if(k==='PageUp'){if(!(ap&&ap.pageGo(-1)))step(-1);}
+  else if(k==='PageDown'){if(!(ap&&pagesGo(1)))step(1);}
+  else if(k==='PageUp'){if(!(ap&&pagesGo(-1)))step(-1);}
   else if(k==='Tab'&&monOn())monTab(e.shiftKey?-1:1);
   else if(k==='Tab'){if(VW.set.length>1){const n=VW.set.length;setActive(panes[(VW.active+(e.shiftKey?-1:1)+n)%n]);}else cyclePair(e.shiftKey?-1:1);}
   else if(k==='Enter'){if(docked()&&!VW.full&&VW.idx>=0)setFull(true);else h=false;}
@@ -3394,7 +3472,7 @@ document.addEventListener('keydown',e=>{
 
 /* при запуске — открыть последнюю папку (если браузер сохранил разрешение; иначе кнопка в пустом окне) */
 (async()=>{
-  if(FOLLOW||!FSA||!SET.reopen||typeof IDB==='undefined')return;
+  if(FOLLOW||NEWWIN||!FSA||!SET.reopen||typeof IDB==='undefined')return;
   const lr=LS.get('lastRoot',null);if(!lr||!lr.rid)return;
   let r;try{r=await IDB.get(lr.rid,'roots');}catch(e){return;}
   if(!r||!r.h||r.kind!=='directory'||items.length)return;
