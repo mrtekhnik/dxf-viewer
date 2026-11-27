@@ -7,7 +7,7 @@ run(){ echo "== $1"; o=$(timeout 120 python3 $1 2>&1); c=$?; echo "$o" | grep -v
 run t3.py 3; run t5.py 3; run t6.py 2; run t7.py 2; run t8.py 5; run t11.py 6; run t13.py 1; run t14.py 2; run t15.py 2
 run t16.py 3; run t17.py 3; run t18.py 3; run t19.py 3; run t2.py 3; run t20.py 1; run t21.py 2; run t22.py 5; run t23.py 3; run t24.py 4; run t25.py 4; run t26.py 9; run t10.py 2
 run t60.py 2; run t61.py 1; run t63.py 1; run t64.py 1; run t65.py 1; run t66.py 1; run t67.py 1
-run t73.py 1; run t74.py 1; run t75.py 1; run t76.py 1; run t77.py 1; run t78.py 1; run t79.py 1; run t80.py 1; run t81.py 1; run t82.py 1; run t83.py 1; run t84.py 1; run t85.py 1; run t86.py 1; run t87.py 1; run t88.py 1
+run t73.py 1; run t74.py 1; run t75.py 1; run t76.py 1; run t77.py 1; run t78.py 1; run t79.py 1; run t80.py 1; run t81.py 1; run t82.py 1; run t83.py 1; run t84.py 1; run t85.py 1; run t86.py 1; run t87.py 1; run t88.py 1; run t89.py 1
 run t69.py 1; run t70.py 1; run t71.py 1; run t72.py 1
 run t53.py 1; run t54.py 1; run t55.py 1; run t59.py 1
 pkill -f "http.server 8765"; echo DONE
