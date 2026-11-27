@@ -2059,7 +2059,7 @@ function holeLabels(c,H,W,Hh,k,col,inL){   // H: [{x,y,r(px),d(мм)}] в экр
   const mode=holeMode(),placed=[],fs=12*k,h=16*k;c.font=fs+'px system-ui,sans-serif';c.textAlign='left';c.textBaseline='middle';
   const hit=a=>placed.some(b=>a[0]<b[0]+b[2]&&b[0]<a[0]+a[2]&&a[1]<b[1]+b[3]&&b[1]<a[1]+a[3]);
   if(col)for(const o of H){if(o.x<-20||o.y<-20||o.x>W+20||o.y>Hh+20)continue;const cc=col.get(fmm(o.d));if(!cc)continue;   // обводка цветом диаметра
-    c.strokeStyle=cc;c.lineWidth=2*k;c.beginPath();c.arc(o.x,o.y,Math.max(o.r,3.5*k),0,Math.PI*2);c.stroke();}
+    c.strokeStyle=cc;c.lineWidth=1.2*k;c.beginPath();c.arc(o.x,o.y,Math.max(o.r,1.5*k)+3*k,0,Math.PI*2);c.stroke();}   // тонкое кольцо с зазором вокруг отверстия — само отверстие видно
   const big=(mode==='all'||inL)?0:mode==='sum'?10*k:4*k;   // в лупе (k>1) — цифры у всех, что в ней
   for(const o of H.slice().sort((a,b)=>b.r-a.r)){
     if(o.x<-40||o.y<-40||o.x>W+40||o.y>Hh+40||o.r<big)continue;
