@@ -341,7 +341,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 </head>
 <body>
 <header>
-  <div class="brand">DXF <small>+PDF · v4.7.2</small></div>
+  <div class="brand">DXF <small>+PDF · v4.7.3</small></div>
   <!-- открыть -->
   <span class="grp">
     <span class="mwrap"><button id="btnOpen" title="Открыть папку или файлы">📂 <span class="lbl a">Открыть</span> ▾</button>
@@ -523,6 +523,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
   <div class="set-row"><span>Линии PDF ( [ и ] )</span><select id="sPdfBold"><option value="-2">−2 — светлее</option><option value="-1">−1 — чуть светлее</option><option value="0">0 — как в файле</option><option value="1">+1 — чуть темнее</option><option value="2">+2 — темнее</option><option value="3">+3 — ещё темнее</option><option value="4">+4 — максимум</option></select></div>
   <div class="set-row"><span>Многостраничный PDF</span><select id="sPdfCont"><option value="1">все страницы подряд (прокрутка)</option><option value="0">по одной странице</option></select></div>
   <div class="set-row"><span>Измерения: держать размеры</span><select id="sMkeep"><option value="mode">пока включён режим «Размеры»</option><option value="view">пока открыт просмотр (выключили режим — скрыты, включили — снова видны)</option><option value="proj">пока открыта папка (проект) — до открытия другой</option></select></div>
+  <div class="set-row"><span>Подписи Ø отверстий (режим «Размеры», кнопка Ø)</span><select id="sHoles"><option value="sum">все отверстия + сводка по диаметрам внизу окна</option><option value="all">все отверстия (подписи не налезают друг на друга)</option><option value="big">только крупные</option></select></div>
   <div class="set-row"><span>Стрелки ‹ › по краям просмотра</span><select id="sEdge"><option value="1">показывать, когда курсор у края</option><option value="0">не показывать</option></select></div>
   <div class="set-row"><span>Обновление списка файлов</span><select id="sRefr"><option value="off">только вручную (⟳, F5)</option><option value="focus">при возврате в окно программы</option><option value="30">при возврате + каждые 30 с</option><option value="60">при возврате + каждую минуту</option><option value="300">при возврате + каждые 5 мин</option></select></div>
   <div class="set-row"><span>Всплывающие подсказки</span><select id="sFlash"><option value="2">2 с</option><option value="4">4 с</option><option value="6">6 с</option><option value="10">10 с</option><option value="off">не показывать</option></select></div>
@@ -699,7 +700,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <li>Точки ставятся <b>только с привязкой</b> — к концам и серединам линий, центрам и «квадрантам» окружностей и дуг (зелёный значок у курсора: □ конец, △ середина, ○ центр, ◇ квадрант). Клик в пустое место точку не ставит.</li>
 <li><b>Радиус и диаметр</b>: клик по дуге или окружности вдали от точек привязки, затем второй клик — <b>где поставить надпись</b>: от дуги к надписи идёт выноска со стрелкой и полкой (удобно для больших радиусов — надпись ставится рядом с дугой, а не у далёкого центра). Маленькие дуги и отверстия (меньше ~20 точек на экране) — радиус по любому клику на них.</li>
 <li>Клик по прямой линии вдали от точек привязки — её длина L.</li>
-<li><b>Ø</b> — подписывать диаметры всех отверстий (включается и выключается, запоминается).</li>
+<li><b>Ø</b> — подписывать диаметры отверстий (включается и выключается, запоминается). Что подписывать — ⚙ «Подписи Ø отверстий»: <i>все + сводка</i> (по умолчанию: подписи у всех отверстий, включая мелкие, без наложения друг на друга, и внизу окна строка «Отверстия: Ø5 ×24 · Ø8 ×6 · Ø22,5» — читается и когда деталь целиком на экране); <i>все</i> — без сводки; <i>только крупные</i>. Если подписи мелких отверстий стоят тесно, часть из них не рисуется, чтобы не налезать, — увеличьте или наведите <b>лупу</b>: в лупе подписаны все отверстия под ней.</li>
 <li><b>Точность</b> — 1 / 0,1 / 0,01 / 0,001 мм.</li>
 <li><b>Двойной клик</b> — показать деталь целиком (размеры при этом не ставятся).</li>
 <li><b>Править поставленные</b>: размерную линию или надпись можно <b>перетащить</b> мышью (курсор ✥); клик по размеру — выбрать (подсветится голубым), <kbd>Delete</kbd> — удалить выбранный, <kbd>Esc</kbd> — снять выбор. Расстояние, угол и зазор не двигаются — их можно только выбрать и удалить.</li>
@@ -876,6 +877,7 @@ body.mui #status.flash{pointer-events:none;position:fixed;left:50%;transform:tra
 <h2>Сравнение двух деталей DXF</h2>
 <h3>Как выбрать две детали</h3>
 <ul>
+<li><b>✕ закрыть просмотр</b> во время сравнения — сравнение заканчивается полностью; файл потом откроется один. Чтобы снова увидеть обе детали рядом: <b>⇆ Сравнить с…</b> (<kbd>V</kbd>) — пара, которую сравнивали последней, стоит в списке первой со значком ↺, один клик. В сравнении папок — клик по значку посередине строки.</li>
 <li><b>⇆ Сравнить с…</b> в просмотре или <kbd>V</kbd> (в сетке — для выделенного файла): список других DXF, <b>сверху похожие по размеру</b> («размер совпал», «размер близок» — это только подсказка, не вывод), поиск, <b>Файл с диска…</b> — любой DXF откуда угодно. Номера и имена могут быть любыми.</li>
 <li>Через сравнение папок — клик по значку ≠ ≈ имя ⇢.</li>
 <li><b>Ctrl+клик</b> — выбрать два файла (выделенный файл считается первым, рамки у обоих одинаковые) → <b>⇆ Сравнить</b>. Если среди них PDF — кнопка <b>⧉ Открыть рядом</b>: отличия программа ищет только у двух DXF.</li>
@@ -2820,7 +2822,7 @@ function renderLog(){
     `Проверено ${done} из ${items.length}. Файлы проверяются, когда их миниатюры появляются на экране, или кнопкой «Проверить все файлы».`;
 }
 $('btnLog').onclick=()=>openLog();
-const APP_VERSION='4.7.2',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
+const APP_VERSION='4.7.3',APP_DATE='27.11.2026';   // подставляются при сборке из шапки (head.part); VERSION в sw.js — та же
 $('verSet').textContent='Версия '+APP_VERSION+' от '+APP_DATE;
 $('setLog').onclick=()=>{$('setPanel').hidden=true;openLog();};
 $('noteBox').addEventListener('click',e=>{if(e.target.id==='noteBox')$('noteBox').hidden=true;});
@@ -3428,7 +3430,7 @@ function gridStage(){
 new ResizeObserver(()=>{if(VW.set.length>1)gridStage();}).observe($('stage'));
 
 function showSet(set,act=0){
-  if(OV&&!OV.keep)ovClear();
+  if(OV&&(!OV.keep||!(set.length===2&&set.includes(OV.a)&&set.includes(OV.b))))ovClear();   // открыли другое — сравнение закончено
   VW.set=set;layoutStage();VW.active=Math.max(0,Math.min(act,set.length-1));
   set.forEach((x,k)=>panes[k].show(x));
   panes.forEach((p,k)=>p.el.classList.toggle('active',set.length>1&&k===VW.active));
@@ -3570,7 +3572,9 @@ $('btnPreview').onclick=()=>{
   sp.addEventListener('pointerup',()=>{sp.classList.remove('drag');saveSet();});
 })();
 
-$('vClose').onclick=()=>{if(docked()&&!VW.full)$('btnPreview').click();else setFull(false);};
+$('vClose').onclick=()=>{
+  if(VW.cmp&&VW.cmp.a&&VW.cmp.b){PICK.last.set(VW.cmp.a.key,VW.cmp.b);if(OV)ovClear();if(VW.cmp.manual)VW.cmp=null;}   // закрыли сравнение: «Сравнить с…» предложит ту же пару первой
+  if(docked()&&!VW.full)$('btnPreview').click();else setFull(false);};
 $('vFull').onclick=()=>setFull(!VW.full);
 $('vPrev').onclick=()=>step(-1);
 $('vNext').onclick=()=>step(1);
@@ -3999,6 +4003,7 @@ function setContrast(v,quiet){v=Math.max(LV_MIN,Math.min(LV_MAX,v));SET.pdfLv=v;
 $('sPdfCont').onchange=e=>{SET.pdfCont=e.target.value==='1';saveSet();panes.forEach(p=>p.reloadPdf());};
 $('sReopen').onchange=e=>{SET.reopen=e.target.value==='1';saveSet();};
 $('sClick').onchange=e=>{SET.click=e.target.value;saveSet();};
+$('sHoles').value=holeMode();$('sHoles').onchange=e=>{SET.mhSmall=e.target.value;saveSet();panes.forEach(p=>p.draw());};
 $('sEdge').value=SET.edge===false?'0':'1';$('sEdge').onchange=e=>{SET.edge=e.target.value==='1';saveSet();};
 $('sRefr').value=refrMode();$('sRefr').onchange=e=>{SET.refr=e.target.value;saveSet();};
 $('sFlash').value=SET.flashT||(MUI?'4':'6');$('sFlash').onchange=e=>{SET.flashT=e.target.value;saveSet();if(SET.flashT!=='off')flash('Так подсказка будет держаться '+SET.flashT+' с');};
@@ -4191,6 +4196,26 @@ function entText(e){
 }
 function measText(it){if(it.t==='ent')return entText(it.e);const dx=Math.abs(it.b[0]-it.a[0]),dy=Math.abs(it.b[1]-it.a[1]),d=Math.hypot(dx,dy);
   return {main:fmm(d)+' мм',sub:measInfo(it)};}
+/* подписи Ø отверстий (режим «Размеры», кнопка Ø; ⚙ «Подписи отверстий»):
+   big — только крупные (от ~8 px на экране); all — все, подписи не налезают друг на друга; sum — все + сводка «Ø5 ×24 · Ø8 ×6» внизу окна */
+function holeMode(){return ['big','all','sum'].includes(SET.mhSmall)?SET.mhSmall:'sum';}
+function holeLabels(c,H,W,Hh,k){   // H: [{x,y,r(px),d(мм)}] в экранных px; k — масштаб надписи (лупа на HiDPI)
+  const mode=holeMode(),placed=[],fs=12*k,h=16*k;c.font=fs+'px system-ui,sans-serif';c.textAlign='left';c.textBaseline='middle';
+  const hit=(a)=>placed.some(b=>a[0]<b[0]+b[2]&&b[0]<a[0]+a[2]&&a[1]<b[1]+b[3]&&b[1]<a[1]+a[3]);
+  for(const o of H.slice().sort((a,b)=>b.r-a.r)){
+    if(o.x<-40||o.y<-40||o.x>W+40||o.y>Hh+40)continue;
+    if(o.r<4*k&&mode==='big')continue;
+    const t='Ø'+fmm(o.d),w=c.measureText(t).width+8*k,rr=Math.max(o.r,2*k);
+    const opts=[[o.x+rr*0.72+2*k,o.y-rr*0.72-h*0.62],[o.x+rr+3*k,o.y-h/2],[o.x+rr*0.72+2*k,o.y+rr*0.72-h*0.38],[o.x-rr*0.72-2*k-w,o.y-rr*0.72-h*0.62],[o.x-rr-3*k-w,o.y-h/2],[o.x-w/2,o.y-rr-h-2*k],[o.x-w/2,o.y+rr+2*k]];
+    let at=null;for(const q of opts){const a=[q[0],q[1],w,h];if(!hit(a)){at=a;break;}}
+    if(!at)continue;placed.push(at);
+    c.fillStyle='rgba(16,18,22,.8)';c.fillRect(at[0],at[1],w,h);c.fillStyle='#8fd3ff';c.fillText(t,at[0]+4*k,at[1]+h/2+0.5*k);}
+}
+function holeSummary(c,E,W,H){   // сводка по диаметрам — читается и при «весь лист на экране»
+  const m=new Map();for(const e of E){const k=fmm(e.r*2);m.set(k,(m.get(k)||0)+1);}if(!m.size)return;
+  const t='Отверстия: '+[...m].sort((a,b)=>parseFloat(a[0].replace(',','.'))-parseFloat(b[0].replace(',','.'))).map(([d,n])=>'Ø'+d+(n>1?' ×'+n:'')).join(' · ');
+  c.font='13px system-ui,sans-serif';c.textAlign='left';c.textBaseline='middle';const w=Math.min(W-16,c.measureText(t).width+14);
+  c.fillStyle='rgba(16,18,22,.86)';c.fillRect(8,H-34,w,24);c.fillStyle='#8fd3ff';c.save();c.beginPath();c.rect(8,H-34,w,24);c.clip();c.fillText(t,15,H-21.5);c.restore();}
 function measPaint(p,c,d){
   const M=msOf(p);c.save();c.setTransform(d,0,0,d,0,0);
   const COL='#ffd23f',SEL='#4fc3ff';let col=COL;const bg='rgba(16,18,22,.92)';
@@ -4245,9 +4270,9 @@ function measPaint(p,c,d){
     c.stroke();};
   // диаметры всех отверстий — сразу при включении режима
   c.font='12px system-ui,sans-serif';
-  if(SET.mholes!==false)for(const e of measEntP(p).E){if(e.t!=='C')continue;const r=e.r*p.s;if(r<4)continue;const [x,y]=m2s(p,e.cx,e.cy),t='Ø'+fmm(e.r*2);
-    const w=c.measureText(t).width+8,lx=x+r*0.72+2,ly=y-r*0.72-10;if(lx>p.W||ly<-10||lx+w<0||ly>p.H)continue;
-    c.fillStyle='rgba(16,18,22,.8)';c.fillRect(lx,ly,w,16);c.fillStyle='#8fd3ff';c.textAlign='left';c.textBaseline='middle';c.fillText(t,lx+4,ly+8.5);}
+  if(SET.mholes!==false){const H=measEntP(p).E.filter(e=>e.t==='C');
+    holeLabels(c,H.map(e=>{const [x,y]=m2s(p,e.cx,e.cy);return {x,y,r:e.r*p.s,d:e.r*2};}),p.W,p.H,1);
+    if(holeMode()==='sum')holeSummary(c,H,p.W,p.H);}
   for(const it of M.items){
     col=it===M.sel?SEL:it===M.hit?'#ffe680':COL;
     if(it.t==='lin')drawDim(it,false);
@@ -4775,6 +4800,10 @@ function loupeDraw(){
   const near=has&&Math.max(Math.abs(x-LC.X0),Math.abs(y-LC.Y0))*k>(LC.SZ/2-R)*0.55;
   if(!has&&LC.want!==sig+'|'+Math.round(x/8)+'|'+Math.round(y/8)){LC.want=sig+'|'+Math.round(x/8)+'|'+Math.round(y/8);loupeBuild(p,x,y,k,d,sig,R,false);}
   else if(near&&!LC.tm2){LC.tm2=1;loupeBuild(p,x,y,k,d,sig,R,false);setTimeout(()=>LC.tm2=0,300);}
+  if(SET.mholes!==false&&!p.isPdf&&p.doc.bbox){   // в лупе (с размерами и без) — по кнопке Ø и ⚙ «Подписи Ø отверстий»; — подписи Ø видимых в ней отверстий
+    const H=[];for(const e of measEntP(p).E){if(e.t!=='C')continue;const [sx,sy]=m2s(p,e.cx,e.cy),lx=(R+(sx-x)*k)*d,ly=(R+(sy-y)*k)*d,rr=e.r*p.s*k*d;
+      if(Math.hypot(lx-R*d,ly-R*d)<R*d+rr)H.push({x:lx,y:ly,r:rr,d:e.r*2});}
+    holeLabels(c,H,2*R*d,2*R*d,d);}
   c.restore();c.lineWidth=2*d;c.strokeStyle='#ffd23f';c.beginPath();c.arc(R*d,R*d,R*d-1,0,Math.PI*2);c.stroke();
   c.strokeStyle=p.isPdf?'rgba(217,130,43,.8)':'rgba(255,210,63,.6)';c.lineWidth=d;c.beginPath();c.moveTo(R*d-8*d,R*d);c.lineTo(R*d+8*d,R*d);c.moveTo(R*d,R*d-8*d);c.lineTo(R*d,R*d+8*d);c.stroke();
   c.fillStyle='rgba(16,18,22,.8)';c.fillRect(R*d-22*d,2*R*d-26*d,44*d,18*d);c.fillStyle='#ffd23f';c.font=(12*d)+'px system-ui,sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillText('×'+k,R*d,2*R*d-17*d);
@@ -5324,7 +5353,7 @@ $('ovTol').onchange=e=>{SET.tol=+e.target.value;saveSet();if(OV)ovStart(OV.M,tru
    «Сравнить с…»: выбрать вторую деталь вручную — имена старых файлов могут не совпадать,
    поэтому список отсортирован по похожести габарита (поворот не важен), есть поиск и «Файл с диска…»
    ===================================================================== */
-const PICK={a:null,tok:0,list:[],sig:new Map()};
+const PICK={a:null,tok:0,list:[],sig:new Map(),last:new Map()};
 function pickCands(a){
   const src=CMP?CMP.items.concat(items):items,seen=new Set(),out=[];
   for(const it of src){if(it===a||physSame(a,it)||it.type!=='dxf'||seen.has(it.key))continue;seen.add(it.key);out.push(it);}   // сам файл (и он же из папки сравнения) не предлагаем
@@ -5346,7 +5375,8 @@ async function pickOpen(a){
   a=a||curItem();if(!a||a.type!=='dxf')return;
   PICK.a=a;const tok=++PICK.tok;$('pickPanel').hidden=false;$('pickQ').value='';
   $('pickFor').textContent='для: '+a.path;
-  PICK.list=pickCands(a).map(it=>({it,sc:-1,other:!!(CMP&&CMP.items.includes(it))}));pickRender();
+  const lb=PICK.last.get(a.key);
+  PICK.list=pickCands(a).map(it=>({it,sc:-1,other:!!(CMP&&CMP.items.includes(it)),last:it===lb}));pickRender();
   const sa=await pickSig(a);if(tok!==PICK.tok)return;
   PICK.sa=sa;let n=0;
   for(const r of PICK.list){ // по очереди, сначала из той же «ветки» имени
@@ -5358,11 +5388,11 @@ async function pickOpen(a){
 }
 function pickRender(){
   const L=$('pickList'),q=$('pickQ').value.trim().toLowerCase();L.textContent='';
-  const rows=PICK.list.filter(r=>!q||r.it.path.toLowerCase().includes(q)).sort((x,y)=>(y.sc+(y.other?0.01:0)-x.sc-(x.other?0.01:0))||x.it.name.localeCompare(y.it.name,'ru',{numeric:true})).slice(0,120);
+  const rows=PICK.list.filter(r=>!q||r.it.path.toLowerCase().includes(q)).sort((x,y)=>(y.last-x.last)||(y.sc+(y.other?0.01:0)-x.sc-(x.other?0.01:0))||x.it.name.localeCompare(y.it.name,'ru',{numeric:true})).slice(0,120);
   for(const r of rows){const d=document.createElement('div');d.className='pk';
     const sg=PICK.sig.get(r.it.key),dir=r.it.path.includes('/')?r.it.path.slice(0,r.it.path.lastIndexOf('/')):'';
     d.innerHTML='<span class="pn"></span><span class="ps"></span><span class="pd"></span>';
-    d.querySelector('.pn').textContent=r.it.name;d.querySelector('.pd').textContent=(r.other?'⇆ ':'')+dir;
+    d.querySelector('.pn').textContent=(r.last?'↺ ':'')+r.it.name;d.querySelector('.pd').textContent=(r.last?'сравнивали последним · ':'')+(r.other?'⇆ ':'')+dir;
     d.querySelector('.ps').innerHTML=sg?('≈ '+Math.round(sg[1])+' × '+Math.round(sg[0])+(r.sc>=0.995?'<br><b>размер совпал</b>':r.sc>0.85?'<br>размер близок':'')):'…';
     d.title='Габарит вдоль осей детали (поворот в файле не важен) и длина контуров: '+(sg?fmt(sg[2]):'?')+' мм';
     d.onclick=()=>pickGo(r.it);L.appendChild(d);}
